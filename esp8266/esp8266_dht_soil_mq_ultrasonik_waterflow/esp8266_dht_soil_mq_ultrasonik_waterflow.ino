@@ -38,7 +38,6 @@
 #define SCREEN_ADDRESS 0x3C
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-
 // Konstanta
 #define SOUND_VELOCITY 0.034
 #define CM_TO_INCH 0.393701
@@ -64,18 +63,41 @@ float flowRate;
 float Litres;
 float totalLitres = 0;  // Inisialisasi totalLitres dari 0
 
+int statusMotor = 0;
+int statusWaterPump = 0;
+
+const char* ssid = "<SSID>";
+const char* password = "<PASSWORD>";
+
 void IRAM_ATTR pulseCounter() {
-  pulseCount++;  // Interrupt handler untuk menghitung pulsa
+  pulseCount++;
 }
 
 void setup() {
   // Inisialisasi Serial
   Serial.begin(115200);
+
+  WiFi.begin(ssid, password);
+
+  Serial.print("Connecting");
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println();
+
+  Serial.print("Connected, IP address: ");
+  Serial.println(WiFi.localIP());
   
   // initialize the OLED object
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-    Serial.println("SSD1306 allocation failed");
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;);
   }
+
+  display.clearDisplay();
+  
   // Inisialisasi pin untuk sensor ultrasonik, DHT, LED, dan sensor aliran air
   pinMode(TRIG_PIN, OUTPUT);  // Sets the trigPin as an Output
   pinMode(ECHO_PIN, INPUT);   // Sets the echoPin as an Input
@@ -88,17 +110,57 @@ void setup() {
 
   dht.begin(); // Memulai sensor DHT
 
-  display.clearDisplay();
-  display.setCursor(0,0);
-  display.setTextSize(1);
-  display.println("Distance (cm): ");
-  
   pulseCount = 0;
   flowRate = 0.0;
   previousMillis = 0;
 
   // Atur interrupt untuk sensor aliran air
   attachInterrupt(digitalPinToInterrupt(FLOW_SENSOR), pulseCounter, FALLING);
+}
+
+void activateMotor() {
+  statusMotor = 1;
+  Serial.println("Jarak terdeteksi di bawah 5 cm, mengaktifkan motor DC");
+  digitalWrite(PIN_IN1, HIGH);
+  digitalWrite(PIN_IN2, LOW);
+
+  // Gradually increase motor speed
+  for (int speed = 0; speed <= 255; speed++) {
+    analogWrite(PIN_ENA, speed);
+    delay(10);
+  }
+
+  delay(10000);  // Motor berputar selama 10 detik
+
+  // Gradually decrease motor speed to stop
+  for (int speed = 255; speed >= 0; speed--) {
+    analogWrite(PIN_ENA, speed);
+    delay(10);
+  }
+
+  statusMotor = 0;
+  Serial.println("Motor berhenti");
+}
+
+void activatePump() {
+  if (statusMotor == 0) {  // Ensure pump only activates after motor has stopped
+    Serial.println("Mengaktifkan relay untuk menghidupkan pompa");
+    digitalWrite(PIN_RELAY_2, LOW);  // Activate relay (pump on)
+    delay(8000);                     // Pump runs for 8 seconds
+    digitalWrite(PIN_RELAY_2, HIGH); // Deactivate relay (pump off)
+    Serial.println("Pompa berhenti");
+  } else {
+    Serial.println("Menunggu motor berhenti sebelum menghidupkan pompa");
+  }
+}
+
+void checkDistanceAndOperate() {
+  if (distanceCm < 5) {
+    activateMotor();  // Start motor if distance is below threshold
+    activatePump();   // Start pump after motor stops
+  } else {
+    Serial.println("Jarak lebih dari 5 cm, motor dan relay tidak aktif");
+  }
 }
 
 void loop() {
@@ -140,36 +202,14 @@ void loop() {
 
 // Clear the buffer.
   display.clearDisplay();
-  display.print(distanceCm);
+  display.setTextSize(2);
+  display.setTextColor(WHITE);
+  display.setCursor(0, 20);
+  display.print("Jarak (cm): ");
+  display.println(distanceCm);
   display.display();
 
-  if (distanceCm < 5) {
-    // Menyalakan motor jika jarak kurang dari 5 cm
-    Serial.println("Jarak terdeteksi di bawah 5 cm, mengaktifkan motor DC");
-    digitalWrite(PIN_IN1, HIGH);
-    digitalWrite(PIN_IN2, LOW);
-
-    for (int speed = 0; speed <= 255; speed++) {
-      analogWrite(PIN_ENA, speed);
-      delay(10);
-    }
-
-    delay(10000);  // Motor berputar selama 10 detik
-    
-    // Matikan motor setelah 2 detik
-    for (int speed = 255; speed >= 0; speed--) {
-      analogWrite(PIN_ENA, speed);
-      delay(10);
-    }
-
-    // Aktifkan relay setelah motor berhenti
-    Serial.println("Mengaktifkan relay untuk menghidupkan pompa");
-    digitalWrite(PIN_RELAY_2, LOW);  // Relay aktif
-    delay(8000);  // Relay aktif selama 8 detik
-    digitalWrite(PIN_RELAY_2, HIGH); // Matikan relay
-  } else {
-    Serial.println("Jarak lebih dari 5 cm, motor dan relay tidak aktif");
-  }
+  checkDistanceAndOperate();
 
   // Pembacaan sensor kelembapan tanah
   moisture_percentage = (100.00 - ((analogRead(SENSOR_SOIL) / 1023.00) * 100.00));
