@@ -1,9 +1,7 @@
-// Original source code: https://wiki.keyestudio.com/KS0429_keyestudio_TDS_Meter_V1.0#Test_Code
-// Project details: https://RandomNerdTutorials.com/esp32-tds-water-quality-sensor/
-
-#define TdsSensorPin 27
+#define TdsSensorPin 34
 #define VREF 3.3              // analog reference voltage(Volt) of the ADC
 #define SCOUNT  30            // sum of sample point
+#define ERROR 0.5
 
 int analogBuffer[SCOUNT];     // store the analog value in the array, read from ADC
 int analogBufferTemp[SCOUNT];
@@ -12,7 +10,7 @@ int copyIndex = 0;
 
 float averageVoltage = 0;
 float tdsValue = 0;
-float temperature = 25;       // current temperature for compensation
+float temperature = 30.8;       // current temperature for compensation
 
 // median filtering algorithm
 int getMedianNum(int bArray[], int iFilterLen){
@@ -41,6 +39,7 @@ int getMedianNum(int bArray[], int iFilterLen){
 void setup(){
   Serial.begin(115200);
   pinMode(TdsSensorPin,INPUT);
+  analogSetAttenuation(ADC_11db);
 }
 
 void loop(){
@@ -61,7 +60,8 @@ void loop(){
       analogBufferTemp[copyIndex] = analogBuffer[copyIndex];
       
       // read the analog value more stable by the median filtering algorithm, and convert to voltage value
-      averageVoltage = getMedianNum(analogBufferTemp,SCOUNT) * (float)VREF / 4096.0;
+      averageVoltage = getMedianNum(analogBufferTemp,SCOUNT) * VREF / 4095.0;
+      // averageVoltage = analogRead(TdsSensorPin);
       
       //temperature compensation formula: fFinalResult(25^C) = fFinalResult(current)/(1.0+0.02*(fTP-25.0)); 
       float compensationCoefficient = 1.0+0.02*(temperature-25.0);
@@ -69,12 +69,13 @@ void loop(){
       float compensationVoltage=averageVoltage/compensationCoefficient;
       
       //convert voltage value to tds value
-      tdsValue=(133.42*compensationVoltage*compensationVoltage*compensationVoltage - 255.86*compensationVoltage*compensationVoltage + 857.39*compensationVoltage)*0.5;
+      tdsValue=(133.42*pow(compensationVoltage, 3) - 255.86 * pow(compensationVoltage, 2) + 857.39*compensationVoltage);
       
       //Serial.print("voltage:");
       //Serial.print(averageVoltage,2);
       //Serial.print("V   ");
       Serial.print("TDS Value:");
+      // tdsValue = tdsValue * ERROR;
       Serial.print(tdsValue,0);
       Serial.println("ppm");
     }

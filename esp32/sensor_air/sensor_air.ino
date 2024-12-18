@@ -4,46 +4,28 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-#include <ESP8266WiFi.h>
+#include <WiFi.h>
 
 // Pin Definitions
 // Ultrasonic Pin Section
-#define TRIG_PIN 14 // Sensor Ultrasonik
-#define ECHO_PIN 13 // Sensor Ultrasonik
-
-// Sensor soil Pin Section
-#define SENSOR_SOIL A0 // Sensor Soil
-
-// DHT Pin Section
-#define DHTPIN 13 // DHT
-
-// MQ Pin Section
-#define MQ_PIN 4 // MQ-135
-#define LED_PIN 2       // Pin untuk LED (mengganti buzzer)
+#define TRIG_PIN 19 // Sensor Ultrasonik
+#define ECHO_PIN 18 // Sensor Ultrasonik
 
 // Water Flow Pin Section
-#define FLOW_SENSOR 5             // Pin untuk sensor aliran air (flow sensor)
+#define FLOW_SENSOR 34           // Pin untuk sensor aliran air (flow sensor)
+
 
 // Motor DC Pin Section
-#define PIN_ENA  14 // The ESP8266 pin connected to the EN1 pin L298N
-#define PIN_IN1  12 // The ESP8266 pin connected to the IN1 pin L298N
-#define PIN_IN2  13 // The ESP8266 pin connected to the IN2 pin L298N
+#define PIN_ENA  25 // The ESP8266 pin connected to the EN1 pin L298N
+#define PIN_IN1  17 // The ESP8266 pin connected to the IN1 pin L298N
+#define PIN_IN2  16 // The ESP8266 pin connected to the IN2 pin L298N
 
-#define PIN_RELAY_1 2 
-#define PIN_RELAY_2  12 // The ESP8266 pin connected to the IN2 pin of relay module
-
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
-
-#define OLED_RESET -1
-#define SCREEN_ADDRESS 0x3C
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+#define PIN_RELAY_1 32 // 
+#define PIN_RELAY_2  27 // The ESP8266 pin connected to the IN2 pin of relay module
 
 // Konstanta
 #define SOUND_VELOCITY 0.034
 #define CM_TO_INCH 0.393701
-#define DHTTYPE DHT11
-DHT dht(DHTPIN, DHTTYPE);
 
 long duration;
 float distanceCm;
@@ -90,27 +72,15 @@ void setup() {
 
   Serial.print("Connected, IP address: ");
   Serial.println(WiFi.localIP());
-  
-  // initialize the OLED object
-  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-    Serial.println(F("SSD1306 allocation failed"));
-    for(;;);
-  }
 
-  display.clearDisplay();
-  
-  // Inisialisasi pin untuk sensor ultrasonik, DHT, LED, dan sensor aliran air
   pinMode(TRIG_PIN, OUTPUT);  // Sets the trigPin as an Output
   pinMode(ECHO_PIN, INPUT);   // Sets the echoPin as an Input
-  pinMode(MQ_PIN, INPUT);    // Pin untuk MQ Sensor
-  pinMode(LED_PIN, OUTPUT);  // Pin untuk LED (sebagai pengganti buzzer)
   pinMode(FLOW_SENSOR, INPUT_PULLUP); // Pin untuk water flow sensor
   pinMode(PIN_IN1, OUTPUT);
   pinMode(PIN_IN2, OUTPUT);
   pinMode(PIN_ENA, OUTPUT);
-
-  dht.begin(); // Memulai sensor DHT
-
+  pinMode(PIN_RELAY_1, OUTPUT);
+  pinMode(PIN_RELAY_2, OUTPUT);
   pulseCount = 0;
   flowRate = 0.0;
   previousMillis = 0;
@@ -118,10 +88,11 @@ void setup() {
   // Atur interrupt untuk sensor aliran air
   attachInterrupt(digitalPinToInterrupt(FLOW_SENSOR), pulseCounter, FALLING);
 }
-
+  
 void activateMotor() {
   statusMotor = 1;
   Serial.println("Jarak terdeteksi di bawah 5 cm, mengaktifkan motor DC");
+  digitalWrite(PIN_RELAY_1, HIGH);
   digitalWrite(PIN_IN1, HIGH);
   digitalWrite(PIN_IN2, LOW);
 
@@ -146,10 +117,8 @@ void activateMotor() {
 void activatePump() {
   if (statusMotor == 0) {  // Ensure pump only activates after motor has stopped
     Serial.println("Mengaktifkan relay untuk menghidupkan pompa");
-    digitalWrite(PIN_RELAY_1, LOW);
     digitalWrite(PIN_RELAY_2, LOW);  // Activate relay (pump on)
     delay(8000);                     // Pump runs for 8 seconds
-    digitalWrite(PIN_RELAY_1, HIGH);
     digitalWrite(PIN_RELAY_2, HIGH); // Deactivate relay (pump off)
     Serial.println("Pompa berhenti");
   } else {
@@ -163,28 +132,11 @@ void checkDistanceAndOperate() {
     activatePump();   // Start pump after motor stops
   } else {
     Serial.println("Jarak lebih dari 5 cm, motor dan relay tidak aktif");
+    digitalWrite(PIN_RELAY_1, LOW);
   }
 }
 
 void loop() {
-  // Pembacaan suhu dan kelembapan dari sensor DHT
-  float suhu = dht.readTemperature();
-  float kelembapan = dht.readHumidity();
-  float MQValue = digitalRead(MQ_PIN);
-
-  // Mengecek apakah data dari sensor berhasil dibaca
-  if (isnan(suhu) || isnan(kelembapan) || isnan(MQValue)) {
-    Serial.println("Gagal membaca data dari sensor");
-  } else {
-    Serial.print("Suhu: ");
-    Serial.print(suhu);
-    Serial.print(" °C, Kelembapan: ");
-    Serial.print(kelembapan);
-    Serial.println(" %");
-    Serial.print("MQ Value: ");
-    Serial.print(MQValue);
-    Serial.println(" ppm");
-  }
 
   // Pembacaan dari sensor ultrasonik
   digitalWrite(TRIG_PIN, LOW);
@@ -203,22 +155,22 @@ void loop() {
   Serial.print("Distance (inch): ");
   Serial.println(distanceInch);
 
-// Clear the buffer.
-  display.clearDisplay();
-  display.setTextSize(2);
-  display.setTextColor(WHITE);
-  display.setCursor(0, 20);
-  display.print("Jarak (cm): ");
-  display.println(distanceCm);
-  display.display();
+// // Clear the buffer.
+//   display.clearDisplay();
+//   display.setTextSize(2);
+//   display.setTextColor(WHITE);
+//   display.setCursor(0, 20);
+//   display.print("Jarak (cm): ");
+//   display.println(distanceCm);
+//   display.display();
 
   checkDistanceAndOperate();
 
-  // Pembacaan sensor kelembapan tanah
-  moisture_percentage = (100.00 - ((analogRead(SENSOR_SOIL) / 1023.00) * 100.00));
-  Serial.print("Soil Moisture(in Percentage) = ");
-  Serial.print(moisture_percentage);
-  Serial.println("%");
+  // // Pembacaan sensor kelembapan tanah
+  // moisture_percentage = (100.00 - ((analogRead(SENSOR_SOIL) / 1023.00) * 100.00));
+  // Serial.print("Soil Moisture(in Percentage) = ");
+  // Serial.print(moisture_percentage);
+  // Serial.println("%");
 
   // Water flow sensor logic
   currentMillis = millis();
@@ -246,12 +198,12 @@ void loop() {
     Serial.println(" L");
 
     // Menyalakan LED jika aliran air terdeteksi
-    if (flowRate > 0) {
-      digitalWrite(LED_PIN, HIGH);  // Menyalakan LED
-      delay(500);
-      digitalWrite(LED_PIN, LOW);   // Mematikan LED
-      delay(500);
-    }
+    // if (flowRate > 0) {
+    //   digitalWrite(LED_PIN, HIGH);  // Menyalakan LED
+    //   delay(500);
+    //   digitalWrite(LED_PIN, LOW);   // Mematikan LED
+    //   delay(500);
+    // }
     
   }
   // Delay sebelum pengulangan loop
