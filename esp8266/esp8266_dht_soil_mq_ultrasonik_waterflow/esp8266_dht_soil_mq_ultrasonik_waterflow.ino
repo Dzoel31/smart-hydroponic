@@ -9,7 +9,7 @@
 // Pin Definitions
 // Ultrasonic Pin Section
 #define TRIG_PIN 14 // Sensor Ultrasonik
-#define ECHO_PIN 13 // Sensor Ultrasonik
+#define ECHO_PIN 12 // Sensor Ultrasonik
 
 // Sensor soil Pin Section
 #define SENSOR_SOIL A0 // Sensor Soil
@@ -31,13 +31,6 @@
 
 #define PIN_RELAY_1 2 
 #define PIN_RELAY_2  12 // The ESP8266 pin connected to the IN2 pin of relay module
-
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
-
-#define OLED_RESET -1
-#define SCREEN_ADDRESS 0x3C
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // Konstanta
 #define SOUND_VELOCITY 0.034
@@ -67,8 +60,8 @@ float totalLitres = 0;  // Inisialisasi totalLitres dari 0
 int statusMotor = 0;
 int statusWaterPump = 0;
 
-const char* ssid = "Digital_Library";
-const char* password = "puska2023$";
+// const char* ssid = "duFIFA";
+// const char* password = "Fahri8013";
 
 void IRAM_ATTR pulseCounter() {
   pulseCount++;
@@ -78,26 +71,19 @@ void setup() {
   // Inisialisasi Serial
   Serial.begin(115200);
 
-  WiFi.begin(ssid, password);
+  // WiFi.begin(ssid, password);
 
-  Serial.print("Connecting");
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println();
+  // Serial.print("Connecting");
+  // while (WiFi.status() != WL_CONNECTED)
+  // {
+  //   delay(500);
+  //   Serial.print(".");
+  // }
+  // Serial.println();
 
-  Serial.print("Connected, IP address: ");
-  Serial.println(WiFi.localIP());
-  
-  // initialize the OLED object
-  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-    Serial.println(F("SSD1306 allocation failed"));
-    for(;;);
-  }
+  // Serial.print("Connected, IP address: ");
+  // Serial.println(WiFi.localIP());
 
-  display.clearDisplay();
   
   // Inisialisasi pin untuk sensor ultrasonik, DHT, LED, dan sensor aliran air
   pinMode(TRIG_PIN, OUTPUT);  // Sets the trigPin as an Output
@@ -144,13 +130,13 @@ void activateMotor() {
 }
 
 void activatePump() {
-  if (statusMotor == 0) {  // Ensure pump only activates after motor has stopped
+  if (statusMotor == 0) {
     Serial.println("Mengaktifkan relay untuk menghidupkan pompa");
     digitalWrite(PIN_RELAY_1, LOW);
-    digitalWrite(PIN_RELAY_2, LOW);  // Activate relay (pump on)
+    digitalWrite(PIN_RELAY_2, LOW); 
     delay(8000);                     // Pump runs for 8 seconds
     digitalWrite(PIN_RELAY_1, HIGH);
-    digitalWrite(PIN_RELAY_2, HIGH); // Deactivate relay (pump off)
+    digitalWrite(PIN_RELAY_2, HIGH);
     Serial.println("Pompa berhenti");
   } else {
     Serial.println("Menunggu motor berhenti sebelum menghidupkan pompa");
@@ -159,10 +145,10 @@ void activatePump() {
 
 void checkDistanceAndOperate() {
   if (distanceCm < 5) {
-    activateMotor();  // Start motor if distance is below threshold
-    activatePump();   // Start pump after motor stops
+    // activateMotor();  // Start motor if distance is below threshold
+    // activatePump();   // Start pump after motor stops
   } else {
-    Serial.println("Jarak lebih dari 5 cm, motor dan relay tidak aktif");
+    // Serial.println("Jarak lebih dari 5 cm, motor dan relay tidak aktif");
   }
 }
 
@@ -171,6 +157,15 @@ void loop() {
   float suhu = dht.readTemperature();
   float kelembapan = dht.readHumidity();
   float MQValue = digitalRead(MQ_PIN);
+
+  Serial.print("Suhu: ");
+  Serial.print(suhu);
+  Serial.print(" °C, Kelembapan: ");
+  Serial.print(kelembapan);
+  Serial.println(" %");
+  Serial.print("MQ Value: ");
+  Serial.print(MQValue);
+  Serial.println(" ppm");
 
   // Mengecek apakah data dari sensor berhasil dibaca
   if (isnan(suhu) || isnan(kelembapan) || isnan(MQValue)) {
@@ -202,15 +197,6 @@ void loop() {
   Serial.println(distanceCm);
   Serial.print("Distance (inch): ");
   Serial.println(distanceInch);
-
-// Clear the buffer.
-  display.clearDisplay();
-  display.setTextSize(2);
-  display.setTextColor(WHITE);
-  display.setCursor(0, 20);
-  display.print("Jarak (cm): ");
-  display.println(distanceCm);
-  display.display();
 
   checkDistanceAndOperate();
 

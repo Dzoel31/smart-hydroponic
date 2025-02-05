@@ -11,7 +11,7 @@ void setup() {
  void loop(){
  
     Value = analogRead(potPin);
-    float voltage = Value * (3.3 / 4095.0);
+    float voltage = Value * (3.3 / 1024.0);
     Serial.print(voltage);
     Serial.print(" | ");
     ph=(3.3*voltage);
