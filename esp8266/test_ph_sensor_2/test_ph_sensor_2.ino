@@ -1,43 +1,45 @@
-#define SensorPin A0          // the pH meter Analog output is connected with the Arduino’s Analog
-unsigned long int avgValue;  //Store the average value of the sensor feedback
-float b;
-int buf[10],temp;
- 
-void setup()
-{
-  pinMode(13,OUTPUT);  
-  Serial.begin(9600);  
-  Serial.println("Ready");    //Test the serial monitor
+#define SensorPin 27  // Pin sensor pH pada ESP32
+#define ADC_MAX 4095  // Resolusi ADC ESP32 (12-bit)
+#define VOLTAGE_REF 5.5  // Tegangan referensi ESP32
+#define Calibration_Value 2.6
+
+unsigned long int avgValue;
+int buf[10], temp;
+
+void setup() {
+  pinMode(13, OUTPUT);
+  Serial.begin(115200);
+  Serial.println("ESP32 pH Sensor Ready");
 }
-void loop()
-{
-  for(int i=0;i<10;i++)       //Get 10 sample value from the sensor for smooth the value
-  { 
-    buf[i]=analogRead(SensorPin);
+
+void loop() {
+  // Ambil 10 sampel dari sensor
+  for (int i = 0; i < 20; i++) { 
+    buf[i] = analogRead(SensorPin);
     delay(10);
   }
-  for(int i=0;i<9;i++)        //sort the analog from small to large
-  {
-    for(int j=i+1;j<10;j++)
-    {
-      if(buf[i]>buf[j])
-      {
-        temp=buf[i];
-        buf[i]=buf[j];
-        buf[j]=temp;
-      }
-    }
+
+  avgValue = 0;
+  for (int i = 0; i < 20; i++) {
+    avgValue += buf[i];
   }
-  avgValue=0;
-  for(int i=2;i<8;i++)                      //take the average value of 6 center sample
-    avgValue+=buf[i];
-  float phValue=(float)avgValue*5.0/1024/6; //convert the analog into millivolt
-  phValue=3.5*phValue;                      //convert the millivolt into pH value
-  Serial.print("    pH:");  
-  Serial.print(phValue,2);
-  Serial.println(" ");
-  digitalWrite(13, HIGH);       
+  avgValue /= 20;
+  
+  // Konversi nilai ADC ke tegangan
+  float voltage = (float)avgValue * VOLTAGE_REF / ADC_MAX;
+  
+  // Konversi tegangan ke nilai pH
+  float phValue = (3.5 * voltage) + Calibration_Value;
+  
+  // Tampilkan hasil di Serial Monitor
+  Serial.print("Voltage: ");
+  Serial.print(voltage, 3);
+  Serial.print(" V   pH: ");
+  Serial.println(phValue, 2);
+  
+  // Blink LED sebagai indikator
+  digitalWrite(13, HIGH);
   delay(800);
-  digitalWrite(13, LOW); 
- 
+  digitalWrite(13, LOW);
+  delay(1000);
 }
