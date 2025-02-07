@@ -5,18 +5,28 @@
 #include <ArduinoJson.h>
 #include <Arduino.h>
 
-#define moisturePin1 34 // input only
-#define moisturePin2 32
-#define waterflowPin 25
-#define triggerPin 27 
-#define echoPin 26 // input only
+#define moisturePin1 32 
+#define moisturePin2 33
+#define moisturePin3 34 // input only
+#define moisturePin4 35 // input only
+#define moisturePin5 36 // input only
+#define moisturePin6 39 // input only
 
+#define waterflowPin 16
+#define triggerPin 18 
+#define echoPin 19 
+
+#define tdsPin 17
 
 //define sound speed in cm/uS
 #define SOUND_SPEED 0.034
 
 int moisture1, moistureAnalog1;
 int moisture2, moistureAnalog2;
+int moisture3, moistureAnalog3;
+int moisture4, moistureAnalog4;
+int moisture5, moistureAnalog5;
+int moisture6, moistureAnalog6;
 
 float moistureAvg;
 
@@ -107,13 +117,37 @@ void loop(void) {
   Serial.print("Moisture2 = ");
   Serial.print(moisture2);
   Serial.println("%");
+  
+  moistureAnalog3 = analogRead(moisturePin3);
+  moisture3 = (100 - ((moistureAnalog3 / 4095.0) * 100));
+  Serial.print("Moisture3 = ");
+  Serial.print(moisture3);
+  Serial.println("%");
+  
+  moistureAnalog4 = analogRead(moisturePin4);
+  moisture4 = (100 - ((moistureAnalog4 / 4095.0) * 100));
+  Serial.print("Moisture4 = ");
+  Serial.print(moisture4);
+  Serial.println("%");
+  
+  moistureAnalog5 = analogRead(moisturePin5);
+  moisture5 = (100 - ((moistureAnalog5 / 4095.0) * 100));
+  Serial.print("Moisture5 = ");
+  Serial.print(moisture5);
+  Serial.println("%");
+  
+  moistureAnalog6 = analogRead(moisturePin6);
+  moisture6 = (100 - ((moistureAnalog6 / 4095.0) * 100));
+  Serial.print("Moisture6 = ");
+  Serial.print(moisture6);
+  Serial.println("%");
 
-  moistureAvg = (moisture1 + moisture2) / 2;
+  moistureAvg = (moisture1 + moisture2 + moisture3 + moisture4 + moisture5 + moisture6) / 6;
 
   Serial.print("Connecting to: ");
   Serial.println(api_url);
 
-  if (moistureAvg < 60) {
+  if (moistureAvg < 70) {
     pump_status = 1;
   } else {
     pump_status = 0;
