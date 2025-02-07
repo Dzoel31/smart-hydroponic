@@ -30,6 +30,7 @@ def store_data():
             "pump_status": data["pump_status"],
             "flow_rate": data["flow_rate"],
             "total_litres": data["total_litres"],
+            "distance": data["distance"]
         }
 
         df = pd.DataFrame(dict_data, index=[0])

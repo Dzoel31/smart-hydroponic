@@ -5,10 +5,20 @@
 #include <ArduinoJson.h>
 #include <Arduino.h>
 
-#define moisturePin 34
-#define waterflowPin 32
+#define moisturePin1 34 // input only
+#define moisturePin2 32
+#define waterflowPin 25
+#define triggerPin 27 
+#define echoPin 26 // input only
 
-int moisture, moistureAnalog;
+
+//define sound speed in cm/uS
+#define SOUND_SPEED 0.034
+
+int moisture1, moistureAnalog1;
+int moisture2, moistureAnalog2;
+
+float moistureAvg;
 
 float flowRate;
 float Litres;
@@ -22,6 +32,10 @@ boolean ledState = LOW;
 float calibrationFactor = 4.5;
 volatile byte pulseCount;
 byte pulse1Sec = 0;
+
+long duration;
+float distanceCm;
+float distanceInch;
 
 const char* ssid = "FIK-Hotspot";
 const char* password = "T4nahairku";
@@ -47,6 +61,8 @@ void setup(void) {
 
 
   pinMode(waterflowPin, INPUT_PULLUP);
+  pinMode(triggerPin, OUTPUT);
+  pinMode(echoPin, INPUT);
 
   pulseCount = 0;
   flowRate = 0.0;
@@ -80,43 +96,42 @@ void loop(void) {
     Serial.println(" L");
   }
   
-  moistureAnalog = analogRead(moisturePin);
-  moisture = (100 - ((moistureAnalog / 4095.0) * 100));
-  Serial.print("Moisture = ");
-  Serial.print(moisture);
+  moistureAnalog1 = analogRead(moisturePin1);
+  moisture1 = (100 - ((moistureAnalog1 / 4095.0) * 100));
+  Serial.print("Moisture1 = ");
+  Serial.print(moisture1);
   Serial.println("%");
+
+  moistureAnalog2 = analogRead(moisturePin2);
+  moisture2 = (100 - ((moistureAnalog2 / 4095.0) * 100));
+  Serial.print("Moisture2 = ");
+  Serial.print(moisture2);
+  Serial.println("%");
+
+  moistureAvg = (moisture1 + moisture2) / 2;
 
   Serial.print("Connecting to: ");
   Serial.println(api_url);
 
-  if (moisture < 60) {
+  if (moistureAvg < 60) {
     pump_status = 1;
   } else {
     pump_status = 0;
   }
 
-  currentMillis = millis();
+  digitalWrite(triggerPin, LOW);
+  delayMicroseconds(2);
 
-  if (currentMillis - previousMillis > interval) {
-    pulse1Sec = pulseCount;
-    pulseCount = 0;
+  digitalWrite(triggerPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(triggerPin, LOW);
 
-    flowRate = ((1000.0 / (millis() - previousMillis)) * pulse1Sec) / calibrationFactor;
-    previousMillis = millis();
-    
-    // Menghitung volume air dalam liter
-    Litres = (flowRate / 60);  
-    totalLitres += Litres;  
+  duration = pulseIn(echoPin, HIGH);
 
-    // Cetak hasil ke Serial Monitor
-    Serial.print("Flow rate: ");
-    Serial.print(flowRate);  // Laju aliran dalam liter per menit (L/min)
-    Serial.print(" L/min");
-    Serial.print("\t");      // Cetak tabulasi
-    Serial.print("Output Liquid Quantity: ");
-    Serial.print(totalLitres);  // Total volume air dalam liter
-    Serial.println(" L");
-  }
+  distanceCm = duration * SOUND_SPEED/2;
+
+  Serial.print("Distance (cm): ");
+  Serial.println(distanceCm);
 
   HTTPClient http;
 
@@ -126,10 +141,11 @@ void loop(void) {
     http.addHeader("Content-Type", "application/json");
     StaticJsonDocument<200> doc;
 
-    doc["moisture"] = moisture;
+    doc["moisture"] = moistureAvg;
     doc["pump_status"] = pump_status;
     doc["flow_rate"] = flowRate;
     doc["total_litres"] = totalLitres;
+    doc["distance"] = distanceCm;
 
     String payload;
     serializeJson(doc, payload);
