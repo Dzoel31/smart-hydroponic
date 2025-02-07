@@ -1,7 +1,7 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
-#define TdsSensorPin 34
+#define TdsSensorPin 17
 #define VREF 3.3   // analog reference voltage(Volt) of the ADC
 #define SCOUNT 30  // sum of sample point
 #define ERROR 0.5
@@ -13,11 +13,11 @@ int copyIndex = 0;
 
 float averageVoltage = 0;
 float tdsValue = 0;
-float temperature = 30.8;  // current temperature for compensation
+float temperature = 24;  // current temperature for compensation
 
-const char* ssid = "bahhhh";
-const char* password = "12345678";
-const char* serverName = "http://192.168.137.204:8000/api/store_data_nutrition";
+const char* ssid = "FIK-Hotspot";
+const char* password = "T4nahairku";
+const char* serverName = "http://172.23.14.120:8000/api/store_data_nutrition";
 
   // median filtering algorithm
   int getMedianNum(int bArray[], int iFilterLen) {
