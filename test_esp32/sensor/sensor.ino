@@ -59,6 +59,7 @@ BlynkTimer timer;
 void IRAM_ATTR pulseCounter() {
   pulseCount++;
 }
+
 void sendToServerAndBlynk() {
   currentMillis = millis();
 
@@ -159,6 +160,7 @@ void sendToServerAndBlynk() {
   if (distanceCm > 35) {
     Blynk.logEvent("isi_air_bos");
   }
+
 
   HTTPClient http;
 
