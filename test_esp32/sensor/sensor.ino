@@ -1,22 +1,25 @@
+#define BLYNK_TEMPLATE_ID "TMPL6bjOLtqP8"
+#define BLYNK_TEMPLATE_NAME "Test Blynk"
+#define BLYNK_AUTH_TOKEN "iaRSzo-qYbVGMy8nxWS0KDJriA6Rqt5x"
+
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <Arduino.h>
+#include <BlynkSimpleEsp32.h>
 
-#define moisturePin1 32 
-#define moisturePin2 33
-#define moisturePin3 34 // input only
-#define moisturePin4 35 // input only
-#define moisturePin5 36 // input only
-#define moisturePin6 39 // input only
+#define moisturePin1 32 // BIRU 1
+#define moisturePin2 33 // HIJAU 2
+#define moisturePin3 34 // input only // OREN 3
+#define moisturePin4 35 // input only // BIRU 4
+#define moisturePin5 36 // HIJAU bawah 5
+#define moisturePin6 39 // input only (SM) // COKELAT 6
 
-#define waterflowPin 16
-#define triggerPin 18 
+#define waterflowPin 16 // OREN
+#define triggerPin 18 // BIRU
 #define echoPin 19 
-
-#define tdsPin 17
 
 //define sound speed in cm/uS
 #define SOUND_SPEED 0.034
@@ -51,6 +54,8 @@ const char* ssid = "FIK-Hotspot";
 const char* password = "T4nahairku";
 String api_url = "http://172.23.13.248:8000/api/store_data";
 
+BlynkTimer timer;
+
 void IRAM_ATTR pulseCounter() {
   pulseCount++;
 }
@@ -69,16 +74,20 @@ void setup(void) {
   Serial.println("\nConnected to WiFi, IP address:");
   Serial.println(WiFi.localIP());
 
+  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, password);
 
   pinMode(waterflowPin, INPUT_PULLUP);
   pinMode(triggerPin, OUTPUT);
   pinMode(echoPin, INPUT);
+  pinMode(phPin, INPUT);
 
   pulseCount = 0;
   flowRate = 0.0;
   previousMillis = 0;
 
   attachInterrupt(digitalPinToInterrupt(waterflowPin), pulseCounter, FALLING);
+
+  timer.setInterval(5000L, sendToServerAndBlynk);
 }
 
 void loop(void) {
@@ -147,7 +156,7 @@ void loop(void) {
   Serial.print("Connecting to: ");
   Serial.println(api_url);
 
-  if (moistureAvg < 70) {
+  if (moistureAvg < 60) {
     pump_status = 1;
   } else {
     pump_status = 0;
@@ -167,6 +176,12 @@ void loop(void) {
   Serial.print("Distance (cm): ");
   Serial.println(distanceCm);
 
+  analogPhValue = analogRead(phPin);
+  float voltage = analogPhValue * (3.3 / 4095);
+  ph = (3.3 * voltage);
+  Serial.print("ph: ");
+  Serial.println(ph);
+
   HTTPClient http;
 
   String url = String(api_url);
@@ -180,6 +195,7 @@ void loop(void) {
     doc["flow_rate"] = flowRate;
     doc["total_litres"] = totalLitres;
     doc["distance"] = distanceCm;
+    doc["ph"] = ph;
 
     String payload;
     serializeJson(doc, payload);

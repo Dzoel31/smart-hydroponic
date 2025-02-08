@@ -5,9 +5,11 @@
 #define moisturePin 13 // D7
 #define relayPin1 4    // D2
 #define relayPin2 5    // D1
-#define enaPin 2       // D4
-#define in1Pin 14      // D5
-#define in2Pin 12      // D6 (sebelumnya 13, diperbaiki karena konflik dengan moisturePin)
+#define relayPin3 12    // lampu (D6)
+#define relayPin4 14    // lampu (D5)
+// #define enaPin 2       // D4
+// #define in1Pin 14      // D5
+// #define in2Pin 12      // D6 (sebelumnya 13, diperbaiki karena konflik dengan moisturePin)
 
 int moisture, moistureAnalog;
 const char* ssid = "FIK-Hotspot";
@@ -28,9 +30,8 @@ void setup(void) {
 
   pinMode(relayPin1, OUTPUT);
   pinMode(relayPin2, OUTPUT);
-  pinMode(in1Pin, OUTPUT);
-  pinMode(in2Pin, OUTPUT);
-  pinMode(enaPin, OUTPUT);
+  pinMode(relayPin3, OUTPUT);
+  pinMode(relayPin4, OUTPUT);
 }
 
 void loop(void) {
@@ -65,10 +66,14 @@ void loop(void) {
           if (pumpStatus == 1) {
             digitalWrite(relayPin2, LOW);
             digitalWrite(relayPin1, LOW);
+            digitalWrite(relayPin3, LOW);
+            digitalWrite(relayPin4, LOW);
             Serial.println("Pompa dinyalakan.");
           } else {
             digitalWrite(relayPin2, HIGH);
             digitalWrite(relayPin1, HIGH);
+            digitalWrite(relayPin3, HIGH);
+            digitalWrite(relayPin4, HIGH);
             Serial.println("Pompa dimatikan.");
           }
         } else {

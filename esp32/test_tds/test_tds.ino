@@ -1,7 +1,7 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
-#define TdsSensorPin 17
+#define TdsSensorPin A0
 #define VREF 3.3   // analog reference voltage(Volt) of the ADC
 #define SCOUNT 30  // sum of sample point
 #define ERROR 0.5
