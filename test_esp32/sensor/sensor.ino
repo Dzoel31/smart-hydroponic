@@ -79,7 +79,6 @@ void setup(void) {
   pinMode(waterflowPin, INPUT_PULLUP);
   pinMode(triggerPin, OUTPUT);
   pinMode(echoPin, INPUT);
-  pinMode(phPin, INPUT);
 
   pulseCount = 0;
   flowRate = 0.0;
@@ -176,11 +175,6 @@ void loop(void) {
   Serial.print("Distance (cm): ");
   Serial.println(distanceCm);
 
-  analogPhValue = analogRead(phPin);
-  float voltage = analogPhValue * (3.3 / 4095);
-  ph = (3.3 * voltage);
-  Serial.print("ph: ");
-  Serial.println(ph);
 
   HTTPClient http;
 
