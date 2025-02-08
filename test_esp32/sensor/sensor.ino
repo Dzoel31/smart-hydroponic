@@ -1,6 +1,6 @@
-#define BLYNK_TEMPLATE_ID "TMPL6bjOLtqP8"
-#define BLYNK_TEMPLATE_NAME "Test Blynk"
-#define BLYNK_AUTH_TOKEN "iaRSzo-qYbVGMy8nxWS0KDJriA6Rqt5x"
+#define BLYNK_TEMPLATE_ID "TMPL68FSq4d8e"
+#define BLYNK_TEMPLATE_NAME "Smart Hidroponik"
+#define BLYNK_AUTH_TOKEN "5cmX2SdrFnscq7WZvCXxWuEfxTbkEoHK"
 
 #include <WiFi.h>
 #include <HTTPClient.h>
@@ -50,8 +50,8 @@ long duration;
 float distanceCm;
 float distanceInch;
 
-const char* ssid = "FIK-Hotspot";
-const char* password = "T4nahairku";
+const char* ssid = "FIK-Dekanat";
+const char* password = "F4silkom";
 String api_url = "http://172.23.13.248:8000/api/store_data";
 
 BlynkTimer timer;
@@ -60,37 +60,7 @@ void IRAM_ATTR pulseCounter() {
   pulseCount++;
 }
 
-void setup(void) {
-  Serial.begin(115200);
-
-  WiFi.begin(ssid, password);
-  Serial.print("Attempting to connect to ");
-  Serial.print(ssid);
-
-  while (WiFi.status() != WL_CONNECTED){
-    delay(1000);
-    Serial.println("Connecting to WiFi...");
-  }
-  Serial.println("\nConnected to WiFi, IP address:");
-  Serial.println(WiFi.localIP());
-
-  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, password);
-
-  pinMode(waterflowPin, INPUT_PULLUP);
-  pinMode(triggerPin, OUTPUT);
-  pinMode(echoPin, INPUT);
-
-  pulseCount = 0;
-  flowRate = 0.0;
-  previousMillis = 0;
-
-  attachInterrupt(digitalPinToInterrupt(waterflowPin), pulseCounter, FALLING);
-
-  timer.setInterval(5000L, sendToServerAndBlynk);
-}
-
-void loop(void) {
-
+void sendToServerAndBlynk() {
   currentMillis = millis();
 
   if (currentMillis - previousMillis > interval) {
@@ -175,6 +145,22 @@ void loop(void) {
   Serial.print("Distance (cm): ");
   Serial.println(distanceCm);
 
+  // Kirim data ke blynk section
+  Blynk.virtualWrite(V0, moistureAvg);
+  Blynk.virtualWrite(V8, moisture1);
+  Blynk.virtualWrite(V9, moisture2);
+  Blynk.virtualWrite(V10, moisture3);
+  Blynk.virtualWrite(V11, moisture4);
+  Blynk.virtualWrite(V12, moisture5);
+  Blynk.virtualWrite(V13, moisture6);
+  Blynk.virtualWrite(V3, flowRate);
+  Blynk.virtualWrite(V4, distanceCm);
+  Blynk.virtualWrite(V7, totalLitres);
+
+  if (distanceCm > 35) {
+    Blynk.logEvent("isi_air_bos");
+  }
+
 
   HTTPClient http;
 
@@ -189,7 +175,6 @@ void loop(void) {
     doc["flow_rate"] = flowRate;
     doc["total_litres"] = totalLitres;
     doc["distance"] = distanceCm;
-    doc["ph"] = ph;
 
     String payload;
     serializeJson(doc, payload);
@@ -208,5 +193,36 @@ void loop(void) {
   } else {
     Serial.println("Error on HTTP request");
   }
-  delay(5000);
+}
+void setup(void) {
+  Serial.begin(115200);
+
+  WiFi.begin(ssid, password);
+  Serial.print("Attempting to connect to ");
+  Serial.print(ssid);
+
+  while (WiFi.status() != WL_CONNECTED){
+    delay(1000);
+    Serial.println("Connecting to WiFi...");
+  }
+  Serial.println("\nConnected to WiFi, IP address:");
+  Serial.println(WiFi.localIP());
+
+  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, password);
+
+  pinMode(waterflowPin, INPUT_PULLUP);
+  pinMode(triggerPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+
+  pulseCount = 0;
+  flowRate = 0.0;
+  previousMillis = 0;
+
+  attachInterrupt(digitalPinToInterrupt(waterflowPin), pulseCounter, FALLING);
+  timer.setInterval(5000L, sendToServerAndBlynk);
+}
+
+void loop() {
+  Blynk.run();
+  timer.run();
 }
