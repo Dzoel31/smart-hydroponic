@@ -37,10 +37,10 @@ void setup() {
   Serial.println("\nConnected to WiFi, IP address:");
   Serial.println(WiFi.localIP());
 
-  pinMode(relayPin1, OUTPUT);
-  pinMode(relayPin2, OUTPUT);
-  pinMode(relayPin3, OUTPUT);
-  pinMode(relayPin4, OUTPUT);
+  pinMode(relayPin1, OUTPUT); // pompa
+  pinMode(relayPin2, OUTPUT); // pompa
+  pinMode(relayPin3, OUTPUT); // lampu
+  pinMode(relayPin4, OUTPUT); // lampu
 
   client.setInsecure();
 }
@@ -58,7 +58,7 @@ void loop() {
 void getLampStatus() {
   HTTPClient http;
 
-  http.begin(client, lampAPI);  // ✅ Menggunakan WiFiClient sebagai parameter
+  http.begin(client, lampAPI); 
   int httpCode = http.GET();
   if (httpCode > 0) {
       String payload = http.getString();
@@ -76,7 +76,7 @@ void getLampStatus() {
 void getMoisture() {
   HTTPClient http;
 
-  http.begin(client, avgMoistureAPI);  // ✅ Menggunakan WiFiClient sebagai parameter
+  http.begin(client, avgMoistureAPI);
 
   int httpCode = http.GET();
   if (httpCode > 0) {
@@ -89,6 +89,7 @@ void getMoisture() {
         digitalWrite(relayPin1, HIGH);
         digitalWrite(relayPin2, HIGH);
       }
+
   }
   http.end();
 }
@@ -96,7 +97,7 @@ void getMoisture() {
 void activatePump() {
   HTTPClient http;
 
-  http.begin(client, pumpAPI);  // ✅ Menggunakan WiFiClient sebagai parameter
+  http.begin(client, pumpAPI);
 
   int httpCode = http.GET();
   if (httpCode > 0) {
