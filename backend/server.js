@@ -3,7 +3,6 @@ const express = require('express');
 const dotenv = require('dotenv');
 
 const router = require('./routes/sensors');
-
 const db = require('./config/db');
 
 db.connect((err) => {
@@ -23,29 +22,48 @@ const wss = new WebSocket.Server({
     port: process.env.PORT_WS
 });
 
+const allowedSensorType = [
+    'plant_ESP32',
+    'environment_ESP32'
+]
+
 wss.on('connection', function connection(ws) {
     ws.on('message', function incoming(message) {
         console.log('received: %s', message.toString());
-
+        
         try {
-            const { temperature, humidity } = JSON.parse(message);
+            const data = JSON.parse(message.toString());
+            if (allowedSensorType.includes(data.type)) {
+                // pop the type from the data
+                const type = data.type;
+                delete data.type;
 
-            const query = `INSERT INTO sensor_data (temperature, humidity) VALUES (${temperature}, ${humidity})`;
-            db.query(query, [temperature, humidity], (err, result) => {
-                if (err) {
-                    console.log('Error inserting data: ', err);
-                    return;
+                // store the data
+                if (!global.storeData) {
+                    global.storeData = {};
                 }
 
-                console.log('Data inserted');
-            });
+                global.storeData[type] = { ...data };
+
+                // Combine data from both sensor types into one object
+                const combinedData = {
+                    plantData: global.storeData['plant_ESP32'] || {},
+                    environmentData: global.storeData['environment_ESP32'] || {}
+                };
+
+                console.log('Combined Data:', combinedData);
+            }
         } catch (error) {
-            console.log('Got an error', error);
+            console.log('Got an error while parsing data:', error);
         }
     });
 
     ws.on('close', function close() {
         console.log('ESP32 disconnected');
+    });
+
+    ws.on('error', function error(err) {
+        console.log('WebSocket error: ', err);
     });
 });
 
@@ -53,5 +71,5 @@ app.use(express.json());
 app.use(router);
 
 app.listen(process.env.PORT, process.env.IP4_ADDRESS_DEV, () => {
-    console.log(`Server is running on : ${process.env.IP4_ADDRESS_DEV}:${process.env.PORT}`);
+    console.log(`Server is running on http://${process.env.IP4_ADDRESS_DEV}:${process.env.PORT}`);
 });
