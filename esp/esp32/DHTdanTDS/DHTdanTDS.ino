@@ -1,18 +1,18 @@
-#define BLYNK_TEMPLATE_ID "TMPL68FSq4d8e"
-#define BLYNK_TEMPLATE_NAME "Smart Hidroponik"
-#define BLYNK_AUTH_TOKEN "5cmX2SdrFnscq7WZvCXxWuEfxTbkEoHK"
-
 #include <WiFi.h>
 #include <ArduinoJson.h>
 #include <Arduino.h>
 #include <ArduinoWebsockets.h>
 #include "DHT.h"
 
+
 #define TdsSensorPin A0
 #define VREF 3.3
 #define SCOUNT 30
-#define DHT_PIN 14
-#define DHT_TYPE DHT11
+#define DHT11_PIN 14  
+#define DHT22_PIN 26
+#define DHT11_TYPE DHT11
+#define DHT22_TYPE DHT22
+
 
 int analogBuffer[SCOUNT];
 int analogBufferTemp[SCOUNT];
@@ -24,10 +24,14 @@ float temperature = 0;
 
 const char *ssid = "FIK-Dekanat";
 const char *password = "F4silkom";
-const char *websocket_server = "ws://192.168.1.16:10000";
+const char *websocket_server = "ws://172.23.13.115:10000";
 const char *type_sensor = "environment_ESP32";
 
-DHT dht(DHT_PIN, DHT_TYPE);
+using namespace websockets;
+WebsocketsClient client;
+
+DHT dht11(DHT11_PIN, DHT11_TYPE);
+DHT dht22(DHT22_PIN, DHT22_TYPE);
 
 int getMedianNum(int bArray[], int iFilterLen)
 {
@@ -54,7 +58,8 @@ void setup()
 {
     Serial.begin(115200);
     pinMode(TdsSensorPin, INPUT);
-    dht.begin();
+    dht11.begin();
+    dht22.begin();
     WiFi.begin(ssid, password);
 
     Serial.print("Connecting to WiFi ..");
@@ -89,12 +94,14 @@ void loop()
             analogBufferIndex = (analogBufferIndex + 1) % SCOUNT;
         }
 
-        float temperature = dht.readTemperature();
-        float humidity = dht.readHumidity();
+        float temperature_atas = dht11.readTemperature();
+        float humidity_atas = dht11.readHumidity();
+        float temperature_bawah = dht22.readTemperature();
+        float humidity_bawah = dht22.readHumidity();
 
-        if (isnan(temperature) || isnan(humidity))
+        if (isnan(temperature_atas) || isnan(humidity_atas) || isnan(temperature_bawah) || isnan(humidity_bawah))
         {
-            Serial.println("Gagal membaca sensor DHT11!");
+            Serial.println("Gagal membaca sensor DHT11 dan DHT22!");
             return;
         }
 
@@ -106,8 +113,10 @@ void loop()
 
         StaticJsonDocument<256> jsonDoc;
         jsonDoc["type"] = type_sensor;
-        jsonDoc["temperature"] = temperature;
-        jsonDoc["humidity"] = humidity;
+        jsonDoc["temperature_atas"] = temperature_atas;
+        jsonDoc["humidity_atas"] = humidity_atas;
+        jsonDoc["temperature_bawah"] = temperature_bawah;
+        jsonDoc["humidity_bawah"] = humidity_bawah;
         jsonDoc["tdsValue"] = tdsValue;
 
         String data;
