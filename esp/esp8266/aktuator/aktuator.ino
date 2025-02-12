@@ -1,16 +1,10 @@
-#define BLYNK_TEMPLATE_ID "TMPL68FSq4d8e"
-#define BLYNK_TEMPLATE_NAME "Smart Hidroponik"
-#define BLYNK_AUTH_TOKEN "5cmX2SdrFnscq7WZvCXxWuEfxTbkEoHK"
-
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>  
 #include <ArduinoJson.h>
-#include <BlynkSimpleEsp8266.h>
 #include <WiFiClientSecure.h>
+#include <Arduino.h>
+#include <ArduinoWebsockets.h>
 
-WiFiClientSecure client;
-
-#define moisturePin 13  // D7
 #define relayPin1 4     // D2
 #define relayPin2 5     // D1
 #define relayPin3 12    // lampu (D6)
@@ -18,12 +12,16 @@ WiFiClientSecure client;
 
 const char* ssid = "FIK-Dekanat";
 const char* password = "F4silkom";
+const char *websocket_server = "ws://172.23.13.115:10000";
+const char *type_sensor = "pump_lamp_ESP8266";
 
 String lampAPI = "https://blynk.cloud/external/api/get?token=5cmX2SdrFnscq7WZvCXxWuEfxTbkEoHK&V5";
-String avgMoistureAPI = "https://blynk.cloud/external/api/get?token=5cmX2SdrFnscq7WZvCXxWuEfxTbkEoHK&V0";
+String avgMoistureAPI = "http://172.23.13.115:15000/sensors/avg_moisture";
 String pumpAPI = "https://blynk.cloud/external/api/get?token=5cmX2SdrFnscq7WZvCXxWuEfxTbkEoHK&V2";
 
-BlynkTimer timer;
+WiFiClientSecure client;
+using namespace websockets;
+WebsocketsClient wsclient;
 
 void setup() {
   Serial.begin(115200);
