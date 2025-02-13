@@ -83,7 +83,6 @@ void setup()
 
 void loop()
 {
-
     if (client.available())
     {
         static unsigned long analogSampleTimepoint = millis();
@@ -127,6 +126,13 @@ void loop()
 
     } else {
         Serial.println("Client not available");
+        Serial.println("WebSocket disconnected, attempting to reconnect...");
+        while (!client.connect(websocket_server))
+        { // Loop hingga berhasil connect
+            Serial.println("Reconnection failed, retrying...");
+            delay(1000);
+        }
+        Serial.println("Reconnected to WebSocket Server");
     }
 
     client.poll();

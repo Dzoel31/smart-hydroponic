@@ -1,5 +1,6 @@
-#include <ESP8266WiFi.h>
-#include <ESP8266HTTPClient.h>  
+// #include <ESP8266WiFi.h>
+// #include <ESP8266HTTPClient.h> 
+#include <WiFi.h>
 #include <ArduinoJson.h>
 #include <WiFiClientSecure.h>
 #include <Arduino.h>
@@ -13,20 +14,17 @@
 const char* ssid = "duFIFA";
 const char* password = "Fahri8013";
 const char *websocket_server = "ws://192.168.1.9:10000";
-const char *type_sensor = "pump_lamp_ESP8266";
+const char *type_sensor = "pump_light_ESP8266";
 bool connected = false;
 
-// String lampAPI = "https://blynk.cloud/external/api/get?token=5cmX2SdrFnscq7WZvCXxWuEfxTbkEoHK&V5";
 String avgMoistureAPI = "http://172.23.13.115:15000/sensors/avg_moisture";
-// String pumpAPI = "https://blynk.cloud/external/api/get?token=5cmX2SdrFnscq7WZvCXxWuEfxTbkEoHK&V2";
 
-// WiFiClientSecure client;
 using namespace websockets;
 WebsocketsClient client;
 
 int pumpstatus = 0;
 int lampstatus = 0;
-float temperature;
+float temperature = 0;
 
 float temperatureAvg(float temperature1, float temperature2) {
   return (temperature1 + temperature2) / 2;
@@ -56,41 +54,37 @@ void onMessageCallback(WebsocketsMessage message)
     Serial.println("Temperature: " + String(temperature));
   }
 
-  if (jsonDoc["pump_status"] == 1 || jsonDoc["moistureAvg"] < 50)
+  if (jsonDoc["pumpStatus"] == 1 || jsonDoc["moistureAvg"] < 50)
   {
     pumpstatus = 1;
     digitalWrite(relayPin1, LOW); // Ubah pin sesuai pompa
     digitalWrite(relayPin2, LOW); // Ubah pin sesuai pompa
   }
-  else if (jsonDoc["pump_status"] == 0 || jsonDoc["moistureAvg"] >= 50)
+  else if (jsonDoc["pumpStatus"] == 0 || jsonDoc["moistureAvg"] >= 50)
   {
     pumpstatus = 0;
     digitalWrite(relayPin1, HIGH); // Ubah pin sesuai pompa
     digitalWrite(relayPin2, HIGH); // Ubah pin sesuai pompa
   }
-  else if (jsonDoc["lamp_status"] == 1 || temperature < 24)
+  else if (jsonDoc["lightStatus"] == 1 || temperature < 24)
   {
     lampstatus = 1;
     digitalWrite(relayPin3, LOW); // Ubah pin sesuai lampu
     digitalWrite(relayPin4, LOW); // Ubah pin sesuai lampu
   }
-  else if (jsonDoc["lamp_status"] == 0 || temperature > 31)
+  else if (jsonDoc["lightStatus"] == 0 || temperature > 31)
   {
     lampstatus = 0;
     digitalWrite(relayPin3, HIGH); // Ubah pin sesuai lampu
     digitalWrite(relayPin4, HIGH); // Ubah pin sesuai lampu
-  }
-  else
-  {
-    Serial.println("Invalid command");
   }
 }
 
 void sendData() {
   StaticJsonDocument<256> jsonDoc;
   jsonDoc["type"] = type_sensor;
-  jsonDoc["pump_status"] = pumpstatus;
-  jsonDoc["lamp_status"] = lampstatus;
+  jsonDoc["pumpStatus"] = pumpstatus;
+  jsonDoc["lightStatus"] = lampstatus;
 
   String data;
   serializeJson(jsonDoc, data);
@@ -115,7 +109,7 @@ void setup() {
   if (connected)
   {
     Serial.println("Connected to WebSocket Server");
-    client.onMessage(onMessageCallback); // Pasang callback
+    client.onMessage(onMessageCallback);
   }
   else
   {
