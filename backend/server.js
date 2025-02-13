@@ -53,6 +53,36 @@ wss.on('connection', function connection(ws) {
 
                 console.log('Combined Data:', combinedData);
             }
+
+            if (allowedActuatorType.includes(data.type)) {
+                // pop the type from the data
+                const type = data.type;
+                delete data.type;
+
+                // store the data
+                if (!global.storeData) {
+                    global.storeData = {};
+                }
+
+                global.storeData[type] = { ...data};
+
+                query = `INSERT INTO actuator_data (
+                    pumpStatus,
+                    lightStatus) VALUES (
+                        ${global.storeData.pumpStatus},
+                        ${global.storeData.lightStatus}
+                    )`;
+
+                db.query(query, (err, result) => {
+                    if (err) {
+                        console.log('Error inserting data: ', err);
+                        return;
+                    }
+
+                    console.log('Data inserted successfully');
+                });
+            }
+            
         } catch (error) {
             console.log('Got an error while parsing data:', error);
         }
