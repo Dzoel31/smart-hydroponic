@@ -81,7 +81,8 @@ wss.on('connection', function connection(ws) {
                     },
                     pump_light_ESP8266: {
                         pumpStatus: global.storeData['pump_light_ESP8266']?.pumpStatus || 0,
-                        lightStatus: global.storeData['pump_light_ESP8266']?.lightStatus || 0
+                        lightStatus: global.storeData['pump_light_ESP8266']?.lightStatus || 0,
+                        otomationStatus: global.storeData['pump_light_ESP8266']?.otomationStatus || 0
                     }
                 };
 
