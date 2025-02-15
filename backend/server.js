@@ -140,6 +140,13 @@ wss.on('connection', function connection(ws) {
                 
                 global.storeData[type] = { ...data};
 
+                combinedData = {
+                    pump_light_ESP8266: {
+                        pumpStatus: global.storeData['pump_light_ESP8266']?.pumpStatus || 0,
+                        lightStatus: global.storeData['pump_light_ESP8266']?.lightStatus || 0
+                    }
+                };
+
                 query = `INSERT INTO actuator_data (
                     pumpStatus,
                     lightStatus) VALUES (
@@ -157,9 +164,11 @@ wss.on('connection', function connection(ws) {
                 });
             }
 
+            var split_data = {...combinedData.plantData, ...combinedData.environmentData, ...combinedData.pump_light_ESP8266};
+
             clients.forEach((client) => {
                 if (client.readyState === WebSocket.OPEN) {
-                    client.send(JSON.stringify(combinedData));
+                    client.send(JSON.stringify(split_data));
                 }
             });            
             
