@@ -29,7 +29,7 @@ dotenv.config();
 
 const app = express();
 const wss = new WebSocket.Server({
-    host: process.env.IP4_ADDRESS_DEV,
+    host: process.env.IP4_ADDRESS,
     port: process.env.PORT_WS
 });
 
@@ -185,6 +185,6 @@ wss.on('connection', function connection(ws) {
 app.use(express.json());
 app.use(router_sensor);
 app.use(router_actuator);
-app.listen(process.env.PORT, process.env.IP4_ADDRESS_DEV, () => {
-    console.log(`Server is running on http://${process.env.IP4_ADDRESS_DEV}:${process.env.PORT}`);
+app.listen(process.env.PORT, process.env.IP4_ADDRESS, () => {
+    console.log(`Server is running on http://${process.env.IP4_ADDRESS}:${process.env.PORT}`);
 });
