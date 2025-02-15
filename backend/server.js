@@ -35,11 +35,8 @@ const wss = new WebSocket.Server({
 
 const allowedSensorType = [
     'plant_ESP32',
-    'environment_ESP32'
-]
-
-const allowedActuatorType = [
-    "pump_light_ESP8266",
+    'environment_ESP32',
+    'pump_light_ESP8266'
 ]
 
 let clients = new Set();
@@ -49,7 +46,7 @@ wss.on('connection', function connection(ws) {
     clients.add(ws);
     ws.on('message', function incoming(message) {
         console.log('received: %s', message.toString());
-        
+
         try {
             const data = JSON.parse(message.toString());
             if (allowedSensorType.includes(data.type)) {
@@ -81,9 +78,13 @@ wss.on('connection', function connection(ws) {
                         temperature_bawah: global.storeData['environment_ESP32']?.temperature_bawah || 0,
                         humidity_bawah: global.storeData['environment_ESP32']?.humidity_bawah || 0,
                         tds: global.storeData['environment_ESP32']?.tds || 0
+                    },
+                    pump_light_ESP8266: {
+                        pumpStatus: global.storeData['pump_light_ESP8266']?.pumpStatus || 0,
+                        lightStatus: global.storeData['pump_light_ESP8266']?.lightStatus || 0
                     }
                 };
-                
+
 
                 query = `INSERT INTO sensor_data (
                     moisture1,
@@ -128,50 +129,30 @@ wss.on('connection', function connection(ws) {
                 });
             }
 
-            if (allowedActuatorType.includes(data.type)) {
-                // pop the type from the data
-                const type = data.type;
-                delete data.type;
-
-                // store the data
-                if (!global.storeData) {
-                    global.storeData = {};
-                }
-                
-                global.storeData[type] = { ...data};
-
-                combinedData = {
-                    pump_light_ESP8266: {
-                        pumpStatus: global.storeData['pump_light_ESP8266']?.pumpStatus || 0,
-                        lightStatus: global.storeData['pump_light_ESP8266']?.lightStatus || 0
-                    }
-                };
-
-                query = `INSERT INTO actuator_data (
+            query = `INSERT INTO actuator_data (
                     pumpStatus,
                     lightStatus) VALUES (
                         ${global.storeData["pump_light_ESP8266"].pumpStatus},
                         ${global.storeData["pump_light_ESP8266"].lightStatus}
-                    )`;
+                        )`;
 
-                db.query(query, (err, result) => {
-                    if (err) {
-                        console.log('Error inserting data: ', err);
-                        return;
-                    }
+            db.query(query, (err, result) => {
+                if (err) {
+                    console.log('Error inserting data: ', err);
+                    return;
+                }
 
-                    console.log('Data inserted successfully');
-                });
-            }
+                console.log('Data inserted successfully');
+            });
 
-            var split_data = {...combinedData.plantData, ...combinedData.environmentData, ...combinedData.pump_light_ESP8266};
+            var split_data = { ...combinedData.plantData, ...combinedData.environmentData, ...combinedData.pump_light_ESP8266 };
 
             clients.forEach((client) => {
                 if (client.readyState === WebSocket.OPEN) {
                     client.send(JSON.stringify(split_data));
                 }
-            });            
-            
+            });
+
         } catch (error) {
             console.log('Got an error while parsing data:', error);
         }
