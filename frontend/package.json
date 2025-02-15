@@ -1,6 +1,0 @@
-{
-	"dependencies": {
-		"websocket": "^1.0.35",
-		"react": "^19.0.0"
-	}
-}

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Toggle</title>
+    <link href="./assets/style_out.css" rel="stylesheet">
+    <script defer src="./assets/script.js"></script>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
+
+    <!-- Navbar -->
+    <nav class="w-full bg-white shadow-md py-4 px-6 flex items-center justify-between fixed top-0 left-0 right-0">
+        <div class="flex items-center">
+            <img src="./assets/upn.png" alt="Logo" style="height: 72px; width: auto; margin-right: 20px;"> 
+            <span class="text-2xl font-bold text-gray-700">Smart Hidroponik Monitoring Dashboard</span>
+        </div>
+    </nav>
+
+    <br>
+
+    <!-- Container -->
+    <div class="bg-white shadow-lg rounded-lg p-6 w-full max-w-md text-center mt-16">
+
+        <div class="grid grid-cols-2 gap-4 bg-gray-100 p-4 rounded-lg shadow-md w-full">
+            <div class="card bg-white p-4 rounded shadow">Water Flow: <span id="flowRate" class="font-bold">0</span> l/m</div>
+            <div class="card bg-white p-4 rounded shadow">Water Level: <span id="distanceCm" class="font-bold">0</span> cm</div>
+            <div class="card bg-white p-4 rounded shadow">Total Liters: <span id="totalLitres" class="font-bold">0</span> l</div>
+            <div class="card bg-white p-4 rounded shadow">Avg Moisture: <span id="moistureAvg" class="font-bold">0</span>%</div>
+            <div class="card bg-white p-4 rounded shadow">Moisture 1: <span id="moisture1" class="font-bold">0</span>%</div>
+            <div class="card bg-white p-4 rounded shadow">Moisture 2: <span id="moisture2" class="font-bold">0</span>%</div>
+            <div class="card bg-white p-4 rounded shadow">Moisture 3: <span id="moisture3" class="font-bold">0</span>%</div>
+            <div class="card bg-white p-4 rounded shadow">Moisture 4: <span id="moisture4" class="font-bold">0</span>%</div>
+            <div class="card bg-white p-4 rounded shadow">Moisture 5: <span id="moisture5" class="font-bold">0</span>%</div>
+            <div class="card bg-white p-4 rounded shadow">Moisture 6: <span id="moisture6" class="font-bold">0</span>%</div>
+            <div class="card bg-white p-4 rounded shadow col-span-2">Temperature Atas: <span id="temperature_atas" class="font-bold">0</span>°C</div>
+            <div class="card bg-white p-4 rounded shadow col-span-2">Temperature Bawah: <span id="temperature_bawah" class="font-bold">0</span>°C</div>
+        </div>
+        <br>
+        <h1 class="text-2xl font-bold mb-4 text-gray-700">Kontrol Pompa dan Lampu</h1>
+        
+        <button id="toggleOtomation" class="w-full bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mb-2">
+            Otomatis
+        </button>
+
+        <button id="toggleButton" class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-2">
+            Mati
+        </button>
+        
+        <button id="toggleLampButton" class="w-full bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded mb-4">
+            Nyala
+        </button>
+        
+        <div class="bg-gray-200 p-4 rounded-lg shadow-md">
+            <p id="statusPump" class="text-gray-700 font-semibold">Pump Status: Unknown</p>
+            <p id="statusLamp" class="text-gray-700 font-semibold">Lamp Status: Unknown</p>
+        </div>
+    </div>
+
+</body>
+</html>
