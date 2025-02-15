@@ -1,6 +1,5 @@
-// #include <ESP8266WiFi.h>
-// #include <ESP8266HTTPClient.h> 
-#include <WiFi.h>
+#include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h> 
 #include <ArduinoJson.h>
 #include <WiFiClientSecure.h>
 #include <Arduino.h>
@@ -11,19 +10,19 @@
 #define relayPin3 12    // lampu (D6)
 #define relayPin4 14    // lampu (D5)
 
-const char* ssid = "duFIFA";
-const char* password = "Fahri8013";
-const char *websocket_server = "ws://192.168.1.9:10000";
+const char* ssid = "FIK-Dekanat";
+const char* password = "F4silkom";
+const char *websocket_server = "ws://172.23.0.188:10000";
 const char *type_sensor = "pump_light_ESP8266";
 bool connected = false;
 
-String avgMoistureAPI = "http://172.23.13.115:15000/sensors/avg_moisture";
+String avgMoistureAPI = "http://172.23.0.188:15000/sensors/moistureAvg";
 
 using namespace websockets;
 WebsocketsClient client;
 
-int pumpstatus = 0;
-int lampstatus = 0;
+int pumpstatus;
+int lampstatus;
 float temperature = 0;
 
 float temperatureAvg(float temperature1, float temperature2) {
@@ -54,25 +53,26 @@ void onMessageCallback(WebsocketsMessage message)
     Serial.println("Temperature: " + String(temperature));
   }
 
-  if (jsonDoc["pumpStatus"] == 1 || jsonDoc["moistureAvg"] < 50)
+  if (jsonDoc["pumpStatus"] == 1 || jsonDoc["moistureAvg"] < 55)
   {
     pumpstatus = 1;
     digitalWrite(relayPin1, LOW); // Ubah pin sesuai pompa
     digitalWrite(relayPin2, LOW); // Ubah pin sesuai pompa
+    delay(15000);
   }
-  else if (jsonDoc["pumpStatus"] == 0 || jsonDoc["moistureAvg"] >= 50)
+  if (jsonDoc["pumpStatus"] == 0 || jsonDoc["moistureAvg"] >= 55)
   {
     pumpstatus = 0;
     digitalWrite(relayPin1, HIGH); // Ubah pin sesuai pompa
     digitalWrite(relayPin2, HIGH); // Ubah pin sesuai pompa
   }
-  else if (jsonDoc["lightStatus"] == 1 || temperature < 24)
+  if (jsonDoc["lightStatus"] == 1 || temperature < 27 && lampstatus == 0)
   {
     lampstatus = 1;
     digitalWrite(relayPin3, LOW); // Ubah pin sesuai lampu
     digitalWrite(relayPin4, LOW); // Ubah pin sesuai lampu
   }
-  else if (jsonDoc["lightStatus"] == 0 || temperature > 31)
+  if (jsonDoc["lightStatus"] == 0 || temperature >= 27 && lampstatus == 1)
   {
     lampstatus = 0;
     digitalWrite(relayPin3, HIGH); // Ubah pin sesuai lampu
@@ -120,6 +120,11 @@ void setup() {
   pinMode(relayPin2, OUTPUT); // pompa
   pinMode(relayPin3, OUTPUT); // lampu
   pinMode(relayPin4, OUTPUT); // lampu
+
+  digitalWrite(relayPin1, LOW); // Ubah pin sesuai pompa
+  digitalWrite(relayPin2, LOW); // Ubah pin sesuai pompa
+  digitalWrite(relayPin3, LOW); // lampu
+  digitalWrite(relayPin4, LOW); // lampu
 }
 
 void loop() {

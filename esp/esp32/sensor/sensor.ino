@@ -45,7 +45,7 @@ float distanceInch;
 
 const char *ssid = "FIK-Dekanat";
 const char *password = "F4silkom";
-const char *websocket_server = "ws://172.23.13.115:10000";
+const char *websocket_server = "ws://172.23.0.188:10000";
 const char *type_sensor = "plant_ESP32";
 
 using namespace websockets;

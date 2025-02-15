@@ -43,6 +43,7 @@ const allowedActuatorType = [
 ]
 
 let clients = new Set();
+var combinedData = {};
 
 wss.on('connection', function connection(ws) {
     clients.add(ws);
@@ -61,9 +62,26 @@ wss.on('connection', function connection(ws) {
 
                 global.storeData[type] = { ...data };
 
-                const combinedData = {
-                    plantData: global.storeData['plant_ESP32'] || {},
-                    environmentData: global.storeData['environment_ESP32'] || {}
+                combinedData = {
+                    plantData: {
+                        moisture1: global.storeData['plant_ESP32']?.moisture1 || 0,
+                        moisture2: global.storeData['plant_ESP32']?.moisture2 || 0,
+                        moisture3: global.storeData['plant_ESP32']?.moisture3 || 0,
+                        moisture4: global.storeData['plant_ESP32']?.moisture4 || 0,
+                        moisture5: global.storeData['plant_ESP32']?.moisture5 || 0,
+                        moisture6: global.storeData['plant_ESP32']?.moisture6 || 0,
+                        moistureAvg: global.storeData['plant_ESP32']?.moistureAvg || 0,
+                        flowRate: global.storeData['plant_ESP32']?.flowRate || 0,
+                        totalLitres: global.storeData['plant_ESP32']?.totalLitres || 0,
+                        distanceCm: global.storeData['plant_ESP32']?.distanceCm || 0
+                    },
+                    environmentData: {
+                        temperature_atas: global.storeData['environment_ESP32']?.temperature_atas || 0,
+                        humidity_atas: global.storeData['environment_ESP32']?.humidity_atas || 0,
+                        temperature_bawah: global.storeData['environment_ESP32']?.temperature_bawah || 0,
+                        humidity_bawah: global.storeData['environment_ESP32']?.humidity_bawah || 0,
+                        tds: global.storeData['environment_ESP32']?.tds || 0
+                    }
                 };
                 
 
@@ -141,7 +159,7 @@ wss.on('connection', function connection(ws) {
 
             clients.forEach((client) => {
                 if (client.readyState === WebSocket.OPEN) {
-                    client.send(JSON.stringify(data));
+                    client.send(JSON.stringify(combinedData));
                 }
             });            
             
