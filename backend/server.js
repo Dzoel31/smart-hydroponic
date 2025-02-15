@@ -133,8 +133,8 @@ wss.on('connection', function connection(ws) {
             query = `INSERT INTO actuator_data (
                     pumpStatus,
                     lightStatus) VALUES (
-                        ${global.storeData["pump_light_ESP8266"].pumpStatus},
-                        ${global.storeData["pump_light_ESP8266"].lightStatus}
+                        ${combinedData.storeData["pump_light_ESP8266"].pumpStatus},
+                        ${combinedData.storeData["pump_light_ESP8266"].lightStatus}
                         )`;
 
             db.query(query, (err, result) => {

@@ -24,6 +24,7 @@ WebsocketsClient client;
 int pumpstatus;
 int lampstatus;
 float temperature;
+int otomationStatus;
 
 float temperatureAvg(float temperature1, float temperature2) {
   return (temperature1 + temperature2) / 2;
@@ -52,6 +53,8 @@ void onMessageCallback(WebsocketsMessage message) {
   }
 
   if (jsonDoc["otomationStatus"] == 1) {
+    otomationStatus = 1;
+    Serial.println("Otomatis nyala");
     if (jsonDoc["moistureAvg"] < 55) {
       pumpstatus = 1;
       digitalWrite(relayPin1, LOW);  // Ubah pin sesuai pompa
@@ -74,6 +77,8 @@ void onMessageCallback(WebsocketsMessage message) {
     }
   }
   if (jsonDoc["otomationStatus"] == 0) {
+    otomationStatus = 1;
+    Serial.println("Otomatis mati");
     if (jsonDoc["pumpStatus"] == 1) {
       pumpstatus = 1;
       digitalWrite(relayPin1, LOW);  // Ubah pin sesuai pompa
@@ -102,6 +107,7 @@ void sendData() {
   jsonDoc["type"] = type_sensor;
   jsonDoc["pumpStatus"] = pumpstatus;
   jsonDoc["lightStatus"] = lampstatus;
+  jsonDoc["otomationStatus"] = otomationStatus;
 
   String data;
   serializeJson(jsonDoc, data);
