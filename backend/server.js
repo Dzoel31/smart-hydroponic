@@ -8,21 +8,20 @@ const router_actuator = require('./routes/aktuator');
 const db = require('./config/db');
 const sql = fs.readFileSync('./database/iot_smart_hydroponic.sql', 'utf8');
 
-db.connect((err) => {
+db.connect((err, message) => {
     if (err) {
-        console.log('Error connecting to database: ', err.message);
+        console.log('Error connecting to database:', err.message);
         return;
     }
+    console.log('Database connected');
 
-    console.log('Connected to database');
-});
-
-db.query(sql, (err, result) => {
-    if (err) {
-        console.log('Error creating database: ', err.message);
-        return;
-    }
-    console.log("SQL Database created");
+    db.query(sql, (err, result) => {
+        if (err) {
+            console.log('Error executing SQL:', err.message);
+            return;
+        }
+        console.log("Initialized database completed");
+    });
 });
 
 dotenv.config();
@@ -87,7 +86,7 @@ wss.on('connection', function connection(ws) {
                 };
 
 
-                query = `INSERT INTO sensor_data (
+                query = `INSERT INTO public.sensor_data (
                     moisture1,
                     moisture2,
                     moisture3,
@@ -130,7 +129,7 @@ wss.on('connection', function connection(ws) {
                 });
             }
 
-            query = `INSERT INTO actuator_data (
+            query = `INSERT INTO public.actuator_data (
                     pumpStatus,
                     lightStatus) VALUES (
                         ${combinedData.pump_light_ESP8266.pumpStatus},

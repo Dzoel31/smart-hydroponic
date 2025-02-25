@@ -1,7 +1,7 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "Backend for Hydroponic Monitoring System",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -16,9 +16,9 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "fs": "0.0.1-security",
-    "mysql2": "^3.12.0",
     "nodemon": "^3.1.9",
-    "pg": "^8.13.1",
+    "pg": "^8.13.3",
+    "pg-native": "^3.2.2",
     "ws": "^8.18.0"
   }
 }
