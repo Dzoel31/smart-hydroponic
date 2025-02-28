@@ -12,21 +12,20 @@
 
 const char* ssid = "FIK-Hotspot";
 const char* password = "T4nahairku";
-const char* websocket_server = "ws://172.23.0.188:10000/actuator";
+const char* websocket_actuator = "ws://172.23.0.188:10000/actuator";
 const char* webcommand = "ws://172.23.0.188:10000/webcommand";
-const char* plantdata = "ws://172.23.0.188:10000/plantdata";
-const char* environment = "ws://172.23.0.188:10000/environmentdata";
-bool connected = false;
+bool actuator_connected = false;
 
 String avgMoistureAPI = "http://172.23.0.188:15000/sensors/moistureAvg";
 
 using namespace websockets;
-WebsocketsClient client;
+WebsocketsClient client_actuator;
+WebsocketsClient client_webcommand;
 
 int pumpstatus;
 int lampstatus;
 float temperature;
-int otomationStatus;
+int otomationStatus = 1;
 
 float temperatureAvg(float temperature1, float temperature2) {
   return (temperature1 + temperature2) / 2;
@@ -54,8 +53,12 @@ void onMessageCallback(WebsocketsMessage message) {
     Serial.println("Temperature: " + String(temperature));
   }
 
-  if (jsonDoc["otomationStatus"] == 1) {
-    otomationStatus = 1;
+  if (jsonDoc["otomationStatus"]) {
+    otomationStatus = jsonDoc["otomationStatus"];
+    Serial.println("Otomation Status: " + String(otomationStatus));
+  }
+
+  if (otomationStatus == 1) {
     Serial.println("Otomatis nyala");
     if (jsonDoc["moistureAvg"] < 55) {
       pumpstatus = 1;
@@ -78,8 +81,7 @@ void onMessageCallback(WebsocketsMessage message) {
       digitalWrite(relayPin4, HIGH);  // Ubah pin sesuai lampu
     }
   }
-  if (jsonDoc["otomationStatus"] == 0) {
-    otomationStatus = 1;
+  if (otomationStatus == 0) {
     Serial.println("Otomatis mati");
     if (jsonDoc["pumpStatus"] == 1) {
       pumpstatus = 1;
@@ -117,6 +119,35 @@ void sendData() {
   Serial.println("Sent: " + data);
 }
 
+void checkWiFiConnection()
+{
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    Serial.println("WiFi disconnected, attempting to reconnect...");
+
+    WiFi.disconnect();
+    WiFi.begin("SSID", "PASSWORD"); // Ganti dengan SSID dan password WiFi kamu
+
+    unsigned long startAttemptTime = millis();
+    const unsigned long wifiTimeout = 10000; // Timeout 10 detik
+
+    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < wifiTimeout)
+    {
+      Serial.println("Reconnecting...");
+      delay(500); // Tunggu 500ms antara percobaan
+    }
+
+    if (WiFi.status() == WL_CONNECTED)
+    {
+      Serial.println("Reconnected to WiFi!");
+    }
+    else
+    {
+      Serial.println("Failed to reconnect. Will retry later.");
+    }
+  }
+}
+
 void setup() {
   Serial.begin(115200);
 
@@ -129,10 +160,18 @@ void setup() {
   Serial.println("\nConnected to WiFi, IP address:");
   Serial.println(WiFi.localIP());
 
-  bool connected = client.connect(websocket_server);
-  if (connected) {
-    Serial.println("Connected to WebSocket Server");
-    client.onMessage(onMessageCallback);
+  bool actuator_connected = client_actuator.connect(websocket_actuator);
+  if (actuator_connected) {
+    Serial.println("Connected to WebSocket Actuator Server");
+    client_actuator.onMessage(onMessageCallback);
+  } else {
+    Serial.println("Failed to connect");
+  }
+
+  bool webcommand_connected = client_webcommand.connect(webcommand);
+  if (webcommand_connected) {
+    Serial.println("Connected to WebSocket Webcommand Server");
+    client_webcommand.onMessage(onMessageCallback);
   } else {
     Serial.println("Failed to connect");
   }
@@ -154,14 +193,22 @@ void loop() {
     sendData();
   } else {
     Serial.println("WebSocket disconnected, attempting to reconnect...");
-    while (!client.connect(websocket_server)) {  // Loop hingga berhasil connect
+    while (!client_actuator.connect(websocket_actuator)) {  // Loop hingga berhasil connect
       Serial.println("Reconnection failed, retrying...");
       delay(1000);
     }
-    Serial.println("Reconnected to WebSocket Server");
-    client.onMessage(onMessageCallback);  // Pasang ulang callback
+    Serial.println("Reconnected to WebSocket actuator Server");
+    client_actuator.onMessage(onMessageCallback);  // Pasang ulang callback
+
+    while (!client_webcommand.connect(webcommand)) {  // Loop hingga berhasil connect
+      Serial.println("Reconnection failed, retrying...");
+      delay(1000);
+    }
+    Serial.println("Reconnected to WebSocket webcommand Server");
+    client_webcommand.onMessage(onMessageCallback);  // Pasang ulang callback
   }
 
-  // sendData(); // Kirim data sensor tetap dilakukan
-  delay(5000);
+  checkWiFiConnection();
+
+  delay(10000);
 }

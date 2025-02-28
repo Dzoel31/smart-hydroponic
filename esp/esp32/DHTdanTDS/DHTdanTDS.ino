@@ -53,6 +53,35 @@ int getMedianNum(int bArray[], int iFilterLen)
     return (iFilterLen & 1) ? bTab[(iFilterLen - 1) / 2] : (bTab[iFilterLen / 2] + bTab[iFilterLen / 2 - 1]) / 2;
 }
 
+void checkWiFiConnection()
+{
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        Serial.println("WiFi disconnected, attempting to reconnect...");
+
+        WiFi.disconnect();
+        WiFi.begin("SSID", "PASSWORD"); // Ganti dengan SSID dan password WiFi kamu
+
+        unsigned long startAttemptTime = millis();
+        const unsigned long wifiTimeout = 10000; // Timeout 10 detik
+
+        while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < wifiTimeout)
+        {
+            Serial.println("Reconnecting...");
+            delay(500); // Tunggu 500ms antara percobaan
+        }
+
+        if (WiFi.status() == WL_CONNECTED)
+        {
+            Serial.println("Reconnected to WiFi!");
+        }
+        else
+        {
+            Serial.println("Failed to reconnect. Will retry later.");
+        }
+    }
+}
+
 void setup()
 {
     Serial.begin(115200);
@@ -133,6 +162,8 @@ void loop()
         Serial.println("Reconnected to WebSocket Server");
     }
 
+    checkWiFiConnection();
+
     client.poll();
-    delay(5000);
+    delay(10000);
 }

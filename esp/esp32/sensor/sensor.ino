@@ -17,6 +17,8 @@
 // define sound speed in cm/uS
 #define SOUND_SPEED 0.034
 
+#define JARAK_SENSOR_KE_DASAR 40
+
 int moisture1, moistureAnalog1;
 int moisture2, moistureAnalog2;
 int moisture3, moistureAnalog3;
@@ -31,13 +33,17 @@ float Litres;
 float totalLitres = 0;
 int pump_status = 0;
 
-long currentMillis = 0;
-long previousMillis = 0;
 int interval = 1000;
-boolean ledState = LOW;
-float calibrationFactor = 4.5;
-volatile byte pulseCount;
-byte pulse1Sec = 0;
+const float calibrationFactor = 4.5;
+volatile int pulseCount = 0;
+
+unsigned long lastFlowCheck = 0;
+unsigned long lastUltrasonicCheck = 0;
+unsigned long lastSendTime = 0;
+
+const unsigned long flowInterval = 1000;
+const unsigned long ultrasonicInterval = 500;
+const unsigned long sendInterval = 10000;
 
 long duration;
 float distanceCm;
@@ -85,86 +91,128 @@ void setup(void)
 	pinMode(triggerPin, OUTPUT);
 	pinMode(echoPin, INPUT);
 
-	pulseCount = 0;
-	flowRate = 0.0;
-	previousMillis = 0;
-
 	attachInterrupt(digitalPinToInterrupt(waterflowPin), pulseCounter, FALLING);
+}
+
+float getWaterLevel() {
+	digitalWrite(triggerPin, LOW);
+	delayMicroseconds(2);
+
+	digitalWrite(triggerPin, HIGH);
+	delayMicroseconds(10);
+	digitalWrite(triggerPin, LOW);
+
+	duration = pulseIn(echoPin, HIGH);
+
+	distanceCm = JARAK_SENSOR_KE_DASAR - (duration * SOUND_SPEED / 2);
+	return distanceCm;
+}
+
+void checkWiFiConnection()
+{
+	if (WiFi.status() != WL_CONNECTED)
+	{
+		Serial.println("WiFi disconnected, attempting to reconnect...");
+
+		WiFi.disconnect();
+		WiFi.begin("SSID", "PASSWORD"); // Ganti dengan SSID dan password WiFi kamu
+
+		unsigned long startAttemptTime = millis();
+		const unsigned long wifiTimeout = 10000; // Timeout 10 detik
+
+		while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < wifiTimeout)
+		{
+			Serial.println("Reconnecting...");
+			delay(500); // Tunggu 500ms antara percobaan
+		}
+
+		if (WiFi.status() == WL_CONNECTED)
+		{
+			Serial.println("Reconnected to WiFi!");
+		}
+		else
+		{
+			Serial.println("Failed to reconnect. Will retry later.");
+		}
+	}
 }
 
 void loop()
 {
 	if (client.available()) {
-
-		currentMillis = millis();
-	
-		if (currentMillis - previousMillis > interval)
+		unsigned long currentMillis = millis();
+		if (currentMillis - lastFlowCheck >= flowInterval)
 		{
-			pulse1Sec = pulseCount;
+			detachInterrupt(waterflowPin);
+	
+			// flowRate = ((1000.0 / (millis() - previousMillis)) * pulse1Sec) / calibrationFactor;
+			flowRate = (pulseCount / calibrationFactor);
+			float litersPerSecond = flowRate / 60;
+			totalLitres += litersPerSecond;
 			pulseCount = 0;
 			
-	
-			flowRate = ((1000.0 / (millis() - previousMillis)) * pulse1Sec) / calibrationFactor;
-			previousMillis = millis();
-	
-			// Menghitung volume air dalam liter
-			Litres = (flowRate / 60);
-			totalLitres += Litres; // Tambahkan volume air ke total volume
-	
+			lastFlowCheck = currentMillis;
+
+			attachInterrupt(digitalPinToInterrupt(waterflowPin), pulseCounter, FALLING);
 		}
+
+		if (currentMillis - lastUltrasonicCheck >= ultrasonicInterval)
+		{
+			distanceCm = getWaterLevel();
+			lastUltrasonicCheck = currentMillis;
+			
+			moistureAnalog1 = analogRead(moisturePin1);
+			moisture1 = (100 - ((moistureAnalog1 / 4095.0) * 100));
 	
-		moistureAnalog1 = analogRead(moisturePin1);
-		moisture1 = (100 - ((moistureAnalog1 / 4095.0) * 100));
-
-		moistureAnalog2 = analogRead(moisturePin2);
-		moisture2 = (100 - ((moistureAnalog2 / 4095.0) * 100));
-
-		moistureAnalog3 = analogRead(moisturePin3);
-		moisture3 = (100 - ((moistureAnalog3 / 4095.0) * 100));
-
-		moistureAnalog4 = analogRead(moisturePin4);
-		moisture4 = (100 - ((moistureAnalog4 / 4095.0) * 100));
-
-		moistureAnalog5 = analogRead(moisturePin5);
-		moisture5 = (100 - ((moistureAnalog5 / 4095.0) * 100));
-
-		moistureAnalog6 = analogRead(moisturePin6);
-		moisture6 = (100 - ((moistureAnalog6 / 4095.0) * 100));
-
-		moistureAvg = (moisture1 + moisture2 + moisture3 + moisture4 + moisture5 + moisture6) / 6;
+			moistureAnalog2 = analogRead(moisturePin2);
+			moisture2 = (100 - ((moistureAnalog2 / 4095.0) * 100));
 	
+			moistureAnalog3 = analogRead(moisturePin3);
+			moisture3 = (100 - ((moistureAnalog3 / 4095.0) * 100));
 	
-		digitalWrite(triggerPin, LOW);
-		delayMicroseconds(2);
+			moistureAnalog4 = analogRead(moisturePin4);
+			moisture4 = (100 - ((moistureAnalog4 / 4095.0) * 100));
 	
-		digitalWrite(triggerPin, HIGH);
-		delayMicroseconds(10);
-		digitalWrite(triggerPin, LOW);
+			moistureAnalog5 = analogRead(moisturePin5);
+			moisture5 = (100 - ((moistureAnalog5 / 4095.0) * 100));
 	
-		duration = pulseIn(echoPin, HIGH);
-	
-		distanceCm = duration * SOUND_SPEED / 2;
+			moistureAnalog6 = analogRead(moisturePin6);
+			moisture6 = (100 - ((moistureAnalog6 / 4095.0) * 100));
 
-		// Create JSON payload
-		StaticJsonDocument<256> jsonDoc;
-		jsonDoc["moisture1"] = moisture1;
-		jsonDoc["moisture2"] = moisture2;
-		jsonDoc["moisture3"] = moisture3;
-		jsonDoc["moisture4"] = moisture4;
-		jsonDoc["moisture5"] = moisture5;
-		jsonDoc["moisture6"] = moisture6;
-		jsonDoc["moistureAvg"] = moistureAvg;
-		jsonDoc["flowRate"] = flowRate;
-		jsonDoc["totalLitres"] = totalLitres;
-		jsonDoc["distanceCm"] = distanceCm;
+			moistureAvg = (moisture1 + moisture2 + moisture3 + moisture4 + moisture5 + moisture6) / 6;
+		}
 
-		String data;
-		serializeJson(jsonDoc, data);
+		if (currentMillis - lastSendTime < sendInterval)
+		{
+			// Create JSON payload
+			StaticJsonDocument<256> jsonDoc;
+			jsonDoc["moisture1"] = moisture1;
+			jsonDoc["moisture2"] = moisture2;
+			jsonDoc["moisture3"] = moisture3;
+			jsonDoc["moisture4"] = moisture4;
+			jsonDoc["moisture5"] = moisture5;
+			jsonDoc["moisture6"] = moisture6;
+			jsonDoc["moistureAvg"] = moistureAvg;
+			jsonDoc["flowRate"] = flowRate;
+			jsonDoc["totalLitres"] = totalLitres;
+			jsonDoc["distanceCm"] = distanceCm;
 
-		// Send data to WebSocket server
-		client.send(data);
-		Serial.println("Sent: " + data);
+			String data;
+			serializeJson(jsonDoc, data);
 
+			// Send data to WebSocket server
+			client.send(data);
+			Serial.println("Sent: " + data);
+		}
+
+		if (currentMillis >= 86400000) {
+			totalLitres = 0;
+			lastFlowCheck = 0;
+			lastUltrasonicCheck = 0;
+			lastSendTime = 0;
+		}
+		
+		client.poll(); // Check for incoming messages
 	} else {
 		Serial.println("Client not available");
 		Serial.println("WebSocket disconnected, attempting to reconnect...");
@@ -175,7 +223,6 @@ void loop()
 		}
 		Serial.println("Reconnected to WebSocket Server");
 	}
-	totalLitres = 0;
-	client.poll(); // Check for incoming messages
-	delay(5000);   // Send data every 5 seconds
+
+	checkWiFiConnection();
 }
