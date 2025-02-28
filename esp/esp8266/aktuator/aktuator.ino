@@ -10,10 +10,12 @@
 #define relayPin3 12  // lampu (D6)
 #define relayPin4 14  // lampu (D5)
 
-const char* ssid = "FIK-Dekanat";
-const char* password = "F4silkom";
-const char* websocket_server = "ws://172.23.0.188:10000";
-const char* type_sensor = "pump_light_ESP8266";
+const char* ssid = "FIK-Hotspot";
+const char* password = "T4nahairku";
+const char* websocket_server = "ws://172.23.0.188:10000/actuator";
+const char* webcommand = "ws://172.23.0.188:10000/webcommand";
+const char* plantdata = "ws://172.23.0.188:10000/plantdata";
+const char* environment = "ws://172.23.0.188:10000/environmentdata";
 bool connected = false;
 
 String avgMoistureAPI = "http://172.23.0.188:15000/sensors/moistureAvg";
@@ -104,7 +106,6 @@ void onMessageCallback(WebsocketsMessage message) {
 
 void sendData() {
   StaticJsonDocument<256> jsonDoc;
-  jsonDoc["type"] = type_sensor;
   jsonDoc["pumpStatus"] = pumpstatus;
   jsonDoc["lightStatus"] = lampstatus;
   jsonDoc["otomationStatus"] = otomationStatus;
@@ -162,5 +163,5 @@ void loop() {
   }
 
   // sendData(); // Kirim data sensor tetap dilakukan
-  delay(3000);
+  delay(5000);
 }

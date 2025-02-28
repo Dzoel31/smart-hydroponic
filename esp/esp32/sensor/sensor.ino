@@ -43,10 +43,9 @@ long duration;
 float distanceCm;
 float distanceInch;
 
-const char *ssid = "FIK-Dekanat";
-const char *password = "F4silkom";
-const char *websocket_server = "ws://172.23.0.188:10000";
-const char *type_sensor = "plant_ESP32";
+const char *ssid = "FIK-Hotspot";
+const char *password = "T4nahairku";
+const char *websocket_server = "ws://172.23.0.188:10000/plantdata";
 
 using namespace websockets;
 WebsocketsClient client;
@@ -148,7 +147,6 @@ void loop()
 
 		// Create JSON payload
 		StaticJsonDocument<256> jsonDoc;
-		jsonDoc["type"] = type_sensor;
 		jsonDoc["moisture1"] = moisture1;
 		jsonDoc["moisture2"] = moisture2;
 		jsonDoc["moisture3"] = moisture3;
@@ -179,5 +177,5 @@ void loop()
 	}
 	totalLitres = 0;
 	client.poll(); // Check for incoming messages
-	delay(3000);   // Send data every 5 seconds
+	delay(5000);   // Send data every 5 seconds
 }

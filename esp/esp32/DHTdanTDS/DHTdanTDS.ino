@@ -22,10 +22,9 @@ float averageVoltage = 0;
 float tdsValue = 0;
 float temperature = 0;
 
-const char *ssid = "FIK-Dekanat";
-const char *password = "F4silkom";
-const char *websocket_server = "ws://172.23.0.188:10000";
-const char *type_sensor = "environment_ESP32";
+const char *ssid = "FIK-Hotspot";
+const char *password = "T4nahairku";
+const char *websocket_server = "ws://172.23.0.188:10000/environmentdata";
 
 using namespace websockets;
 WebsocketsClient client;
@@ -111,7 +110,6 @@ void loop()
         tdsValue = (133.42 * pow(compensationVoltage, 3) - 255.86 * pow(compensationVoltage, 2) + 857.39 * compensationVoltage);
 
         StaticJsonDocument<256> jsonDoc;
-        jsonDoc["type"] = type_sensor;
         jsonDoc["temperature_atas"] = temperature_atas;
         jsonDoc["humidity_atas"] = humidity_atas;
         jsonDoc["temperature_bawah"] = temperature_bawah;
@@ -136,5 +134,5 @@ void loop()
     }
 
     client.poll();
-    delay(3000);
+    delay(5000);
 }
