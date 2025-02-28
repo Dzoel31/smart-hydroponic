@@ -42,13 +42,61 @@ Object.entries(wssMap).forEach(([path, wss]) => {
 
         ws.on('message', (message) => {
             console.log(`Received message from ${path}: ${message.toString()}`);
+            let parsedMessage;
+            try {
+            parsedMessage = JSON.parse(message);
+            } catch (e) {
+            console.error(`Invalid JSON received from ${path}:`, e.message);
+            ws.send('Invalid JSON format');
+            return;
+            }
+
             wss.clients.forEach((client) => {
-                if (client !== ws && client.readyState === WebSocket.OPEN) {
-                    client.send(message);
-                }
+            if (client !== ws && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify(parsedMessage));
+            }
             });
 
-            ws.send(`Server received: ${message.toString()}`);
+            if (path === '/plantdata') {
+                const query = 'INSERT INTO plant_data (column1, column2, column3, column4, column5, column6, column7, column8, column9, column10) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *';
+                const values = [parsedMessage.column1, parsedMessage.column2, parsedMessage.column3, parsedMessage.column4, parsedMessage.column5, parsedMessage.column6, parsedMessage.column7, parsedMessage.column8, parsedMessage.column9, parsedMessage.column10];
+
+                db.query(query, values, (err, result) => {
+                    if (err) {
+                        console.log('Error executing SQL:', err.message);
+                        return;
+                    }
+                    console.log('Data inserted:', result.rows);
+                })
+            }
+
+            if (path === '/environmentdata') {
+                const query = 'INSERT INTO environment_data (column1, column2, column3, column4, column5) VALUES ($1, $2, $3, $4, $5) RETURNING *';
+                const values = [parsedMessage.column1, parsedMessage.column2, parsedMessage.column3, parsedMessage.column4, parsedMessage.column5];
+
+                db.query(query, values, (err, result) => {
+                    if (err) {
+                        console.log('Error executing SQL:', err.message);
+                        return;
+                    }
+                    console.log('Data inserted:', result.rows);
+                })
+            }
+
+            if (path === '/actuator') {
+                const query = 'INSERT INTO actuator (column1, column2) VALUES ($1, $2) RETURNING *';
+                const values = [parsedMessage.column1, parsedMessage.column2];
+
+                db.query(query, values, (err, result) => {
+                    if (err) {
+                        console.log('Error executing SQL:', err.message);
+                        return;
+                    }
+                    console.log('Data inserted:', result.rows);
+                })
+            }
+
+            ws.send(`Server received: ${JSON.stringify(parsedMessage)}`);
         });
 
         ws.on('close', () => {
