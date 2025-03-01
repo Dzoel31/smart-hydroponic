@@ -60,7 +60,7 @@ void checkWiFiConnection()
         Serial.println("WiFi disconnected, attempting to reconnect...");
 
         WiFi.disconnect();
-        WiFi.begin("SSID", "PASSWORD"); // Ganti dengan SSID dan password WiFi kamu
+        WiFi.begin(ssid, password);
 
         unsigned long startAttemptTime = millis();
         const unsigned long wifiTimeout = 10000; // Timeout 10 detik
@@ -68,7 +68,7 @@ void checkWiFiConnection()
         while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < wifiTimeout)
         {
             Serial.println("Reconnecting...");
-            delay(500); // Tunggu 500ms antara percobaan
+            delay(500);
         }
 
         if (WiFi.status() == WL_CONNECTED)

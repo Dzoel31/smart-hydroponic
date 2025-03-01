@@ -34,7 +34,7 @@ float temperatureAvg(float temperature1, float temperature2) {
 void onMessageCallback(WebsocketsMessage message) {
   String command = message.data();
   Serial.println("Received command: " + command);
-  // Parse JSON dari server
+
   StaticJsonDocument<256> jsonDoc;
   DeserializationError error = deserializeJson(jsonDoc, command);
 
@@ -60,12 +60,12 @@ void onMessageCallback(WebsocketsMessage message) {
 
   if (otomationStatus == 1) {
     Serial.println("Otomatis nyala");
-    if (jsonDoc["moistureAvg"] < 55) {
+    if (jsonDoc["moistureAvg"] < 65) {
       pumpstatus = 1;
       digitalWrite(relayPin1, LOW);  // Ubah pin sesuai pompa
       digitalWrite(relayPin2, LOW);  // Ubah pin sesuai pompa
     }
-    if (jsonDoc["moistureAvg"] >= 55) {
+    if (jsonDoc["moistureAvg"] >= 65) {
       pumpstatus = 0;
       digitalWrite(relayPin1, HIGH);  // Ubah pin sesuai pompa
       digitalWrite(relayPin2, HIGH);  // Ubah pin sesuai pompa
@@ -126,15 +126,14 @@ void checkWiFiConnection()
     Serial.println("WiFi disconnected, attempting to reconnect...");
 
     WiFi.disconnect();
-    WiFi.begin("SSID", "PASSWORD"); // Ganti dengan SSID dan password WiFi kamu
-
+    WiFi.begin(ssid, password); 
     unsigned long startAttemptTime = millis();
     const unsigned long wifiTimeout = 10000; // Timeout 10 detik
 
     while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < wifiTimeout)
     {
       Serial.println("Reconnecting...");
-      delay(500); // Tunggu 500ms antara percobaan
+      delay(500);
     }
 
     if (WiFi.status() == WL_CONNECTED)

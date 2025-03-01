@@ -115,8 +115,7 @@ void checkWiFiConnection()
 		Serial.println("WiFi disconnected, attempting to reconnect...");
 
 		WiFi.disconnect();
-		WiFi.begin("SSID", "PASSWORD"); // Ganti dengan SSID dan password WiFi kamu
-
+		WiFi.begin(ssid, password);
 		unsigned long startAttemptTime = millis();
 		const unsigned long wifiTimeout = 10000; // Timeout 10 detik
 
