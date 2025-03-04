@@ -58,8 +58,19 @@ Object.entries(wssMap).forEach(([path, wss]) => {
             });
 
             if (path === '/plantdata') {
-                const query = 'INSERT INTO plant_data (column1, column2, column3, column4, column5, column6, column7, column8, column9, column10) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *';
-                const values = [parsedMessage.column1, parsedMessage.column2, parsedMessage.column3, parsedMessage.column4, parsedMessage.column5, parsedMessage.column6, parsedMessage.column7, parsedMessage.column8, parsedMessage.column9, parsedMessage.column10];
+                const query = 'INSERT INTO public.sensor_data (moisture1, moisture2, moisture3, moisture4, moisture5, moisture6, moistureavg, flowrate, totallitres, distancecm) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *';
+                const values = [
+                    parsedMessage.moisture1, 
+                    parsedMessage.moisture2, 
+                    parsedMessage.moisture3, 
+                    parsedMessage.moisture4, 
+                    parsedMessage.moisture5, 
+                    parsedMessage.moisture6, 
+                    parsedMessage.moistureAvg, 
+                    parsedMessage.flowRate, 
+                    parsedMessage.totalLitres, 
+                    parsedMessage.distanceCm
+                ];
 
                 db.query(query, values, (err, result) => {
                     if (err) {
@@ -71,8 +82,14 @@ Object.entries(wssMap).forEach(([path, wss]) => {
             }
 
             if (path === '/environmentdata') {
-                const query = 'INSERT INTO environment_data (column1, column2, column3, column4, column5) VALUES ($1, $2, $3, $4, $5) RETURNING *';
-                const values = [parsedMessage.column1, parsedMessage.column2, parsedMessage.column3, parsedMessage.column4, parsedMessage.column5];
+                const query = 'INSERT INTO public.environment_data (temperature_atas, humidity_atas, temperature_bawah, humidity, tds) VALUES ($1, $2, $3, $4, $5) RETURNING *';
+                const values = [
+                    parsedMessage.temperature_atas, 
+                    parsedMessage.humidity_atas, 
+                    parsedMessage.temperature_bawah, 
+                    parsedMessage.humidity_bawah, 
+                    parsedMessage.tds
+                ];
 
                 db.query(query, values, (err, result) => {
                     if (err) {
@@ -84,8 +101,8 @@ Object.entries(wssMap).forEach(([path, wss]) => {
             }
 
             if (path === '/actuator') {
-                const query = 'INSERT INTO actuator (column1, column2) VALUES ($1, $2) RETURNING *';
-                const values = [parsedMessage.column1, parsedMessage.column2];
+                const query = 'INSERT INTO public.actuator (pumpstatus, lightstatus) VALUES ($1, $2) RETURNING *';
+                const values = [parsedMessage.pumpStatus, parsedMessage.lightStatus];
 
                 db.query(query, values, (err, result) => {
                     if (err) {

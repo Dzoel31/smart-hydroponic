@@ -60,8 +60,8 @@ CREATE TABLE IF NOT EXISTS public.sensor_data (
     moisture5 integer NOT NULL,
     moisture6 integer NOT NULL,
     moistureavg integer NOT NULL,
-    water_flowrate double precision NOT NULL,
-    total_litres double precision NOT NULL,
+    flowrate double precision NOT NULL,
+    totallitres double precision NOT NULL,
     distancecm double precision NOT NULL,
     "timestamp" timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL
 );

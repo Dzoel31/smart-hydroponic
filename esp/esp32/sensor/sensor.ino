@@ -49,9 +49,9 @@ long duration;
 float distanceCm;
 float distanceInch;
 
-const char *ssid = "FIK-Hotspot";
-const char *password = "T4nahairku";
-const char *websocket_server = "ws://172.23.0.188:10000/plantdata";
+const char *ssid = "duFIFA";
+const char *password = "Fahri8013";
+const char *websocket_server = "ws://192.168.1.8:10000/plantdata";
 
 using namespace websockets;
 WebsocketsClient client;
@@ -181,7 +181,7 @@ void loop()
 			moistureAvg = (moisture1 + moisture2 + moisture3 + moisture4 + moisture5 + moisture6) / 6;
 		}
 
-		if (currentMillis - lastSendTime < sendInterval)
+		if (currentMillis - lastSendTime >= sendInterval)
 		{
 			// Create JSON payload
 			StaticJsonDocument<256> jsonDoc;
@@ -199,6 +199,8 @@ void loop()
 			String data;
 			serializeJson(jsonDoc, data);
 
+			lastSendTime = currentMillis;
+
 			// Send data to WebSocket server
 			client.send(data);
 			Serial.println("Sent: " + data);
@@ -210,8 +212,7 @@ void loop()
 			lastUltrasonicCheck = 0;
 			lastSendTime = 0;
 		}
-		
-		client.poll(); // Check for incoming messages
+
 	} else {
 		Serial.println("Client not available");
 		Serial.println("WebSocket disconnected, attempting to reconnect...");
