@@ -22,9 +22,9 @@ float averageVoltage = 0;
 float tdsValue = 0;
 float temperature = 0;
 
-const char *ssid = "FIK-Hotspot";
-const char *password = "T4nahairku";
-const char *websocket_server = "ws://172.23.0.188:10000/environmentdata";
+const char *ssid = "Podcast Area";
+const char *password = "iriunwebcam";
+const char *websocket_server = "ws://172.23.14.189:10000/environmentdata";
 
 using namespace websockets;
 WebsocketsClient client;

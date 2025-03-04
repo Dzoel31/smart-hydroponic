@@ -49,9 +49,9 @@ long duration;
 float distanceCm;
 float distanceInch;
 
-const char *ssid = "duFIFA";
-const char *password = "Fahri8013";
-const char *websocket_server = "ws://192.168.1.8:10000/plantdata";
+const char *ssid = "Podcast Area";
+const char *password = "iriunwebcam";
+const char *websocket_server = "ws://172.23.14.189:10000/plantdata";
 
 using namespace websockets;
 WebsocketsClient client;
