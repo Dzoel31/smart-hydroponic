@@ -10,13 +10,13 @@
 #define relayPin3 12  // lampu (D6)
 #define relayPin4 14  // lampu (D5)
 
-const char* ssid = "FIK-Hotspot";
-const char* password = "T4nahairku";
-const char* websocket_actuator = "ws://172.23.0.188:10000/actuator";
-const char* webcommand = "ws://172.23.0.188:10000/webcommand";
+const char *ssid = "Podcast Area";
+const char *password = "iriunwebcam";
+const char* websocket_actuator = "ws://172.23.14.189:10000/actuator";
+const char* webcommand = "ws://172.23.14.189:10000/webcommand";
 bool actuator_connected = false;
 
-String avgMoistureAPI = "http://172.23.0.188:15000/sensors/moistureAvg";
+String avgMoistureAPI = "http://172.23.14.189:15000/sensors/moistureAvg";
 
 using namespace websockets;
 WebsocketsClient client_actuator;
@@ -115,7 +115,7 @@ void sendData() {
   String data;
   serializeJson(jsonDoc, data);
 
-  client.send(data);
+  client_actuator.send(data);
   Serial.println("Sent: " + data);
 }
 
@@ -187,8 +187,8 @@ void setup() {
 }
 
 void loop() {
-  if (client.available()) {
-    client.poll();
+  if (client_actuator.available()) {
+    client_actuator.poll();
     sendData();
   } else {
     Serial.println("WebSocket disconnected, attempting to reconnect...");
