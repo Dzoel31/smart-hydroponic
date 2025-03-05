@@ -101,7 +101,7 @@ Object.entries(wssMap).forEach(([path, wss]) => {
             }
 
             if (path === '/actuator') {
-                const query = 'INSERT INTO public.actuator (pumpstatus, lightstatus) VALUES ($1, $2) RETURNING *';
+                const query = 'INSERT INTO public.actuator_data (pumpstatus, lightstatus) VALUES ($1, $2) RETURNING *';
                 const values = [parsedMessage.pumpStatus, parsedMessage.lightStatus];
 
                 db.query(query, values, (err, result) => {
