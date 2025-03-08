@@ -128,7 +128,7 @@ const handleEnvironmentData = (ws, request) => {
             parsedMessage.humidity_atas, 
             parsedMessage.temperature_bawah, 
             parsedMessage.humidity_bawah, 
-            parsedMessage.tds
+            parsedMessage.tdsValue
         ];
 
         db.query(query, values, (err, result) => {
