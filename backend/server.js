@@ -122,7 +122,7 @@ const handleEnvironmentData = (ws, request) => {
             console.warn('Actuator Websocket is not connected');
         }
 
-        const query = 'INSERT INTO public.environment_data (temperature_atas, humidity_atas, temperature_bawah, humidity, tds) VALUES ($1, $2, $3, $4, $5) RETURNING *';
+        const query = 'INSERT INTO public.environment_data (temperature_atas, humidity_atas, temperature_bawah, humidity_bawah, tds) VALUES ($1, $2, $3, $4, $5) RETURNING *';
         const values = [
             parsedMessage.temperature_atas, 
             parsedMessage.humidity_atas, 
