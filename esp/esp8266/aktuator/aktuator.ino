@@ -1,4 +1,5 @@
 #include <ESP8266WiFi.h>
+// #include <WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <ArduinoJson.h>
 #include <WiFiClientSecure.h>
@@ -12,11 +13,11 @@
 
 const char *ssid = "Podcast Area";
 const char *password = "iriunwebcam";
-const char* websocket_actuator = "ws://172.23.14.189:10000/actuator";
-const char* webcommand = "ws://172.23.14.189:10000/webcommand";
+const char *websocket_actuator = "ws://172.23.0.188:10000/actuator";
+const char* webcommand = "ws://172.23.0.188:10000/webcommand";
 bool actuator_connected = false;
 
-String avgMoistureAPI = "http://172.23.14.189:15000/sensors/moistureAvg";
+String avgMoistureAPI = "http://172.23.0.188:15000/sensors/moistureAvg";
 
 using namespace websockets;
 WebsocketsClient client_actuator;
@@ -25,85 +26,83 @@ WebsocketsClient client_webcommand;
 int pumpstatus;
 int lampstatus;
 float temperature;
-int otomationStatus = 1;
+int otomationStatus;
 
 float temperatureAvg(float temperature1, float temperature2) {
   return (temperature1 + temperature2) / 2;
 }
 
 void onMessageCallback(WebsocketsMessage message) {
-  String command = message.data();
-  Serial.println("Received command: " + command);
+    String command = message.data();
+    Serial.println("Received command: " + command);
 
-  StaticJsonDocument<256> jsonDoc;
-  DeserializationError error = deserializeJson(jsonDoc, command);
+    StaticJsonDocument<256> jsonDoc;
+    DeserializationError error = deserializeJson(jsonDoc, command);
 
-  if (error) {
-    Serial.println("JSON Parsing Failed!");
-    return;
-  }
+    if (error) {
+        Serial.println("JSON Parsing Failed!");
+        return;
+    }
 
-  serializeJsonPretty(jsonDoc, Serial);
-  Serial.println();
+    serializeJsonPretty(jsonDoc, Serial);
+    Serial.println();
 
-  if (jsonDoc["temperature_atas"] && jsonDoc["temperature_bawah"]) {
-    float temperatureAtas = jsonDoc["temperature_atas"];
-    float temperatureBawah = jsonDoc["temperature_bawah"];
-    temperature = temperatureAvg(temperatureAtas, temperatureBawah);
-    Serial.println("Temperature: " + String(temperature));
-  }
+    // Cek dan hitung suhu jika tersedia
+    if (jsonDoc.containsKey("temperature_atas") && jsonDoc.containsKey("temperature_bawah")) {
+        float temperatureAtas = jsonDoc["temperature_atas"].as<float>();
+        float temperatureBawah = jsonDoc["temperature_bawah"].as<float>();
+        temperature = temperatureAvg(temperatureAtas, temperatureBawah);
+        Serial.println("Temperature: " + String(temperature));
+    }
 
-  if (jsonDoc["otomationStatus"]) {
-    otomationStatus = jsonDoc["otomationStatus"];
-    Serial.println("Otomation Status: " + String(otomationStatus));
-  }
+    // Status otomasi
+    if (jsonDoc.containsKey("otomationStatus")) {
+        otomationStatus = jsonDoc["otomationStatus"].as<int>();
+        Serial.println("Otomation Status: " + String(otomationStatus));
+    }
 
-  if (otomationStatus == 1) {
-    Serial.println("Otomatis nyala");
-    if (jsonDoc["moistureAvg"] < 65) {
-      pumpstatus = 1;
-      digitalWrite(relayPin1, LOW);  // Ubah pin sesuai pompa
-      digitalWrite(relayPin2, LOW);  // Ubah pin sesuai pompa
+    if (otomationStatus == 1) {
+        Serial.println("Otomatis nyala");
+
+        if (jsonDoc.containsKey("moistureAvg") && !isnan(jsonDoc["moistureAvg"].as<float>())) {
+            if (jsonDoc["moistureAvg"].as<float>() < 65) {
+                pumpstatus = 1;
+                digitalWrite(relayPin1, LOW);
+                digitalWrite(relayPin2, LOW);
+            } else {
+                pumpstatus = 0;
+                digitalWrite(relayPin1, HIGH);
+                digitalWrite(relayPin2, HIGH);
+            }
+        }
+
+        if (temperature < 27) {
+            lampstatus = 1;
+            digitalWrite(relayPin3, LOW);
+            digitalWrite(relayPin4, LOW);
+        } else {
+            lampstatus = 0;
+            digitalWrite(relayPin3, HIGH);
+            digitalWrite(relayPin4, HIGH);
+        }
+        return;
     }
-    if (jsonDoc["moistureAvg"] >= 65) {
-      pumpstatus = 0;
-      digitalWrite(relayPin1, HIGH);  // Ubah pin sesuai pompa
-      digitalWrite(relayPin2, HIGH);  // Ubah pin sesuai pompa
+
+    if (otomationStatus == 0) {
+        Serial.println("Otomatis mati");
+
+        if (jsonDoc.containsKey("pumpStatus")) {
+            pumpstatus = jsonDoc["pumpStatus"].as<int>();
+            digitalWrite(relayPin1, pumpstatus == 1 ? LOW : HIGH);
+            digitalWrite(relayPin2, pumpstatus == 1 ? LOW : HIGH);
+        }
+
+        if (jsonDoc.containsKey("lightStatus")) {
+            lampstatus = jsonDoc["lightStatus"].as<int>();
+            digitalWrite(relayPin3, lampstatus == 1 ? LOW : HIGH);
+            digitalWrite(relayPin4, lampstatus == 1 ? LOW : HIGH);
+        }
     }
-    if (temperature < 27) {
-      lampstatus = 1;
-      digitalWrite(relayPin3, LOW);  // Ubah pin sesuai lampu
-      digitalWrite(relayPin4, LOW);  // Ubah pin sesuai lampu
-    }
-    if (temperature >= 27) {
-      lampstatus = 0;
-      digitalWrite(relayPin3, HIGH);  // Ubah pin sesuai lampu
-      digitalWrite(relayPin4, HIGH);  // Ubah pin sesuai lampu
-    }
-  }
-  if (otomationStatus == 0) {
-    Serial.println("Otomatis mati");
-    if (jsonDoc["pumpStatus"] == 1) {
-      pumpstatus = 1;
-      digitalWrite(relayPin1, LOW);  // Ubah pin sesuai pompa
-      digitalWrite(relayPin2, LOW);  // Ubah pin sesuai pompa
-    }
-    if (jsonDoc["pumpStatus"] == 0) {
-      pumpstatus = 0;
-      digitalWrite(relayPin1, HIGH);  // Ubah pin sesuai pompa
-      digitalWrite(relayPin2, HIGH);  // Ubah pin sesuai pompa
-    }
-    if (jsonDoc["lightStatus"] == 1) {
-      lampstatus = 1;
-      digitalWrite(relayPin3, LOW);  // Ubah pin sesuai lampu
-      digitalWrite(relayPin4, LOW);  // Ubah pin sesuai lampu
-    }
-    if (jsonDoc["lightStatus"] == 0) {
-      lampstatus = 0;
-      digitalWrite(relayPin3, HIGH);  // Ubah pin sesuai lampu
-      digitalWrite(relayPin4, HIGH);  // Ubah pin sesuai lampu
-    }
-  }
 }
 
 void sendData() {
@@ -187,27 +186,31 @@ void setup() {
 }
 
 void loop() {
-  if (client_actuator.available()) {
-    client_actuator.poll();
-    sendData();
-  } else {
-    Serial.println("WebSocket disconnected, attempting to reconnect...");
-    while (!client_actuator.connect(websocket_actuator)) {  // Loop hingga berhasil connect
-      Serial.println("Reconnection failed, retrying...");
-      delay(1000);
-    }
-    Serial.println("Reconnected to WebSocket actuator Server");
-    client_actuator.onMessage(onMessageCallback);  // Pasang ulang callback
+  client_actuator.poll();
+  client_webcommand.poll();
 
-    while (!client_webcommand.connect(webcommand)) {  // Loop hingga berhasil connect
-      Serial.println("Reconnection failed, retrying...");
-      delay(1000);
+  if (!client_actuator.available()) {
+    Serial.println("WebSocket actuator disconnected, attempting to reconnect...");
+    if (client_actuator.connect(websocket_actuator)) {
+      Serial.println("Reconnected to WebSocket actuator Server");
+      client_actuator.onMessage(onMessageCallback);
     }
-    Serial.println("Reconnected to WebSocket webcommand Server");
-    client_webcommand.onMessage(onMessageCallback);  // Pasang ulang callback
+  }
+
+  if (!client_webcommand.available()) {
+    Serial.println("WebSocket webcommand disconnected, attempting to reconnect...");
+    if (client_webcommand.connect(webcommand)) {
+      Serial.println("Reconnected to WebSocket webcommand Server");
+      client_webcommand.onMessage(onMessageCallback);
+    }
   }
 
   checkWiFiConnection();
 
-  delay(10000);
+  static unsigned long lastSendTime = 0;
+  unsigned long currentTime = millis();
+  if (currentTime - lastSendTime >= 10000) {
+    sendData();
+    lastSendTime = currentTime;
+  }
 }

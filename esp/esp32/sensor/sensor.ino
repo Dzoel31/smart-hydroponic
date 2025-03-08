@@ -51,7 +51,7 @@ float distanceInch;
 
 const char *ssid = "Podcast Area";
 const char *password = "iriunwebcam";
-const char *websocket_server = "ws://172.23.14.189:10000/plantdata";
+const char *websocket_server = "ws://172.23.0.188:10000/plantdata";
 
 using namespace websockets;
 WebsocketsClient client;

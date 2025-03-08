@@ -41,6 +41,7 @@ DROP TABLE IF EXISTS public.actuator_data CASCADE;
 CREATE TABLE IF NOT EXISTS public.actuator_data (
     pumpstatus INTEGER NOT NULL,
     lightstatus INTEGER NOT NULL,
+    automationstatus INTEGER NOT NULL,
     "timestamp" timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
@@ -76,9 +77,9 @@ DROP TABLE IF EXISTS public.environment_data CASCADE;
 
 CREATE TABLE IF NOT EXISTS public.environment_data (
     temperature_atas double precision NOT NULL,
-    humidity_atas integer NOT NULL,
+    humidity_atas double precision NOT NULL,
     temperature_bawah double precision NOT NULL,
-    humidity_bawah integer NOT NULL,
+    humidity_bawah double precision NOT NULL,
     tds integer NOT NULL,
     "timestamp" timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
