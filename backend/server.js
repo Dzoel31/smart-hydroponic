@@ -46,6 +46,48 @@ let plantdata_socket = null;
 let environmentdata_socket = null;
 let webcommand_socket = null;
 
+
+const handleActuator = (ws, request) => {
+    console.log(`Client connected to /actuator`);
+
+    actuator_socket = ws;
+
+    ws.on('message', (message) => {
+        console.log(`Received message from /actuator: ${message.toString()}`);
+        let parsedMessage;
+        try {
+            parsedMessage = JSON.parse(message);
+        } catch (e) {
+            console.error(`Invalid JSON received from /actuator:`, e.message);
+            ws.send('Invalid JSON format');
+            return;
+        }
+
+        const query = 'INSERT INTO public.actuator_data (pumpstatus, lightstatus, automationstatus) VALUES ($1, $2, $3) RETURNING *';
+        const values = [parsedMessage.pumpStatus, parsedMessage.lightStatus, parsedMessage.otomationStatus];
+
+        db.query(query, values, (err, result) => {
+            if (err) {
+                console.log('Error executing SQL:', err.message);
+                return;
+            }
+            console.log('Data inserted:', result.rows);
+        });
+
+        ws.send(JSON.stringify(parsedMessage));
+    });
+
+    ws.on('close', () => {
+        console.log(`WebSocket disconnected from /actuator`);
+        actuator_socket = null;
+    });
+
+    ws.on('error', (err) => {
+        console.error(`WebSocket error in /actuator:`, err);
+    });
+};
+
+
 const handlePlantData = (ws, request) => {
     console.log(`Client connected to /plantdata`);
 
@@ -148,46 +190,6 @@ const handleEnvironmentData = (ws, request) => {
 
     ws.on('error', (err) => {
         console.error(`WebSocket error in /environmentdata:`, err);
-    });
-};
-
-const handleActuator = (ws, request) => {
-    console.log(`Client connected to /actuator`);
-
-    actuator_socket = ws;
-
-    ws.on('message', (message) => {
-        console.log(`Received message from /actuator: ${message.toString()}`);
-        let parsedMessage;
-        try {
-            parsedMessage = JSON.parse(message);
-        } catch (e) {
-            console.error(`Invalid JSON received from /actuator:`, e.message);
-            ws.send('Invalid JSON format');
-            return;
-        }
-
-        const query = 'INSERT INTO public.actuator_data (pumpstatus, lightstatus, automationstatus) VALUES ($1, $2, $3) RETURNING *';
-        const values = [parsedMessage.pumpStatus, parsedMessage.lightStatus, parsedMessage.otomationStatus];
-
-        db.query(query, values, (err, result) => {
-            if (err) {
-                console.log('Error executing SQL:', err.message);
-                return;
-            }
-            console.log('Data inserted:', result.rows);
-        });
-
-        ws.send(JSON.stringify(parsedMessage));
-    });
-
-    ws.on('close', () => {
-        console.log(`WebSocket disconnected from /actuator`);
-        actuator_socket = null;
-    });
-
-    ws.on('error', (err) => {
-        console.error(`WebSocket error in /actuator:`, err);
     });
 };
 
