@@ -178,7 +178,7 @@ void loop()
 			moistureAnalog6 = analogRead(moisturePin6);
 			moisture6 = (100 - ((moistureAnalog6 / 4095.0) * 100));
 
-			moistureAvg = (moisture1 + moisture2 + moisture3 + moisture4 + moisture5 + moisture6) / 6;
+			moistureAvg = (moisture1 + moisture2 + moisture3 + moisture4 + moisture5 + moisture6) / 5;
 		}
 
 		if (currentMillis - lastSendTime >= sendInterval)

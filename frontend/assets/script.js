@@ -1,4 +1,7 @@
-const ws = new WebSocket("ws://172.23.0.188:10000");
+const wsAktuator = new WebSocket("ws://172.23.0.188:10000/actuator"); 
+const wsEnvData = new WebSocket("ws://172.23.0.188:10000/environmentdata");
+const wsPlantData = new WebSocket("ws://172.23.0.188:10000/plantdata");
+// const wsWebCommad = new WebSocket("ws://172.23.0.188:10000/webcommand");
 
 const pumpButton = document.getElementById("togglePumpButton");
 const lampButton = document.getElementById("toggleLampButton");
@@ -27,57 +30,123 @@ let automationState = 1;
 let pumpState = 0;
 let lampState = 0;
 
-ws.onopen = () => {
-    console.log("WebSocket connection opened");
-    ws.send(JSON.stringify({ type: "pump_light_ESP8266", otomationStatus: automationState, pumpStatus: pumpState, lightStatus: lampState }));
-};
+// ws.onopen = () => {
+//     console.log("WebSocket connection opened");
+//     ws.send(JSON.stringify({ type: "pump_light_ESP8266", otomationStatus: automationState, pumpStatus: pumpState, lightStatus: lampState }));
+// };
 
-ws.onmessage = (event) => {
-    console.log("Message from server:", event.data);
-    
+
+wsAktuator.onopen = () => {
+    console.log("WebSocket aktuator connection opened");
+    wsAktuator.send(JSON.stringify({ otomationStatus: automationState, pumpStatus: pumpState, lightStatus: lampState}))
+}
+
+wsEnvData.onopen = () => {
+    console.log("WebSocket environmentdata connection opened")
+}
+
+wsPlantData.onopen = () => {
+    console.log("WebSocket PlantData connection opened")
+}
+
+wsAktuator.onmessage = (eventAktuator) => {
+    console.log("Message from server:", eventAktuator.data);
     try {
-        const data = JSON.parse(event.data);
-        pumpState = data.pumpStatus;
-        lampState = data.lightStatus;
-        statusPump.textContent = `Pump Status: ${data.pumpStatus}`;
-        statusLamp.textContent = `Lamp Status: ${data.lightStatus}`;
-        flowRate.textContent = `${(data.flowRate == undefined) ? 0 : data.flowRate}`;
-        distanceCm.textContent = `${(data.distanceCm == undefined) ? 0 : data.distanceCm}`;
-        
-        totalLitres.textContent = `${(data.totalLitres == undefined) ? 0 : data.totalLitres}`;
-        moisture1.textContent = `${(data.moisture1 == undefined) ? 0 : data.moisture1}`;
-        moisture2.textContent = `${(data.moisture2 == undefined) ? 0 : data.moisture2}`;
-        moisture3.textContent = `${(data.moisture3 == undefined) ? 0 : data.moisture3}`;
-        moisture4.textContent = `${(data.moisture4 == undefined) ? 0 : data.moisture4}`;
-        moisture5.textContent = `${(data.moisture5 == undefined) ? 0 : data.moisture5}`;
-        moisture6.textContent = `${(data.moisture6 == undefined) ? 0 : data.moisture6}`;
-        moistureAvg.textContent = `${(data.moistureAvg == undefined) ? 0 : data.moistureAvg}`;
-        temperature_atas.textContent = `${(data.temperature_atas == undefined)? 0 : data.temperature_atas}`;
-        temperature_bawah.textContent = `${(data.temperature_bawah == undefined) ? 0 : data.temperature_bawah}`;
-        avg_temperature.textContent = `${(data.temperature_atas + data.temperature_bawah) / 2}`;
-        
+        const dataAktuator = JSON.parse(eventAktuator.data);
+        pumpState = dataAktuator.pumpStatus;
+        lampState = dataAktuator.lightStatus;
+        statusPump.textContent = `Pump Status: ${dataAktuator.pumpStatus}`;
+        statusLamp.textContent = `Lamp Status: ${dataAktuator.lightStatus}`;
         pumpButton.setAttribute("checked", pumpState);
         lampButton.setAttribute("checked", lampState);
-
-    } catch (error) {
-        console.error("Error parsing JSON:", error);
+    } catch (errorAktuator) {
+    console.error("Error parsing JSON Aktuator:", errorAktuator);
     }
 };
 
-ws.onclose = () => {
-    console.log("WebSocket connection closed");
+wsEnvData.onmessage = (eventEnvData) => {
+    console.log("Message from server:", eventEnvData.data);
+    try{
+        const dataEnvData = JSON.parse(eventEnvData.data);
+        temperature_atas.textContent = `${(dataEnvData.temperature_atas == undefined)? 0 : dataEnvData.temperature_atas}`;
+        temperature_bawah.textContent = `${(dataEnvData.temperature_bawah == undefined) ? 0 : dataEnvData.temperature_bawah}`;
+        avg_temperature.textContent = `${(dataEnvData.temperature_atas + dataEnvData.temperature_bawah) / 2}`;
+    } catch (errorEnvData) {
+    console.error("Error parsing JSON EnvData:", errorEnvData);
+    }
+};
+
+
+wsPlantData.onmessage = (eventPlantData) => {
+    console.log("Message from server:", eventPlantData.data);
+    try{
+        const dataPlantData = JSON.parse(eventPlantData.data);
+        flowRate.textContent = `${(dataPlantData.flowRate == undefined) ? 0 : dataPlantData.flowRate}`;
+        distanceCm.textContent = `${(dataPlantData.distanceCm == undefined) ? 0 : dataPlantData.distanceCm}`;
+        totalLitres.textContent = `${(dataPlantData.totalLitres == undefined) ? 0 : dataPlantData.totalLitres}`;
+        moisture1.textContent = `${(dataPlantData.moisture1 == undefined) ? 0 : dataPlantData.moisture1}`;
+        moisture2.textContent = `${(dataPlantData.moisture2 == undefined) ? 0 : dataPlantData.moisture2}`;
+        moisture3.textContent = `${(dataPlantData.moisture3 == undefined) ? 0 : dataPlantData.moisture3}`;
+        moisture4.textContent = `${(dataPlantData.moisture4 == undefined) ? 0 : dataPlantData.moisture4}`;
+        moisture5.textContent = `${(dataPlantData.moisture5 == undefined) ? 0 : dataPlantData.moisture5}`;
+        moisture6.textContent = `${(dataPlantData.moisture6 == undefined) ? 0 : dataPlantData.moisture6}`;
+        moistureAvg.textContent = `${(dataPlantData.moistureAvg == undefined) ? 0 : dataPlantData.moistureAvg}`;
+    } catch (errorPlantData) {
+        console.error("Error parsing JSON PlantData:", errorPlantData);
+    }
+};
+// ws.onmessage = (event) => {
+//     console.log("Message from server:", event.data);
+    
+//     try {
+//         const data = JSON.parse(event.data);
+//         pumpState = data.pumpStatus;
+//         lampState = data.lightStatus;
+//         statusPump.textContent = `Pump Status: ${data.pumpStatus}`;
+//         statusLamp.textContent = `Lamp Status: ${data.lightStatus}`;
+//         flowRate.textContent = `${(data.flowRate == undefined) ? 0 : data.flowRate}`;
+//         distanceCm.textContent = `${(data.distanceCm == undefined) ? 0 : data.distanceCm}`;
+        
+//         totalLitres.textContent = `${(data.totalLitres == undefined) ? 0 : data.totalLitres}`;
+//         moisture1.textContent = `${(data.moisture1 == undefined) ? 0 : data.moisture1}`;
+//         moisture2.textContent = `${(data.moisture2 == undefined) ? 0 : data.moisture2}`;
+//         moisture3.textContent = `${(data.moisture3 == undefined) ? 0 : data.moisture3}`;
+//         moisture4.textContent = `${(data.moisture4 == undefined) ? 0 : data.moisture4}`;
+//         moisture5.textContent = `${(data.moisture5 == undefined) ? 0 : data.moisture5}`;
+//         moisture6.textContent = `${(data.moisture6 == undefined) ? 0 : data.moisture6}`;
+//         moistureAvg.textContent = `${(data.moistureAvg == undefined) ? 0 : data.moistureAvg}`;
+//         temperature_atas.textContent = `${(data.temperature_atas == undefined)? 0 : data.temperature_atas}`;
+//         temperature_bawah.textContent = `${(data.temperature_bawah == undefined) ? 0 : data.temperature_bawah}`;
+//         avg_temperature.textContent = `${(data.temperature_atas + data.temperature_bawah) / 2}`;
+        
+//         pumpButton.setAttribute("checked", pumpState);
+//         lampButton.setAttribute("checked", lampState);
+
+//     } catch (error) {
+//         console.error("Error parsing JSON:", error);
+//     }
+// };
+
+wsAktuator.onclose = () => {
+    console.log("WebSocket connection Aktuator closed");
+};
+wsEnvData.onclose = () => {
+    console.log("WebSocket connection EnvData closed");
+}; 
+wsPlantData.onclose = () => {
+    console.log("WebSocket connection PlantData closed");
 };
 
 function sendOtomationCommand() {
-    ws.send(JSON.stringify({type: "pump_light_ESP8266", otomationStatus: automationState, pumpStatus: pumpState, lightStatus: lampState }))
+    wsAktuator.send(JSON.stringify({ otomationStatus: automationState, pumpStatus: pumpState, lightStatus: lampState }))
 }
 
 function sendPumpCommand() {
-    ws.send(JSON.stringify({ type: "pump_light_ESP8266", otomationStatus: automationState, pumpStatus: pumpState, lightStatus: lampState }));
+    wsAktuator.send(JSON.stringify({ otomationStatus: automationState, pumpStatus: pumpState, lightStatus: lampState }));
 }
 
 function sendLampCommand() {
-    ws.send(JSON.stringify({ type: "pump_light_ESP8266", otomationStatus: automationState, pumpStatus: pumpState, lightStatus: lampState }));
+    wsAktuator.send(JSON.stringify({ otomationStatus: automationState, pumpStatus: pumpState, lightStatus: lampState }));
 }
 
 if (automationState == 1) {
