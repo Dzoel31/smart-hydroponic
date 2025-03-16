@@ -14,19 +14,19 @@
 const char *ssid = "Podcast Area";
 const char *password = "iriunwebcam";
 const char *websocket_actuator = "ws://172.23.0.188:10000/actuator";
-const char* webcommand = "ws://172.23.0.188:10000/webcommand";
+const char* moisttemp = "ws://172.23.0.188:10000/mois_temp";
 bool actuator_connected = false;
 
 String avgMoistureAPI = "http://172.23.0.188:15000/sensors/moistureAvg";
 
 using namespace websockets;
 WebsocketsClient client_actuator;
-WebsocketsClient client_webcommand;
+WebsocketsClient client_moisttemp;
 
 int pumpstatus;
 int lampstatus;
 float temperature;
-int otomationStatus;
+int otomationStatus = 1;
 
 float temperatureAvg(float temperature1, float temperature2) {
   return (temperature1 + temperature2) / 2;
@@ -166,10 +166,10 @@ void setup() {
     Serial.println("Failed to connect");
   }
 
-  bool webcommand_connected = client_webcommand.connect(webcommand);
-  if (webcommand_connected) {
-    Serial.println("Connected to WebSocket Webcommand Server");
-    client_webcommand.onMessage(onMessageCallback);
+  bool moisttemp_connected = client_moisttemp.connect(moisttemp);
+  if (moisttemp_connected) {
+    Serial.println("Connected to WebSocket moisttemp Server");
+    client_moisttemp.onMessage(onMessageCallback);
   } else {
     Serial.println("Failed to connect");
   }
@@ -187,7 +187,7 @@ void setup() {
 
 void loop() {
   client_actuator.poll();
-  client_webcommand.poll();
+  client_moisttemp.poll();
 
   if (!client_actuator.available()) {
     Serial.println("WebSocket actuator disconnected, attempting to reconnect...");
@@ -197,11 +197,11 @@ void loop() {
     }
   }
 
-  if (!client_webcommand.available()) {
-    Serial.println("WebSocket webcommand disconnected, attempting to reconnect...");
-    if (client_webcommand.connect(webcommand)) {
-      Serial.println("Reconnected to WebSocket webcommand Server");
-      client_webcommand.onMessage(onMessageCallback);
+  if (!client_moisttemp.available()) {
+    Serial.println("WebSocket moisttemp disconnected, attempting to reconnect...");
+    if (client_moisttemp.connect(moisttemp)) {
+      Serial.println("Reconnected to WebSocket moisttemp Server");
+      client_moisttemp.onMessage(onMessageCallback);
     }
   }
 
