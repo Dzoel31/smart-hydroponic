@@ -1,261 +1,183 @@
 const WebSocket = require('ws');
-const server = require('http');
+const http = require('http');
 const express = require('express');
 const dotenv = require('dotenv');
 const fs = require('fs');
 
-const router_sensor = require('./routes/sensors');
-const router_actuator = require('./routes/aktuator');
+const router_sensor = require('./routes/sensor_route');
+const router_actuator = require('./routes/actuator_route');
 const db = require('./config/db');
 const sql = fs.readFileSync('./database/iot_smart_hydroponic.sql', 'utf8');
 
-db.connect((err, message) => {
+db.connect((err) => {
     if (err) {
         console.log('Error connecting to database:', err.message);
         return;
     }
     console.log('Database connected');
 
-    db.query(sql, (err, result) => {
+    const checkTableQuery = `
+        SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name = 'sensor_data'
+        );
+    `;
+
+    db.query(checkTableQuery, (err, result) => {
         if (err) {
-            console.log('Error executing SQL:', err.message);
+            console.log('Error checking table existence:', err.message);
             return;
         }
-        console.log("Initialized database completed");
+        if (result.rows[0].exists) {
+            console.log('Tables already exist, skipping initialization');
+        } else {
+            db.query(sql, (err) => {
+                if (err) {
+                    console.log('Error executing SQL:', err.message);
+                    return;
+                }
+                console.log("Initialized database completed");
+            });
+        }
     });
 });
 
 dotenv.config();
 
 const app = express();
-const httpServer = server.createServer();
-// const wssMap = {
-//     '/plantdata': new WebSocket.Server({ noServer: true }),
-//     '/environmentdata': new WebSocket.Server({ noServer: true }),
-//     '/actuator': new WebSocket.Server({ noServer: true }),
-//     '/webcommand' : new WebSocket.Server({ noServer: true }),
-// };
+const httpServer = http.createServer();
 
-plantdata_ws = new WebSocket.Server({ noServer: true });
-environmentdata_ws = new WebSocket.Server({ noServer: true });
-actuator_ws = new WebSocket.Server({ noServer: true });
-webcommand_ws = new WebSocket.Server({ noServer: true });
+const wss = new WebSocket.Server({ noServer: true });
 
-let actuator_socket = null;
-let plantdata_socket = null;
-let environmentdata_socket = null;
-let webcommand_socket = null;
+const clients = {
+    data_moisture: [],
+    data_environment: [],
+    actuator: [],
+    mois_temp: [],
+};
 
+wss.on('connection', (ws, request) => {
+    const path = request.url;
 
-const handleActuator = (ws, request) => {
-    console.log(`Client connected to /actuator`);
-
-    actuator_socket = ws;
+    switch (path) {
+        case '/plantdata':
+            clients.data_moisture.push(ws);
+            console.log('ESP32 (1) connected to /plantdata');
+            break;
+        case '/environmentdata':
+            clients.data_environment.push(ws);
+            console.log('ESP32 (2) connected to /environmentdata');
+            break;
+        case '/actuator':
+            clients.actuator.push(ws);
+            console.log('ESP8266 connected to /actuator');
+            break;
+        case '/mois_temp':
+            clients.mois_temp.push(ws);
+            console.log('Web connected to /mois_temp');
+            break;
+        default:
+            console.log(`Unknown path: ${path}`);
+            ws.close();
+            break;
+    }
 
     ws.on('message', (message) => {
-        console.log(`Received message from /actuator: ${message.toString()}`);
-        let parsedMessage;
+        console.log(`Received on ${path}: ${message}`);
+        let data;
         try {
-            parsedMessage = JSON.parse(message);
+            data = JSON.parse(message);
         } catch (e) {
-            console.error(`Invalid JSON received from /actuator:`, e.message);
+            console.error(`Invalid JSON received on ${path}:`, e.message);
             ws.send('Invalid JSON format');
             return;
         }
 
-        const query = 'INSERT INTO public.actuator_data (pumpstatus, lightstatus, automationstatus) VALUES ($1, $2, $3) RETURNING *';
-        const values = [parsedMessage.pumpStatus, parsedMessage.lightStatus, parsedMessage.otomationStatus];
+        switch (path) {
+            case '/plantdata':
+                clients.data_moisture.forEach(client => client.send(JSON.stringify(data)));
+                clients.mois_temp.forEach(client => client.send(JSON.stringify(data)));
+                const plantQuery = 'INSERT INTO public.sensor_data (moisture1, moisture2, moisture3, moisture4, moisture5, moisture6, moistureavg, flowrate, totallitres, distancecm) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *';
+                const plantValues = [
+                    data.moisture1,
+                    data.moisture2,
+                    data.moisture3,
+                    data.moisture4,
+                    data.moisture5,
+                    data.moisture6,
+                    data.moistureAvg,
+                    data.flowRate,
+                    data.totalLitres,
+                    data.distanceCm
+                ];
+                db.query(plantQuery, plantValues, (err, result) => {
+                    if (err) {
+                        console.log('Error executing SQL:', err.message);
+                        return;
+                    }
+                    console.log('Data inserted:', result.rows);
+                });
+                break;
+            case '/environmentdata':
+                clients.data_environment.forEach(client => client.send(JSON.stringify(data)));
+                clients.mois_temp.forEach(client => client.send(JSON.stringify(data)));
+                const envQuery = 'INSERT INTO public.environment_data (temperature_atas, humidity_atas, temperature_bawah, humidity_bawah, tds) VALUES ($1, $2, $3, $4, $5) RETURNING *';
+                const envValues = [
+                    data.temperature_atas,
+                    data.humidity_atas,
+                    data.temperature_bawah,
+                    data.humidity_bawah,
+                    data.tdsValue
+                ];
+                db.query(envQuery, envValues, (err, result) => {
+                    if (err) {
+                        console.log('Error executing SQL:', err.message);
+                        return;
+                    }
+                    console.log('Data inserted:', result.rows);
+                });
+                break;
+            case '/actuator':
+                clients.actuator.forEach(client => client.send(JSON.stringify(data)));
+                const actuatorQuery = 'INSERT INTO public.actuator_data (pumpstatus, lightstatus, automationstatus) VALUES ($1, $2, $3) RETURNING *';
+                const actuatorValues = [data.pumpStatus, data.lightStatus, data.otomationStatus];
+                db.query(actuatorQuery, actuatorValues, (err, result) => {
+                    if (err) {
+                        console.log('Error executing SQL:', err.message);
+                        return;
+                    }
+                    console.log('Data inserted:', result.rows);
+                });
+                break;
+            case '/mois_temp':
+                clients.mois_temp.forEach(client => client.send(JSON.stringify(data)));
+                break;
+            default:
+                console.log(`Unknown path: ${path}`);
+                break;
+        }
+    });
 
-        db.query(query, values, (err, result) => {
-            if (err) {
-                console.log('Error executing SQL:', err.message);
-                return;
-            }
-            console.log('Data inserted:', result.rows);
-        });
+    const interval = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.ping();
+        }
+    }, 10000);
 
-        ws.send(JSON.stringify(parsedMessage));
+    ws.on('pong', () => {
+        console.log(`Pong received from ${path}`);
     });
 
     ws.on('close', () => {
-        console.log(`WebSocket disconnected from /actuator`);
-        actuator_socket = null;
+        console.log(`Client disconnected from ${path}`);
     });
-
-    ws.on('error', (err) => {
-        console.error(`WebSocket error in /actuator:`, err);
-    });
-};
-
-
-const handlePlantData = (ws, request) => {
-    console.log(`Client connected to /plantdata`);
-
-    ws.on('message', (message) => {
-        console.log(`Received message from /plantdata: ${message.toString()}`);
-        let parsedMessage;
-        try {
-            parsedMessage = JSON.parse(message);
-        } catch (e) {
-            console.error(`Invalid JSON received from /plantdata:`, e.message);
-            ws.send('Invalid JSON format');
-            return;
-        }
-
-        if (actuator_socket && actuator_socket.readyState === WebSocket.OPEN) {
-            actuator_socket.send(JSON.stringify(parsedMessage));
-            console.log(`Sent message to /actuator: ${parsedMessage}`);
-        } else {
-            console.warn('Actuator Websocket is not connected');
-        }
-
-        const query = 'INSERT INTO public.sensor_data (moisture1, moisture2, moisture3, moisture4, moisture5, moisture6, moistureavg, flowrate, totallitres, distancecm) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *';
-        const values = [
-            parsedMessage.moisture1, 
-            parsedMessage.moisture2, 
-            parsedMessage.moisture3, 
-            parsedMessage.moisture4, 
-            parsedMessage.moisture5, 
-            parsedMessage.moisture6, 
-            parsedMessage.moistureAvg, 
-            parsedMessage.flowRate, 
-            parsedMessage.totalLitres, 
-            parsedMessage.distanceCm
-        ];
-
-        db.query(query, values, (err, result) => {
-            if (err) {
-                console.log('Error executing SQL:', err.message);
-                return;
-            }
-            console.log('Data inserted:', result.rows);
-        });
-
-        ws.send(JSON.stringify(parsedMessage));
-    });
-
-    ws.on('close', () => {
-        console.log(`WebSocket disconnected from /plantdata`);
-    });
-
-    ws.on('error', (err) => {
-        console.error(`WebSocket error in /plantdata:`, err);
-    });
-};
-
-const handleEnvironmentData = (ws, request) => {
-    console.log(`Client connected to /environmentdata`);
-
-    ws.on('message', (message) => {
-        console.log(`Received message from /environmentdata: ${message.toString()}`);
-        let parsedMessage;
-        try {
-            parsedMessage = JSON.parse(message);
-        } catch (e) {
-            console.error(`Invalid JSON received from /environmentdata:`, e.message);
-            ws.send('Invalid JSON format');
-            return;
-        }
-
-        if (actuator_socket && actuator_socket.readyState === WebSocket.OPEN) {
-            actuator_socket.send(JSON.stringify(parsedMessage));
-            console.log(`Sent message to /actuator: ${parsedMessage}`);
-        } else {
-            console.warn('Actuator Websocket is not connected');
-        }
-
-        const query = 'INSERT INTO public.environment_data (temperature_atas, humidity_atas, temperature_bawah, humidity_bawah, tds) VALUES ($1, $2, $3, $4, $5) RETURNING *';
-        const values = [
-            parsedMessage.temperature_atas, 
-            parsedMessage.humidity_atas, 
-            parsedMessage.temperature_bawah, 
-            parsedMessage.humidity_bawah, 
-            parsedMessage.tdsValue
-        ];
-
-        db.query(query, values, (err, result) => {
-            if (err) {
-                console.log('Error executing SQL:', err.message);
-                return;
-            }
-            console.log('Data inserted:', result.rows);
-        });
-
-        ws.send(JSON.stringify(parsedMessage));
-    });
-
-    ws.on('close', () => {
-        console.log(`WebSocket disconnected from /environmentdata`);
-    });
-
-    ws.on('error', (err) => {
-        console.error(`WebSocket error in /environmentdata:`, err);
-    });
-};
-
-const handleWebCommand = (ws, request) => {
-    console.log(`Client connected to /webcommand`);
-
-    ws.on('message', (message) => {
-        console.log(`Received message from /webcommand: ${message.toString()}`);
-        let parsedMessage;
-        try {
-            parsedMessage = JSON.parse(message);
-        } catch (e) {
-            console.error(`Invalid JSON received from /webcommand:`, e.message);
-            ws.send('Invalid JSON format');
-            return;
-        }
-
-        if (actuator_socket && actuator_socket.readyState === WebSocket.OPEN) {
-            actuator_socket.send(JSON.stringify(parsedMessage));
-            console.log(`Sent message to /actuator: ${parsedMessage}`);            
-        } else {
-            console.warn('Actuator Websocket is not connected');
-        }
-
-        ws.send(JSON.stringify(parsedMessage));
-    });
-
-    ws.on('close', () => {
-        console.log(`WebSocket disconnected from /webcommand`);
-    });
-
-    ws.on('error', (err) => {
-        console.error(`WebSocket error in /webcommand:`, err);
-    });
-};
-
-plantdata_ws.on('connection', handlePlantData);
-environmentdata_ws.on('connection', handleEnvironmentData);
-actuator_ws.on('connection', handleActuator);
-webcommand_ws.on('connection', handleWebCommand);
-
+});
 
 httpServer.on('upgrade', (request, socket, head) => {
-    if (request.url === '/plantdata') {
-        plantdata_ws.handleUpgrade(request, socket, head, (ws) => {
-            plantdata_ws.emit('connection', ws, request);
-        });
-    }
-    else if (request.url === '/environmentdata') {
-        environmentdata_ws.handleUpgrade(request, socket, head, (ws) => {
-            environmentdata_ws.emit('connection', ws, request);
-        });
-    }
-    else if (request.url === '/actuator') {
-        actuator_ws.handleUpgrade(request, socket, head, (ws) => {
-            actuator_ws.emit('connection', ws, request);
-        });
-    }
-    else if (request.url === '/webcommand') {
-        webcommand_ws.handleUpgrade(request, socket, head, (ws) => {
-            webcommand_ws.emit('connection', ws, request);
-        });
-    }
-    else {
-        socket.destroy();
-    }
+    wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request);
+    });
 });
 
 app.use(express.json());
