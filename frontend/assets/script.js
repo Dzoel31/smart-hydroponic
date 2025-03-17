@@ -60,7 +60,7 @@ function handleWebSocketMessage(event, handlers) {
 }
 
 const wsAktuator = createWebSocket(
-    "ws://192.168.1.10:10000/actuator",
+    "ws://172.23.0.188:10000/actuator",
     () => {
         console.log("WebSocket aktuator connection opened");
         wsAktuator.send(JSON.stringify(states));
@@ -79,7 +79,7 @@ const wsAktuator = createWebSocket(
 );
 
 const wsEnvData = createWebSocket(
-    "ws://192.168.1.10:10000/environmentdata",
+    "ws://172.23.0.188:10000/environmentdata",
     () => console.log("WebSocket environmentdata connection opened"),
     (event) => handleWebSocketMessage(event, {
         name: 'EnvData',
@@ -94,7 +94,7 @@ const wsEnvData = createWebSocket(
 );
 
 const wsPlantData = createWebSocket(
-    "ws://192.168.1.10:10000/plantdata",
+    "ws://172.23.0.188:10000/plantdata",
     () => console.log("WebSocket PlantData connection opened"),
     (event) => handleWebSocketMessage(event, {
         name: 'PlantData',

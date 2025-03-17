@@ -17,7 +17,7 @@
 // define sound speed in cm/uS
 #define SOUND_SPEED 0.034
 
-#define JARAK_SENSOR_KE_DASAR 40
+#define JARAK_SENSOR_KE_DASAR 35
 
 int moisture1, moistureAnalog1;
 int moisture2, moistureAnalog2;
