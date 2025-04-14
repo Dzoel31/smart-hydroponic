@@ -15,8 +15,8 @@ def data_environment():
         "device_id": "esp32-environment-device",
         "type": "update_data",
         "data": {
-            "temperatureAtas": 40,
-            "temperatureBawah": 40,
+            "temperatureAtas": 20,
+            "temperatureBawah": 20,
             "humidityAtas": random.randint(1, 100),
             "humidityBawah": random.randint(1, 100),
         },
