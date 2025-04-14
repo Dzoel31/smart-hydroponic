@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Input</title>
+    <script>
+        function sendData(serverUrl, inputId) {
+            const input = document.getElementById(inputId).value;
+            const socket = new WebSocket(serverUrl);
+
+            socket.onopen = function() {
+                socket.send(input);
+                socket.close();
+            };
+
+            socket.onerror = function(error) {
+                console.error('WebSocket Error: ', error);
+            };
+        }
+    </script>
+</head>
+<body>
+    <h1>Send Data to Web Servers</h1>
+    <div>
+        <label for="input1">Input 1:</label>
+        <input type="text" id="input1">
+        <button onclick="sendData('ws://192.168.1.10:10000/plantdata', 'input1')">Send to Server 1</button>
+    </div>
+    <div>
+        <label for="input2">Input 2:</label>
+        <input type="text" id="input2">
+        <button onclick="sendData('ws://192.168.1.10:10000/environmentdata', 'input2')">Send to Server 2</button>
+    </div>
+    <div>
+        <label for="input3">Input 3:</label>
+        <input type="text" id="input3">
+        <button onclick="sendData('ws://192.168.1.10:10000/actuator', 'input3')">Send to Server 3</button>
+    </div>
+    <div>
+        <label for="automationStatus">Automation Status (0 or 1):</label>
+        <input type="text" id="automationStatus">
+
+        <label for="pumpStatus">Pump Status (0 or 1):</label>
+        <input type="text" id="pumpStatus">
+
+        <label for="lightStatus">Light Status (0 or 1):</label>
+        <input type="text" id="lightStatus">
+
+        <button onclick="sendStatusData()">Send Status Data</button>
+
+        <script>
+            function sendStatusData() {
+            const automationStatus = document.getElementById('automationStatus').value;
+            const pumpStatus = document.getElementById('pumpStatus').value;
+            const lightStatus = document.getElementById('lightStatus').value;
+
+            const data = JSON.stringify({
+                otomationStatus: automationStatus,
+                pumpStatus: pumpStatus,
+                lightStatus: lightStatus
+            });
+
+            const socket = new WebSocket('ws://172.23.0.188:10000/webcommand');
+
+            socket.onopen = function() {
+                socket.send(data);
+            };
+
+            socket.onerror = function(error) {
+                console.error('WebSocket Error: ', error);
+            };
+            }
+        </script>
+    </div>
+    <div>
+        <h2>Received Data from Server 1</h2>
+        <textarea id="receivedData1" rows="5" cols="50" readonly></textarea>
+    </div>
+    <div>
+        <h2>Received Data from Server 2</h2>
+        <textarea id="receivedData2" rows="5" cols="50" readonly></textarea>
+    </div>
+    <div>
+        <h2>Received Data from Server 3</h2>
+        <textarea id="receivedData3" rows="5" cols="50" readonly></textarea>
+    </div>
+    <div>
+        <h2>Received Data from Server 4</h2>
+        <textarea id="receivedData4" rows="5" cols="50" readonly></textarea>
+    </div>
+    <script>
+        function sendData(serverUrl, inputId) {
+            const input = document.getElementById(inputId).value;
+            const socket = new WebSocket(serverUrl);
+            console.log("Hello World")
+
+            socket.onopen = function() {
+                socket.send(input);
+                // socket.close();
+            };
+
+            socket.onmessage = function(event) {
+                console.log(event.data);
+                const receivedData = document.getElementById('receivedData' + inputId.charAt(inputId.length - 1));
+                receivedData.value += event.data + '\n';
+            };
+
+            socket.onerror = function(error) {
+                console.error('WebSocket Error: ', error);
+            };
+        }
+    </script>
+</body>
+</html>
