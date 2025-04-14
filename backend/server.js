@@ -6,8 +6,9 @@ const fs = require('fs');
 
 const router_sensor = require('./routes/sensor_route');
 const router_actuator = require('./routes/actuator_route');
+const { updateCache, getAlldata, clearCache, isDataComplete } = require('./utils/data_cache');
+const { plantDataUpdate, environmentDataUpdate, actuatorDataUpdate } = require('./utils/insert_data');
 const db = require('./config/db');
-const sql = fs.readFileSync('./database/iot_smart_hydroponic.sql', 'utf8');
 
 db.connect((err) => {
     if (err) {
@@ -15,177 +16,198 @@ db.connect((err) => {
         return;
     }
     console.log('Database connected');
-
-    const checkTableQuery = `
-        SELECT EXISTS (
-            SELECT FROM information_schema.tables 
-            WHERE table_schema = 'public' 
-            AND table_name = 'sensor_data'
-        );
-    `;
-
-    db.query(checkTableQuery, (err, result) => {
-        if (err) {
-            console.log('Error checking table existence:', err.message);
-            return;
-        }
-        if (result.rows[0].exists) {
-            console.log('Tables already exist, skipping initialization');
-        } else {
-            db.query(sql, (err) => {
-                if (err) {
-                    console.log('Error executing SQL:', err.message);
-                    return;
-                }
-                console.log("Initialized database completed");
-            });
-        }
-    });
 });
 
 dotenv.config();
 
 const app = express();
-const httpServer = http.createServer();
+const server = http.createServer(app);
 
-const wss = new WebSocket.Server({ noServer: true });
+const heartbeat = () => {
+    this.isAlive = true;
+    console.log("Heartbeat received from device");
+}
 
-const clients = {
-    data_moisture: [],
-    data_environment: [],
-    actuator: [],
-    mois_temp: [],
-};
+const wssDevice = new WebSocket.Server({ noServer: true, path: '/device' });
+const wssControl = new WebSocket.Server({ noServer: true, path: '/control' });
 
-wss.on('connection', (ws, request) => {
-    const path = request.url;
+const deviceClients = new Map();
+const dashboardClients = new Set();
 
-    switch (path) {
-        case '/plantdata':
-            clients.data_moisture.push(ws);
-            console.log('ESP32 (1) connected to /plantdata');
-            break;
-        case '/environmentdata':
-            clients.data_environment.push(ws);
-            console.log('ESP32 (2) connected to /environmentdata');
-            break;
-        case '/actuator':
-            clients.actuator.push(ws);
-            console.log('ESP8266 connected to /actuator');
-            break;
-        case '/mois_temp':
-            clients.mois_temp.push(ws);
-            console.log('Web connected to /mois_temp');
-            break;
-        default:
-            console.log(`Unknown path: ${path}`);
-            ws.close();
-            break;
+server.on('upgrade', (request, socket, head) => {
+    if (request.url === '/device') {
+        wssDevice.handleUpgrade(request, socket, head, (ws) => {
+            wssDevice.emit('connection', ws, request);
+        });
+    } else if (request.url === '/control') {
+        wssControl.handleUpgrade(request, socket, head, (ws) => {
+            wssControl.emit('connection', ws, request);
+        });
+    } else {
+        socket.destroy(); // Close the socket if the URL doesn't match
     }
+});
 
-    ws.on('message', (message) => {
-        console.log(`Received on ${path}: ${message}`);
-        let data;
+wssDevice.on('connection', (ws) => {
+    ws.isAlive = true;
+    console.log('Device connected');
+
+    ws.on("message", (message) => {
+        let payload;
         try {
-            data = JSON.parse(message);
+            payload = JSON.parse(message);
+            console.log("[DEVICE WS] Data received from device:", payload);
         } catch (e) {
-            console.error(`Invalid JSON received on ${path}:`, e.message);
-            ws.send('Invalid JSON format');
+            console.error("Error parsing message:", e.message);
             return;
         }
+        
+        const { device_id, type, data } = payload;
 
-        switch (path) {
-            case '/plantdata':
-                clients.data_moisture.forEach(client => client.send(JSON.stringify(data)));
-                clients.mois_temp.forEach(client => client.send(JSON.stringify(data)));
-                const plantQuery = 'INSERT INTO public.sensor_data (moisture1, moisture2, moisture3, moisture4, moisture5, moisture6, moistureavg, flowrate, totallitres, distancecm) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *';
-                const plantValues = [
+        if (type === 'register') {
+            deviceClients.set(device_id, ws);
+            console.log(`[DEVICE WS] Registered device ${device_id}`);
+            if (device_id === "dashboard-device" || device_id === "esp8266-actuator-device") {
+                dashboardClients.add(ws);
+                console.log(`[DEVICE WS] Registered dashboard device ${device_id}`);
+            }
+            ws.send(JSON.stringify({ type: 'register', status: 'success' }));
+        } else if (type === 'update_data') {
+            // Process data based on device type
+            if (device_id === "esp32-plant-device") {
+                const moistureValues = [
                     data.moisture1,
                     data.moisture2,
                     data.moisture3,
                     data.moisture4,
                     data.moisture5,
                     data.moisture6,
-                    data.moistureAvg,
-                    data.flowRate,
-                    data.totalLitres,
-                    data.distanceCm
-                ];
-                db.query(plantQuery, plantValues, (err, result) => {
-                    if (err) {
-                        console.log('Error executing SQL:', err.message);
-                        return;
+                ].filter(value => value > 0);
+
+                if (moistureValues.length > 0) {
+                    const averageMoisture = moistureValues.reduce((a, b) => a + b, 0) / moistureValues.length;
+                    data.moistureAvg = parseFloat(averageMoisture.toPrecision(3));
+                } else {
+                    console.warn("No valid moisture values found for device:", device_id);
+                }
+            } else if (device_id === "esp32-environment-device") {
+                data.temperatureAtas = parseFloat(data.temperatureAtas.toPrecision(3));
+                data.temperatureBawah = parseFloat(data.temperatureBawah.toPrecision(3));
+                data.temperatureAvg = parseFloat(((data.temperatureAtas + data.temperatureBawah) / 2).toPrecision(3));
+                data.humidityAtas = parseFloat(data.humidityAtas.toPrecision(3));
+                data.humidityBawah = parseFloat(data.humidityBawah.toPrecision(3));
+                data.humidityAvg = parseFloat(((data.humidityAtas + data.humidityBawah) / 2).toPrecision(3));
+            } else if (device_id === "esp8266-actuator-device") {
+                data.pumpStatus = parseInt(data.pumpStatus) || 0;
+                data.lightStatus = parseInt(data.lightStatus) || 0;
+                data.automationStatus = parseInt(data.automationStatus) || 0;
+            }
+
+            updateCache(device_id, data);
+            
+            if (isDataComplete(getAlldata())) {
+                const allData = getAlldata();
+                const completePayload = {
+                    ...allData["esp32-plant-device"],
+                    ...allData["esp32-environment-device"],
+                    ...allData["esp8266-actuator-device"],
+                };
+                
+                console.log("Data complete, broadcasting to all dashboards:", completePayload);
+                
+                // Send to all dashboard clients
+                for (const client of dashboardClients) {      
+                    if (client.readyState === WebSocket.OPEN) {                        
+                        client.send(JSON.stringify({ type: 'update_data', data: completePayload }));
                     }
-                    console.log('Data inserted:', result.rows);
-                });
-                break;
-            case '/environmentdata':
-                clients.data_environment.forEach(client => client.send(JSON.stringify(data)));
-                clients.mois_temp.forEach(client => client.send(JSON.stringify(data)));
-                const envQuery = 'INSERT INTO public.environment_data (temperature_atas, humidity_atas, temperature_bawah, humidity_bawah, tds) VALUES ($1, $2, $3, $4, $5) RETURNING *';
-                const envValues = [
-                    data.temperature_atas,
-                    data.humidity_atas,
-                    data.temperature_bawah,
-                    data.humidity_bawah,
-                    data.tdsValue
-                ];
-                db.query(envQuery, envValues, (err, result) => {
-                    if (err) {
-                        console.log('Error executing SQL:', err.message);
-                        return;
-                    }
-                    console.log('Data inserted:', result.rows);
-                });
-                break;
-            case '/actuator':
-                clients.actuator.forEach(client => client.send(JSON.stringify(data)));
-                const actuatorQuery = 'INSERT INTO public.actuator_data (pumpstatus, lightstatus, automationstatus) VALUES ($1, $2, $3) RETURNING *';
-                const actuatorValues = [data.pumpStatus, data.lightStatus, data.otomationStatus];
-                db.query(actuatorQuery, actuatorValues, (err, result) => {
-                    if (err) {
-                        console.log('Error executing SQL:', err.message);
-                        return;
-                    }
-                    console.log('Data inserted:', result.rows);
-                });
-                break;
-            case '/mois_temp':
-                clients.mois_temp.forEach(client => client.send(JSON.stringify(data)));
-                break;
-            default:
-                console.log(`Unknown path: ${path}`);
-                break;
+                }
+                
+                // Insert data into database
+                plantDataUpdate("esp32-plant-device", allData["esp32-plant-device"]);
+                environmentDataUpdate("esp32-environment-device", allData["esp32-environment-device"]);
+                actuatorDataUpdate("esp8266-actuator-device", allData["esp8266-actuator-device"]);
+                
+                clearCache(); // Clear cache after broadcasting and storing
+            } else {
+                console.log("Data not complete, not broadcasting to devices");
+            }
         }
     });
 
-    const interval = setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-            ws.ping();
-        }
-    }, 10000);
+    const pingInterval = setInterval(function ping() {
+        wssDevice.clients.forEach(function each(ws) {
+            if (ws.isAlive === false) return ws.terminate();
+            ws.isAlive = false;
+            ws.ping(() => {
+                console.log("Ping");
+            });
+        })
+    }, 30000); // Send a ping every 30 seconds
 
-    ws.on('pong', () => {
-        console.log(`Pong received from ${path}`);
-    });
+    ws.on("pong", heartbeat);
 
     ws.on('close', () => {
-        console.log(`Client disconnected from ${path}`);
+        for (const [device_id, client] of deviceClients.entries()) {
+            if (client === ws) {
+                deviceClients.delete(device_id);
+                console.log(`[DEVICE WS] Device ${device_id} disconnected`);
+                break;
+            }
+        }
+        clearInterval(pingInterval);
     });
 });
 
-httpServer.on('upgrade', (request, socket, head) => {
-    wss.handleUpgrade(request, socket, head, (ws) => {
-        wss.emit('connection', ws, request);
+wssControl.on('connection', (ws, req) => {
+    console.log('Dashboard connected');
+    dashboardClients.add(ws);
+
+    ws.on('message', (message) => {
+        let payload;
+        try {
+            payload = JSON.parse(message);
+            console.log("Data received from dashboard:", payload);
+        } catch (e) {
+            console.error("Error parsing message:", e.message);
+            return;
+        }
+
+        const { device_id, type, data } = payload;
+
+        const targetDevice = deviceClients.get(device_id);
+        if (targetDevice) {
+            targetDevice.send(JSON.stringify({ type: 'command', data }));
+            console.log(`[CONTROL] Command sent to device ${device_id}:`, data);
+        } else {
+            console.warn(`[CONTROL] Device ${device_id} not found`);
+        }
+    });
+
+    const pingInterval = setInterval(function ping() {
+        wssControl.clients.forEach(function each(ws) {
+            if (ws.isAlive === false) return ws.terminate();
+            ws.isAlive = false;
+            ws.ping(() => {
+                console.log("Ping");
+            });
+        })
+    }, 30000); // Send a ping every 30 seconds
+
+    ws.on("pong", heartbeat);
+    
+    ws.on('close', () => {
+        dashboardClients.delete(ws);
+        console.log('Dashboard disconnected');
+        clearInterval(pingInterval);
     });
 });
 
 app.use(express.json());
 app.use(router_sensor);
 app.use(router_actuator);
-app.listen(process.env.PORT, process.env.IP4_ADDRESS, () => {
-    console.log(`Server is running on http://${process.env.IP4_ADDRESS}:${process.env.PORT}`);
-});
-httpServer.listen(process.env.PORT_WS, process.env.IP4_ADDRESS, () => {
-    console.log(`WebSocket server is running on ws://${process.env.IP4_ADDRESS}:${process.env.PORT_WS}`);
+
+server.listen(process.env.PORT, () => {
+    console.log(`Server is running on port ws://localhost:${process.env.PORT}/device`);
+    console.log(`Server is running on port ws://localhost:${process.env.PORT}/control`);
+    console.log(`Server is running on port http://localhost:${process.env.PORT}`);
 });
