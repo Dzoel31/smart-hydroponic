@@ -3,6 +3,10 @@ import time
 import asyncio
 import websockets
 import random
+import dotenv
+import os
+
+dotenv.load_dotenv()
 
 # Constants from Arduino code
 MOISTURE_THRESHOLD = 65.0
@@ -30,7 +34,9 @@ actuator_state = {
 async def connect_to_websocket():
     """Simulates connecting to the WebSocket server"""
     try:
-        websocket = await websockets.connect("ws://192.168.1.3:15000/device")
+        websocket = await websockets.connect(
+            f"ws://{os.getenv('HOST')}:{os.getenv('PORT')}/ws/smart-hydroponic/device"
+        )
         actuator_state["isActuatorConnected"] = True
         print("Connected to WebSocket server")
         return websocket

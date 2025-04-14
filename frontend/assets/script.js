@@ -1,7 +1,7 @@
 // Configuration
 const config = {
-    wsUrl: "ws://103.147.92.179:15000/device",
-    controlUrl: "ws://103.147.92.179:15000/control",
+    wsUrl: "ws://103.147.92.179:15000/ws/smart-hydroponic/device",
+    controlUrl: "ws://103.147.92.179:15000/ws/smart-hydroponic/control",
     deviceId: "dashboard-device",
     actuatorDeviceId: "esp8266-actuator-device"
 };
@@ -94,17 +94,16 @@ function connectWebSockets() {
     wsDashboard = new WebSocket(config.wsUrl);
     
     wsDashboard.onopen = () => {
-        console.log(`Connected to WebSocket at ${config.wsUrl}`);
         const registerData = {
             device_id: config.deviceId,
             type: "register"
         };
-        wsDashboard.send(JSON.stringify(registerData));
-        console.log("Register data sent:", registerData);
+        if (wsDashboard.readyState === WebSocket.OPEN) {
+            wsDashboard.send(JSON.stringify(registerData));
+        }
     };
     
     wsDashboard.onmessage = (event) => {
-        console.log("Message received:", event.data);
         const data = JSON.parse(event.data);
         if (data.type === "update_data") {
             handleSensorData(data.data);
@@ -112,29 +111,23 @@ function connectWebSockets() {
     };
     
     wsDashboard.onclose = () => {
-        console.log(`WebSocket connection to ${config.wsUrl} closed, attempting to reconnect...`);
         setTimeout(connectWebSockets, 5000);
     };
     
-    wsDashboard.onerror = (error) => {
-        console.error("WebSocket error:", error);
+    wsDashboard.onerror = () => {
         wsDashboard.close();
     };
     
     // Control WebSocket
     wsControl = new WebSocket(config.controlUrl);
     
-    wsControl.onopen = () => {
-        console.log(`Connected to control WebSocket at ${config.controlUrl}`);
-    };
+    wsControl.onopen = () => {};
     
     wsControl.onclose = () => {
-        console.log(`Control WebSocket connection closed, attempting to reconnect...`);
         setTimeout(connectWebSockets, 5000);
     };
     
-    wsControl.onerror = (error) => {
-        console.error("Control WebSocket error:", error);
+    wsControl.onerror = () => {
         wsControl.close();
     };
 }
@@ -145,9 +138,6 @@ function connectWebSockets() {
 function sendCommand() {
     if (wsControl && wsControl.readyState === WebSocket.OPEN) {
         wsControl.send(JSON.stringify(state));
-        console.log("Command sent:", state);
-    } else {
-        console.error("Control WebSocket not connected!");
     }
 }
 

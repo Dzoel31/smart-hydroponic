@@ -1,6 +1,7 @@
 const WebSocket = require('ws');
 const http = require('http');
 const express = require('express');
+const cors  = require('cors');
 const dotenv = require('dotenv');
 const fs = require('fs');
 
@@ -28,18 +29,18 @@ const heartbeat = () => {
     console.log("Heartbeat received from device");
 }
 
-const wssDevice = new WebSocket.Server({ noServer: true, path: '/device' });
-const wssControl = new WebSocket.Server({ noServer: true, path: '/control' });
+const wssDevice = new WebSocket.Server({ noServer: true, path: '/ws/smart-hydroponic/device' });
+const wssControl = new WebSocket.Server({ noServer: true, path: '/ws/smart-hydroponic/control' });
 
 const deviceClients = new Map();
 const dashboardClients = new Set();
 
 server.on('upgrade', (request, socket, head) => {
-    if (request.url === '/device') {
+    if (request.url === '/ws/smart-hydroponic/device') {
         wssDevice.handleUpgrade(request, socket, head, (ws) => {
             wssDevice.emit('connection', ws, request);
         });
-    } else if (request.url === '/control') {
+    } else if (request.url === '/ws/smart-hydroponic/control') {
         wssControl.handleUpgrade(request, socket, head, (ws) => {
             wssControl.emit('connection', ws, request);
         });
@@ -202,12 +203,13 @@ wssControl.on('connection', (ws, req) => {
     });
 });
 
+app.use(cors())
 app.use(express.json());
 app.use(router_sensor);
 app.use(router_actuator);
 
-server.listen(process.env.PORT, () => {
-    console.log(`Server is running on port ws://localhost:${process.env.PORT}/device`);
-    console.log(`Server is running on port ws://localhost:${process.env.PORT}/control`);
+server.listen(process.env.PORT, process.env.HOST, () => {
+    console.log(`Server is running on port ws://localhost:${process.env.PORT}/ws/smart-hydroponic/device`);
+    console.log(`Server is running on port ws://localhost:${process.env.PORT}/ws/smart-hydroponic/control`);
     console.log(`Server is running on port http://localhost:${process.env.PORT}`);
 });

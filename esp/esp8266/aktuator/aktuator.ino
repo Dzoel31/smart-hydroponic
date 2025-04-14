@@ -1,5 +1,5 @@
-// #include <ESP8266WiFi.h>
-#include <WiFi.h>
+#include <ESP8266WiFi.h>
+// #include <WiFi.h>
 // #include <ESP8266HTTPClient.h>
 #include <ArduinoJson.h>
 #include <WiFiClientSecure.h>
@@ -13,9 +13,9 @@
 #define RELAY_LIGHT_2 14  // D5
 
 // Configuration
-const char* WIFI_SSID = "Podcast Area";
-const char* WIFI_PASSWORD = "iriunwebcam";
-const char* WEBSOCKET_URL = "ws://103.147.92.179:15000/device";
+const char* WIFI_SSID = "Rhizopus Oryzae";
+const char* WIFI_PASSWORD = "jamurtempe";
+const char *WEBSOCKET_URL = "ws://103.147.92.179:15000/ws/smart-hydroponic/device";
 const char* DEVICE_ID = "esp8266-actuator-device";
 const unsigned long DATA_SEND_INTERVAL = 5000; // 5 seconds
 const unsigned long WIFI_RECONNECT_TIMEOUT = 10000; // 10 seconds
@@ -79,7 +79,7 @@ void connectToWifi() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+    delay(3000);
     Serial.print(".");
   }
   
