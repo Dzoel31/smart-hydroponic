@@ -57,7 +57,7 @@ exports.up = (pgm) => {
             notNull: true,
         },
         timestamp: {
-            type: 'timestamp',
+            type: 'timestamptz',
             notNull: true,
             default: pgm.func('CURRENT_TIMESTAMP'),
         },
@@ -93,7 +93,7 @@ exports.up = (pgm) => {
             notNull: true,
         },
         timestamp: {
-            type: 'timestamp',
+            type: 'timestamptz',
             notNull: true,
             default: pgm.func('CURRENT_TIMESTAMP'),
         },
@@ -117,7 +117,7 @@ exports.up = (pgm) => {
             notNull: true,
         },
         timestamp: {
-            type: 'timestamp',
+            type: 'timestamptz',
             notNull: true,
             default: pgm.func('CURRENT_TIMESTAMP'),
         },
