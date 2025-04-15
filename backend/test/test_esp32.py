@@ -8,7 +8,7 @@ import json
 dotenv.load_dotenv()
 
 DEVICE_ID = "esp32-plant-device"
-uri = f"ws://{os.getenv('HOST')}:{os.getenv('PORT')}/ws/smart-hydroponic/device"
+uri = f"ws://{os.getenv('HOST')}/ws/smart-hydroponic/device"
 
 def data_plant():
     return {

@@ -35,7 +35,7 @@ async def connect_to_websocket():
     """Simulates connecting to the WebSocket server"""
     try:
         websocket = await websockets.connect(
-            f"ws://{os.getenv('HOST')}:{os.getenv('PORT')}/ws/smart-hydroponic/device"
+            f"ws://{os.getenv('HOST')}/ws/smart-hydroponic/device"
         )
         actuator_state["isActuatorConnected"] = True
         print("Connected to WebSocket server")
