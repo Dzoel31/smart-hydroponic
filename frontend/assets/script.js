@@ -1,7 +1,7 @@
 // Configuration
 const config = {
-    wsUrl: "ws://103.147.92.179:15000/ws/smart-hydroponic/device",
-    controlUrl: "ws://103.147.92.179:15000/ws/smart-hydroponic/control",
+    wsUrl: "ws://103.147.92.179/ws/smart-hydroponic/device",
+    controlUrl: "ws://103.147.92.179/ws/smart-hydroponic/control",
     deviceId: "dashboard-device",
     actuatorDeviceId: "esp8266-actuator-device"
 };
