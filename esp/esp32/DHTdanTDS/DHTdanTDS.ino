@@ -14,8 +14,8 @@
 #define DHT22_TYPE DHT22
 
 // Network configuration
-const char *ssid = "Podcast Area";
-const char *password = "iriunwebcam";
+const char *ssid = "Rhizopus Oryzae";
+const char *password = "jamurtempe";
 const char *websocket_server = "ws://103.147.92.179/ws/smart-hydroponic/device";
 const char *device_id = "esp32-environment-device";
 
@@ -154,7 +154,7 @@ bool connectToWebSocket() {
 }
 
 void registerDevice() {
-  StaticJsonDocument<256> registerJson;
+  StaticJsonDocument<512> registerJson;
   registerJson["device_id"] = device_id;
   registerJson["type"] = "register";
 
@@ -172,7 +172,10 @@ void readDHTSensors() {
   humidity_bawah = dht22.readHumidity();
 
   if (isnan(temperature_atas) || isnan(humidity_atas) || isnan(temperature_bawah) || isnan(humidity_bawah)) {
-    Serial.println("Failed to read from DHT sensors!");
+    temperature_atas = 0;
+    humidity_atas = 0;
+    temperature_bawah = 0;
+    humidity_bawah = 0;
   }
 }
 
@@ -191,12 +194,13 @@ void readTDSSensor() {
 void sendSensorData() {
   StaticJsonDocument<256> jsonDoc;
   jsonDoc["device_id"] = device_id;
+  jsonDoc["type"] = "update_data";
 
   JsonObject data = jsonDoc.createNestedObject("data");
-  data["temperature_atas"] = temperature_atas;
-  data["humidity_atas"] = humidity_atas;
-  data["temperature_bawah"] = temperature_bawah;
-  data["humidity_bawah"] = humidity_bawah;
+  data["temperatureAtas"] = temperature_atas;
+  data["humidityAtas"] = humidity_atas;
+  data["temperatureBawah"] = temperature_bawah;
+  data["humidityBawah"] = humidity_bawah;
   data["tdsValue"] = tdsValue;
 
   String dataStr;
