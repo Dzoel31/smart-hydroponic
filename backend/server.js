@@ -18,7 +18,6 @@ db.connect((err) => {
         errorLogger.error('Error connecting to database:', err.message);
         return;
     }
-    console.log('Database connected');
     deviceLogger.info('Database connected');
 });
 
@@ -54,16 +53,15 @@ server.on('upgrade', (request, socket, head) => {
 
 wssDevice.on('connection', (ws) => {
     ws.isAlive = true;
-    console.log('Device connected');
+    deviceLogger.info('Device connected');
 
     ws.on("message", (message) => {
         let payload;
         try {
             payload = JSON.parse(message);
-            console.log("[DEVICE WS] Data received from device:", payload);
+            deviceLogger.info(`[DEVICE WS] Data received from ${payload.device_id}: ${payload}`);
         } catch (e) {
-            console.error("Error parsing message:", e.message);
-            errorLogger.error("Error parsing message:", e.message);
+            errorLogger.error(`Error parsing message: ${e.message}`);
             return;
         }
         
@@ -71,10 +69,10 @@ wssDevice.on('connection', (ws) => {
 
         if (type === 'register') {
             deviceClients.set(device_id, ws);
-            console.log(`[DEVICE WS] Registered device ${device_id}`);
+            deviceLogger.info(`[DEVICE WS] Registered device ${device_id}`);
             if (device_id === "dashboard-device" || device_id === "esp8266-actuator-device") {
                 dashboardClients.add(ws);
-                console.log(`[DEVICE WS] Registered dashboard device ${device_id}`);
+                deviceLogger.info(`[DEVICE WS] Registered dashboard device ${device_id}`);
             }
             ws.send(JSON.stringify({ type: 'register', status: 'success' }));
         } else if (type === 'update_data') {
@@ -93,8 +91,7 @@ wssDevice.on('connection', (ws) => {
                     const averageMoisture = moistureValues.reduce((a, b) => a + b, 0) / moistureValues.length;
                     data.moistureAvg = parseFloat(averageMoisture.toPrecision(3));
                 } else {
-                    console.warn("No valid moisture values found for device:", device_id);
-                    deviceLogger.warn("No valid moisture values found for device:", device_id);
+                    deviceLogger.warn(`No valid moisture values found for device: ${device_id}`);
                 }
             } else if (device_id === "esp32-environment-device") {
                 data.temperatureAtas = parseFloat(data.temperatureAtas.toPrecision(3));
@@ -119,7 +116,7 @@ wssDevice.on('connection', (ws) => {
                     ...allData["esp8266-actuator-device"],
                 };
                 
-                console.log("Data complete, broadcasting to all dashboards:", completePayload);
+                deviceLogger.info(`Data complete, broadcasting to all dashboards: ${completePayload}`);
                 
                 // Send to all dashboard clients
                 for (const client of dashboardClients) {      
@@ -135,7 +132,8 @@ wssDevice.on('connection', (ws) => {
                 
                 clearCache(); // Clear cache after broadcasting and storing
             } else {
-                console.log("Data not complete, not broadcasting to devices");
+                deviceLogger.warn("Data not complete, not broadcasting to devices");
+                deviceLogger.warn(`Current data state: ${JSON.stringify(data)}`);
             }
         }
     });
@@ -145,7 +143,7 @@ wssDevice.on('connection', (ws) => {
             if (ws.isAlive === false) return ws.terminate();
             ws.isAlive = false;
             ws.ping(() => {
-                console.log("Ping");
+                deviceLogger.info("Ping");
             });
         })
     }, 30000); // Send a ping every 30 seconds
@@ -156,7 +154,7 @@ wssDevice.on('connection', (ws) => {
         for (const [device_id, client] of deviceClients.entries()) {
             if (client === ws) {
                 deviceClients.delete(device_id);
-                console.log(`[DEVICE WS] Device ${device_id} disconnected`);
+                deviceLogger.info(`[DEVICE WS] Device ${device_id} disconnected`);
                 break;
             }
         }
@@ -165,17 +163,18 @@ wssDevice.on('connection', (ws) => {
 });
 
 wssControl.on('connection', (ws, req) => {
-    console.log('Dashboard connected');
+    deviceLogger.info('Dashboard connected');
+    dashboardLogger.info('Dashboard connected');
     dashboardClients.add(ws);
 
     ws.on('message', (message) => {
         let payload;
         try {
             payload = JSON.parse(message);
-            console.log("Data received from dashboard:", payload);
+            deviceLogger.info(`Data received from dashboard: ${JSON.stringify(payload)}`);
+            dashboardLogger.info(`Data sent from dashboard: ${JSON.stringify(payload)}`);
         } catch (e) {
-            console.error("Error parsing message:", e.message);
-            errorLogger.warn("Error parsing message:", e.message);
+            errorLogger.warn(`Error parsing message: ${e.message}`);
             return;
         }
 
@@ -184,9 +183,9 @@ wssControl.on('connection', (ws, req) => {
         const targetDevice = deviceClients.get(device_id);
         if (targetDevice) {
             targetDevice.send(JSON.stringify({ type: 'command', data }));
-            console.log(`[CONTROL] Command sent to device ${device_id}:`, data);
+            deviceLogger.info(`[CONTROL] Command sent to device ${device_id}: ${JSON.stringify(data)}`);
         } else {
-            console.warn(`[CONTROL] Device ${device_id} not found`);
+            deviceLogger.warn(`[CONTROL] Device ${device_id} not found`);
             errorLogger.warn(`[CONTROL] Device ${device_id} not found`);
         }
     });
@@ -205,13 +204,14 @@ wssControl.on('connection', (ws, req) => {
     
     ws.on('close', () => {
         dashboardClients.delete(ws);
-        console.log('Dashboard disconnected');
+        dashboardLogger.info('Dashboard disconnected');
+        deviceLogger.info('Dashboard disconnected');
         
         const disconnectedDevice = [...deviceClients.entries()].find(([_, client]) => client === ws);
         if (disconnectedDevice) {
             const [device_id] = disconnectedDevice;
             deviceClients.delete(device_id);
-            console.log(`[CONTROL] Device ${device_id} disconnected`);
+            deviceLogger.info(`[CONTROL] Device ${device_id} disconnected`);
         }
         
         clearInterval(pingInterval);

@@ -1,26 +1,27 @@
-const data_cache = {
-    "esp32-plant-device": null,
-    "esp32-environment-device": null,
-    "esp8266-actuator-device": null,
-};
+const DEVICE_KEYS = [
+    "esp32-plant-device",
+    "esp32-environment-device",
+    "esp8266-actuator-device",
+];
 
-const updateCache = (device_id, data) => {    
-    data_cache[device_id] = {
-        ...data,
-    };
+const data_cache = Object.fromEntries(DEVICE_KEYS.map(key => [key, null]));
 
+const updateCache = (device_id, data) => {
+    if (DEVICE_KEYS.includes(device_id)) {
+        data_cache[device_id] = { ...data };
+    }
 };
 
 const getAlldata = () => {
-    console.log("Payload data: ", data_cache);
-    return data_cache;
+    console.log("Payload data:", data_cache);
+    return { ...data_cache };
 };
 
 const clearCache = () => {
-    data_cache["esp32-plant-device"] = null;
-    data_cache["esp32-environment-device"] = null;
-    data_cache["esp8266-actuator-device"] = null;
-}
+    DEVICE_KEYS.forEach(key => {
+        data_cache[key] = null;
+    });
+};
 
 const isDataComplete = (data) => {
     const sensor_data = data["esp32-plant-device"];
