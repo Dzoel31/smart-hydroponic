@@ -8,7 +8,8 @@
     "start": "nodemon server.js --ignore logs/",
     "migrate": "node-pg-migrate",
     "migrate:latest": "node-pg-migrate up",
-    "migrate:rollback": "node-pg-migrate down"
+    "migrate:rollback": "node-pg-migrate down",
+    "migrate:clean": "node-pg-migrate redo 0"
   },
   "keywords": [],
   "author": "",
