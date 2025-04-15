@@ -27,7 +27,7 @@ const buildLogger = (label) => {
             new transports.DailyRotateFile({
                 filename: path.join(logsDir, `${labelLower}-%DATE%.log`),
                 datePattern: 'YYYY-MM-DD',
-                zippedArchive: false,
+                zippedArchive: true,
                 maxSize: '10m',
                 maxFiles: '14d',
                 level: 'info',
@@ -42,7 +42,7 @@ const buildLogger = (label) => {
             new transports.DailyRotateFile({
                 filename: path.join(logsDir, `${labelLower}-%DATE%.json`),
                 datePattern: 'YYYY-MM-DD',
-                zippedArchive: false,
+                zippedArchive: true,
                 maxSize: '10m',
                 maxFiles: '14d',
                 level: 'info',
