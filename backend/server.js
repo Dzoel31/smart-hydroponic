@@ -3,7 +3,6 @@ const http = require('http');
 const express = require('express');
 const cors  = require('cors');
 const dotenv = require('dotenv');
-const fs = require('fs');
 
 const router_sensor = require('./routes/sensor_route');
 const router_actuator = require('./routes/actuator_route');
@@ -11,12 +10,14 @@ const { updateCache, getAlldata, clearCache, isDataComplete } = require('./utils
 const { plantDataUpdate, environmentDataUpdate, actuatorDataUpdate } = require('./utils/insert_data');
 const db = require('./config/db');
 
+const { deviceLogger, dashboardLogger, errorLogger } = require("./utils/logger")
+
 db.connect((err) => {
     if (err) {
-        console.log('Error connecting to database:', err.message);
+        errorLogger.error('Error connecting to database:', err.message);
         return;
     }
-    console.log('Database connected');
+    deviceLogger.info('Database connected');
 });
 
 dotenv.config();
@@ -26,7 +27,7 @@ const server = http.createServer(app);
 
 const heartbeat = () => {
     this.isAlive = true;
-    console.log("Heartbeat received from device");
+    deviceLogger.info("Heartbeat received from device");
 }
 
 const wssDevice = new WebSocket.Server({ noServer: true, path: '/ws/smart-hydroponic/device' });
@@ -57,9 +58,9 @@ wssDevice.on('connection', (ws) => {
         let payload;
         try {
             payload = JSON.parse(message);
-            console.log("[DEVICE WS] Data received from device:", payload);
+            deviceLogger.info("[DEVICE WS] Data received from device:", payload);
         } catch (e) {
-            console.error("Error parsing message:", e.message);
+            errorLogger.error("Error parsing message:", e.message);
             return;
         }
         
@@ -67,10 +68,10 @@ wssDevice.on('connection', (ws) => {
 
         if (type === 'register') {
             deviceClients.set(device_id, ws);
-            console.log(`[DEVICE WS] Registered device ${device_id}`);
+            deviceLogger.info(`[DEVICE WS] Registered device ${device_id}`);
             if (device_id === "dashboard-device" || device_id === "esp8266-actuator-device") {
                 dashboardClients.add(ws);
-                console.log(`[DEVICE WS] Registered dashboard device ${device_id}`);
+                dashboardLogger.info(`[DEVICE WS] Registered dashboard device ${device_id}`);
             }
             ws.send(JSON.stringify({ type: 'register', status: 'success' }));
         } else if (type === 'update_data') {
@@ -89,7 +90,7 @@ wssDevice.on('connection', (ws) => {
                     const averageMoisture = moistureValues.reduce((a, b) => a + b, 0) / moistureValues.length;
                     data.moistureAvg = parseFloat(averageMoisture.toPrecision(3));
                 } else {
-                    console.warn("No valid moisture values found for device:", device_id);
+                    deviceLogger.warn("No valid moisture values found for device:", device_id);
                 }
             } else if (device_id === "esp32-environment-device") {
                 data.temperatureAtas = parseFloat(data.temperatureAtas.toPrecision(3));
@@ -114,7 +115,8 @@ wssDevice.on('connection', (ws) => {
                     ...allData["esp8266-actuator-device"],
                 };
                 
-                console.log("Data complete, broadcasting to all dashboards:", completePayload);
+                deviceLogger.info("Data complete, broadcasting to all dashboards:", completePayload);
+                dashboardLogger.info("Data complete, Received from device:", completePayload);
                 
                 // Send to all dashboard clients
                 for (const client of dashboardClients) {      
@@ -130,7 +132,7 @@ wssDevice.on('connection', (ws) => {
                 
                 clearCache(); // Clear cache after broadcasting and storing
             } else {
-                console.log("Data not complete, not broadcasting to devices");
+                deviceLogger.info("Data not complete, not broadcasting to devices");
             }
         }
     });
@@ -151,7 +153,7 @@ wssDevice.on('connection', (ws) => {
         for (const [device_id, client] of deviceClients.entries()) {
             if (client === ws) {
                 deviceClients.delete(device_id);
-                console.log(`[DEVICE WS] Device ${device_id} disconnected`);
+                deviceLogger.info(`[DEVICE WS] Device ${device_id} disconnected`);
                 break;
             }
         }
@@ -160,16 +162,18 @@ wssDevice.on('connection', (ws) => {
 });
 
 wssControl.on('connection', (ws, req) => {
-    console.log('Dashboard connected');
+    deviceLogger.info('Dashboard connected');
+    dashboardLogger.info('Dashboard connected');
     dashboardClients.add(ws);
 
     ws.on('message', (message) => {
         let payload;
         try {
             payload = JSON.parse(message);
-            console.log("Data received from dashboard:", payload);
+            dashboardLogger.info("[CONTROL WS] Data sent to device:", payload);
+            deviceLogger.info("[CONTROL WS] Data received from dashboard:", payload);
         } catch (e) {
-            console.error("Error parsing message:", e.message);
+            errorLogger.warn("Error parsing message:", e.message);
             return;
         }
 
@@ -178,9 +182,10 @@ wssControl.on('connection', (ws, req) => {
         const targetDevice = deviceClients.get(device_id);
         if (targetDevice) {
             targetDevice.send(JSON.stringify({ type: 'command', data }));
-            console.log(`[CONTROL] Command sent to device ${device_id}:`, data);
+            deviceLogger.info(`[CONTROL] Command sent to device ${device_id}:`, data);
+            dashboardLogger.info(`[CONTROL] Command sent to device ${device_id}:`, data);
         } else {
-            console.warn(`[CONTROL] Device ${device_id} not found`);
+            errorLogger.warn(`[CONTROL] Device ${device_id} not found`);
         }
     });
 
@@ -198,7 +203,17 @@ wssControl.on('connection', (ws, req) => {
     
     ws.on('close', () => {
         dashboardClients.delete(ws);
-        console.log('Dashboard disconnected');
+        deviceLogger.info('Dashboard disconnected');
+        dashboardLogger.info('Dashboard disconnected');
+        
+        const disconnectedDevice = [...deviceClients.entries()].find(([_, client]) => client === ws);
+        if (disconnectedDevice) {
+            const [device_id] = disconnectedDevice;
+            deviceClients.delete(device_id);
+            deviceLogger.info(`[CONTROL] Device ${device_id} disconnected`);
+            dashboardLogger.info(`[CONTROL] Device ${device_id} disconnected`);
+        }
+        
         clearInterval(pingInterval);
     });
 });
@@ -209,7 +224,7 @@ app.use(router_sensor);
 app.use(router_actuator);
 
 server.listen(process.env.PORT, process.env.HOST, () => {
-    console.log(`Server is running on port ws://localhost:${process.env.PORT}/ws/smart-hydroponic/device`);
-    console.log(`Server is running on port ws://localhost:${process.env.PORT}/ws/smart-hydroponic/control`);
-    console.log(`Server is running on port http://localhost:${process.env.PORT}`);
+    deviceLogger.info(`Server is running on port ws://localhost:${process.env.PORT}/ws/smart-hydroponic/device`);
+    deviceLogger.info(`Server is running on port ws://localhost:${process.env.PORT}/ws/smart-hydroponic/control`);
+    deviceLogger.info(`Server is running on port http://localhost:${process.env.PORT}`);
 });

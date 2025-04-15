@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon server.js",
+    "start": "nodemon server.js --ignore logs/",
     "migrate": "node-pg-migrate",
     "migrate:latest": "node-pg-migrate up",
     "migrate:rollback": "node-pg-migrate down"
@@ -23,6 +23,8 @@
     "nodemon": "^3.1.9",
     "pg": "^8.13.3",
     "pg-native": "^3.2.2",
+    "winston": "^3.17.0",
+    "winston-daily-rotate-file": "^5.0.0",
     "ws": "^8.18.0"
   },
   "optionalDependencies": {
