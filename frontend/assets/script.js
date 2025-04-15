@@ -91,7 +91,13 @@ function handleSensorData(data) {
  */
 function connectWebSockets() {
     // Dashboard WebSocket
-    wsDashboard = new WebSocket(config.wsUrl);
+    try {
+        wsDashboard = new WebSocket(config.wsUrl);
+    } catch (error) {
+        console.error("Failed to connect to Dashboard WebSocket:", error);
+        setTimeout(connectWebSockets, 5000);
+        return;
+    }
     
     wsDashboard.onopen = () => {
         const registerData = {
@@ -113,7 +119,13 @@ function connectWebSockets() {
     wsDashboard.onclose = () => {
         setTimeout(connectWebSockets, 5000);
     };
-    
+    try {
+        wsControl = new WebSocket(config.controlUrl);
+    } catch (error) {
+        console.error("Failed to connect to Control WebSocket:", error);
+        setTimeout(connectWebSockets, 5000);
+        return;
+    }
     wsDashboard.onerror = () => {
         wsDashboard.close();
     };
