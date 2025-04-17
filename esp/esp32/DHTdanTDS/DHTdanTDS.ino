@@ -14,8 +14,8 @@
 #define DHT22_TYPE DHT22
 
 // Network configuration
-const char *ssid = "Rhizopus Oryzae";
-const char *password = "jamurtempe";
+const char *WIFI_SSID = "Podcast Area";
+const char *WIFI_PASSWORD = "iriunwebcam";
 const char *websocket_server = "ws://103.147.92.179/ws/smart-hydroponic/device";
 const char *device_id = "esp32-environment-device";
 
