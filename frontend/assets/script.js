@@ -36,6 +36,10 @@ const state = {
     }
 };
 
+// WebSocket connections
+let wsDashboard = null;
+let wsControl = null;
+
 /**
  * Updates the UI based on current state
  */
@@ -85,137 +89,60 @@ function handleSensorData(data) {
 /**
  * Connect to WebSocket services
  */
-let wsDashboard = null;
-let wsControl = null;
-let isConnectingDashboard = false;
-let isConnectingControl = false;
-let dashboardPingInterval = null;
-let controlPingInterval = null;
-
-// General retry wrapper
-const retryConnection = (fn, delay = 5000) => {
-    setTimeout(fn, delay);
-};
-
-// Connect to WebSocket (Reusable)
-function connectWebSocket(url, handlers, type = 'generic') {
-    let ws;
+function connectWebSockets() {
+    // Dashboard WebSocket
     try {
-        ws = new WebSocket(url);
-    } catch (err) {
-        console.error(`[${type}] Failed to connect:`, err.message);
-        retryConnection(() => connectWebSocket(url, handlers, type));
+        wsDashboard = new WebSocket(config.wsUrl);
+    } catch (error) {
+        console.error("Failed to connect to Dashboard WebSocket:", error);
+        setTimeout(connectWebSockets, 5000);
         return;
     }
-
-    ws.onopen = () => {
-        console.info(`[${type}] Connected`);
-        handlers.onOpen?.(ws);
-
-        // Start ping-pong mechanism
-        if (type === "Dashboard") {
-            clearInterval(dashboardPingInterval);
-            dashboardPingInterval = setInterval(() => {
-                if (ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: "ping" }));
-                }
-            }, 30000); // Ping every 30 seconds
-        } else if (type === "Control") {
-            clearInterval(controlPingInterval);
-            controlPingInterval = setInterval(() => {
-                if (ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: "ping" }));
-                }
-            }, 30000); // Ping every 30 seconds
+    
+    wsDashboard.onopen = () => {
+        const registerData = {
+            device_id: config.deviceId,
+            type: "register"
+        };
+        if (wsDashboard.readyState === WebSocket.OPEN) {
+            wsDashboard.send(JSON.stringify(registerData));
         }
     };
-
-    ws.onmessage = (event) => {
-        handlers.onMessage?.(event, ws);
-    };
-
-    ws.onclose = (event) => {
-        console.warn(`[${type}] Connection closed: ${event.reason}`);
-        handlers.onClose?.();
-
-        // Clear ping interval on close
-        if (type === "Dashboard") {
-            clearInterval(dashboardPingInterval);
-        } else if (type === "Control") {
-            clearInterval(controlPingInterval);
+    
+    wsDashboard.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === "update_data") {
+            handleSensorData(data.data);
         }
-
-        retryConnection(() => connectWebSocket(url, handlers, type));
     };
-
-    ws.onerror = (err) => {
-        console.error(`[${type}] Error:`, err.message || err);
-        ws.close();
+    
+    wsDashboard.onclose = () => {
+        setTimeout(connectWebSockets, 5000);
     };
-
-    return ws;
+    try {
+        wsControl = new WebSocket(config.controlUrl);
+    } catch (error) {
+        console.error("Failed to connect to Control WebSocket:", error);
+        setTimeout(connectWebSockets, 5000);
+        return;
+    }
+    wsDashboard.onerror = () => {
+        wsDashboard.close();
+    };
+    
+    // Control WebSocket
+    wsControl = new WebSocket(config.controlUrl);
+    
+    wsControl.onopen = () => {};
+    
+    wsControl.onclose = () => {
+        setTimeout(connectWebSockets, 5000);
+    };
+    
+    wsControl.onerror = () => {
+        wsControl.close();
+    };
 }
-
-function connectDashboardWebSocket() {
-    if (isConnectingDashboard) return;
-    isConnectingDashboard = true;
-
-    wsDashboard = connectWebSocket(config.wsUrl, {
-        onOpen: (ws) => {
-            isConnectingDashboard = false;
-            const registerPayload = {
-                device_id: config.deviceId,
-                type: "register"
-            };
-            ws.send(JSON.stringify(registerPayload));
-        },
-        onMessage: (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                if (data.type === "update_data") {
-                    handleSensorData(data.data);
-                } else if (data.type === "pong") {
-                    console.info("[Dashboard] Pong received");
-                }
-            } catch (e) {
-                console.error("Invalid message from dashboard:", event.data);
-            }
-        },
-        onClose: () => {
-            isConnectingDashboard = false;
-        }
-    }, "Dashboard");
-}
-
-function connectControlWebSocket() {
-    if (isConnectingControl) return;
-    isConnectingControl = true;
-
-    wsControl = connectWebSocket(config.controlUrl, {
-        onOpen: () => {
-            isConnectingControl = false;
-        },
-        onMessage: (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                if (data.type === "pong") {
-                    console.info("[Control] Pong received");
-                }
-            } catch (e) {
-                console.error("Invalid message from control:", event.data);
-            }
-        },
-        onClose: () => {
-            isConnectingControl = false;
-        }
-    }, "Control");
-}
-
-function connectWebSockets() {
-    connectDashboardWebSocket();
-    connectControlWebSocket();
-}
-
 
 /**
  * Send command to control WebSocket

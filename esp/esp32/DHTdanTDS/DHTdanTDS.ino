@@ -90,7 +90,7 @@ void loop() {
   readDHTSensors();
   
   // Read TDS sensor
-  readTDSSensor();
+  // readTDSSensor();
   
   // Send data at regular intervals
   if (currentMillis - lastSendTime >= SEND_INTERVAL) {
@@ -179,17 +179,17 @@ void readDHTSensors() {
   }
 }
 
-void readTDSSensor() {
-  // Copy buffer for median calculation
-  for (int i = 0; i < SCOUNT; i++) {
-    analogBufferTemp[i] = analogBuffer[i];
-  }
+// void readTDSSensor() {
+//   // Copy buffer for median calculation
+//   for (int i = 0; i < SCOUNT; i++) {
+//     analogBufferTemp[i] = analogBuffer[i];
+//   }
   
-  float averageVoltage = getMedianNum(analogBufferTemp, SCOUNT) * VREF / 4095.0;
-  float compensationCoefficient = 1.0 + 0.02 * (temperature_bawah - 25.0); // Using temperature_bawah for compensation
-  float compensationVoltage = averageVoltage / compensationCoefficient;
-  tdsValue = (133.42 * pow(compensationVoltage, 3) - 255.86 * pow(compensationVoltage, 2) + 857.39 * compensationVoltage);
-}
+//   float averageVoltage = getMedianNum(analogBufferTemp, SCOUNT) * VREF / 4095.0;
+//   float compensationCoefficient = 1.0 + 0.02 * (temperature_bawah - 25.0); // Using temperature_bawah for compensation
+//   float compensationVoltage = averageVoltage / compensationCoefficient;
+//   tdsValue = (133.42 * pow(compensationVoltage, 3) - 255.86 * pow(compensationVoltage, 2) + 857.39 * compensationVoltage);
+// }
 
 void sendSensorData() {
   StaticJsonDocument<256> jsonDoc;
@@ -201,7 +201,6 @@ void sendSensorData() {
   data["humidityAtas"] = humidity_atas;
   data["temperatureBawah"] = temperature_bawah;
   data["humidityBawah"] = humidity_bawah;
-  data["tdsValue"] = tdsValue;
 
   String dataStr;
   serializeJson(jsonDoc, dataStr);
