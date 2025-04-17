@@ -13,13 +13,13 @@
 #define RELAY_LIGHT_2 14  // D5
 
 // Configuration
-const char* WIFI_SSID = "Rhizopus Oryzae";
-const char* WIFI_PASSWORD = "jamurtempe";
+const char *WIFI_SSID = "Podcast Area";
+const char *WIFI_PASSWORD = "iriunwebcam";
 const char *WEBSOCKET_URL = "ws://103.147.92.179/ws/smart-hydroponic/device";
 const char* DEVICE_ID = "esp8266-actuator-device";
 const unsigned long DATA_SEND_INTERVAL = 5000; // 5 seconds
 const unsigned long WIFI_RECONNECT_TIMEOUT = 10000; // 10 seconds
-const float MOISTURE_THRESHOLD = 65.0;
+const float MOISTURE_THRESHOLD = 65;
 const float TEMPERATURE_THRESHOLD = 30.0;
 
 // State variables

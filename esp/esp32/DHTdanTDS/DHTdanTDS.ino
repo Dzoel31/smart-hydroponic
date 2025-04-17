@@ -62,7 +62,7 @@ void setup() {
   dht22.begin();
   
   // Connect to WiFi
-  WiFi.begin(ssid, password);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to WiFi ..");
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
@@ -125,7 +125,7 @@ void checkWiFiConnection() {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi disconnected, attempting to reconnect...");
     WiFi.disconnect();
-    WiFi.begin(ssid, password);
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
     unsigned long startAttemptTime = millis();
 

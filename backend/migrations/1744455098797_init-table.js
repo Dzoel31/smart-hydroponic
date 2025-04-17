@@ -45,15 +45,15 @@ exports.up = (pgm) => {
             notNull: true,
         },
         flowRate: {
-            type: 'int',
+            type: 'double precision',
             notNull: true,
         },
         totalLitres: {
-            type: 'int',
+            type: 'double precision',
             notNull: true,
         },
         distanceCm: {
-            type: 'int',
+            type: 'double precision',
             notNull: true,
         },
         timestamp: {
