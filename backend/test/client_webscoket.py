@@ -48,7 +48,7 @@ def data_actuator():
     }
 
 
-uri = f"ws://{os.getenv('IP4_ADDRESS')}:{os.getenv('PORT')}"
+uri = f"ws://{os.getenv('IP4_ADDRESS')}:{os.getenv('PORT')}/ws/smart-hydroponic/device"
 
 
 

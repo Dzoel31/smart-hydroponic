@@ -1,7 +1,7 @@
 // Configuration
+
 const config = {
-    wsUrl: "ws://103.147.92.179/ws/smart-hydroponic/device",
-    controlUrl: "ws://103.147.92.179/ws/smart-hydroponic/control",
+    wsUrl: `ws://172.23.14.166:15000/ws/smart-hydroponic/device`,
     deviceId: "dashboard-device",
     actuatorDeviceId: "esp8266-actuator-device"
 };
@@ -27,7 +27,8 @@ const elements = {
 
 // State management
 const state = {
-    device_id: config.actuatorDeviceId,
+    device_id: config.deviceId,
+    target_device_id: config.actuatorDeviceId,
     type: "command",
     data: {
         automationStatus: 0,
@@ -119,37 +120,37 @@ function connectWebSockets() {
     wsDashboard.onclose = () => {
         setTimeout(connectWebSockets, 5000);
     };
-    try {
-        wsControl = new WebSocket(config.controlUrl);
-    } catch (error) {
-        console.error("Failed to connect to Control WebSocket:", error);
-        setTimeout(connectWebSockets, 5000);
-        return;
-    }
-    wsDashboard.onerror = () => {
-        wsDashboard.close();
-    };
+    // try {
+    //     wsControl = new WebSocket(config.controlUrl);
+    // } catch (error) {
+    //     console.error("Failed to connect to Control WebSocket:", error);
+    //     setTimeout(connectWebSockets, 5000);
+    //     return;
+    // }
+    // wsDashboard.onerror = () => {
+    //     wsDashboard.close();
+    // };
     
-    // Control WebSocket
-    wsControl = new WebSocket(config.controlUrl);
+    // // Control WebSocket
+    // wsControl = new WebSocket(config.controlUrl);
     
-    wsControl.onopen = () => {};
+    // wsControl.onopen = () => {};
     
-    wsControl.onclose = () => {
-        setTimeout(connectWebSockets, 5000);
-    };
+    // wsControl.onclose = () => {
+    //     setTimeout(connectWebSockets, 5000);
+    // };
     
-    wsControl.onerror = () => {
-        wsControl.close();
-    };
+    // wsControl.onerror = () => {
+    //     wsControl.close();
+    // };
 }
 
 /**
  * Send command to control WebSocket
  */
 function sendCommand() {
-    if (wsControl && wsControl.readyState === WebSocket.OPEN) {
-        wsControl.send(JSON.stringify(state));
+    if (wsDashboard && wsDashboard.readyState === WebSocket.OPEN) {
+        wsDashboard.send(JSON.stringify(state));
     }
 }
 

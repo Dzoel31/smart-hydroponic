@@ -32,7 +32,6 @@ const heartbeat = () => {
 }
 
 const wssDevice = new WebSocket.Server({ noServer: true, path: '/ws/smart-hydroponic/device' });
-const wssControl = new WebSocket.Server({ noServer: true, path: '/ws/smart-hydroponic/control' });
 
 const deviceClients = new Map();
 const dashboardClients = new Set();
@@ -41,10 +40,6 @@ server.on('upgrade', (request, socket, head) => {
     if (request.url === '/ws/smart-hydroponic/device') {
         wssDevice.handleUpgrade(request, socket, head, (ws) => {
             wssDevice.emit('connection', ws, request);
-        });
-    } else if (request.url === '/ws/smart-hydroponic/control') {
-        wssControl.handleUpgrade(request, socket, head, (ws) => {
-            wssControl.emit('connection', ws, request);
         });
     } else {
         socket.destroy(); // Close the socket if the URL doesn't match
@@ -65,7 +60,7 @@ wssDevice.on('connection', (ws) => {
             return;
         }
         
-        const { device_id, type, data } = payload;
+        const { device_id, target_device_id, type, data } = payload;
 
         if (type === 'register') {
             deviceClients.set(device_id, ws);
@@ -135,6 +130,15 @@ wssDevice.on('connection', (ws) => {
                 deviceLogger.warn("Data not complete, not broadcasting to devices");
                 deviceLogger.warn(`Current data state: ${JSON.stringify(data)}`);
             }
+        } else if (type === 'command') {
+            const targetDevice = deviceClients.get(target_device_id);
+            if (targetDevice) {
+                targetDevice.send(JSON.stringify({ type: 'command', data }));
+                deviceLogger.info(`[CONTROL] Command sent to device ${target_device_id}: ${JSON.stringify(data)}`);
+            } else {
+                deviceLogger.warn(`[CONTROL] Device ${target_device_id} not found`);
+                errorLogger.warn(`[CONTROL] Device ${target_device_id} not found`);
+            }
         }
     });
 
@@ -162,62 +166,6 @@ wssDevice.on('connection', (ws) => {
     });
 });
 
-wssControl.on('connection', (ws, req) => {
-    deviceLogger.info('Dashboard connected');
-    dashboardLogger.info('Dashboard connected');
-    dashboardClients.add(ws);
-
-    ws.on('message', (message) => {
-        let payload;
-        try {
-            payload = JSON.parse(message);
-            deviceLogger.info(`Data received from dashboard: ${JSON.stringify(payload)}`);
-            dashboardLogger.info(`Data sent from dashboard: ${JSON.stringify(payload)}`);
-        } catch (e) {
-            errorLogger.warn(`Error parsing message: ${e.message}`);
-            return;
-        }
-
-        const { device_id, type, data } = payload;
-
-        const targetDevice = deviceClients.get(device_id);
-        if (targetDevice) {
-            targetDevice.send(JSON.stringify({ type: 'command', data }));
-            deviceLogger.info(`[CONTROL] Command sent to device ${device_id}: ${JSON.stringify(data)}`);
-        } else {
-            deviceLogger.warn(`[CONTROL] Device ${device_id} not found`);
-            errorLogger.warn(`[CONTROL] Device ${device_id} not found`);
-        }
-    });
-
-    const pingInterval = setInterval(function ping() {
-        wssControl.clients.forEach(function each(ws) {
-            if (ws.isAlive === false) return ws.terminate();
-            ws.isAlive = false;
-            ws.ping(() => {
-                console.log("Ping");
-            });
-        })
-    }, 30000); // Send a ping every 30 seconds
-
-    ws.on("pong", heartbeat);
-    
-    ws.on('close', () => {
-        dashboardClients.delete(ws);
-        dashboardLogger.info('Dashboard disconnected');
-        deviceLogger.info('Dashboard disconnected');
-        
-        const disconnectedDevice = [...deviceClients.entries()].find(([_, client]) => client === ws);
-        if (disconnectedDevice) {
-            const [device_id] = disconnectedDevice;
-            deviceClients.delete(device_id);
-            deviceLogger.info(`[CONTROL] Device ${device_id} disconnected`);
-        }
-        
-        clearInterval(pingInterval);
-    });
-});
-
 app.use(cors())
 app.use(express.json());
 app.use(router_sensor);
@@ -225,6 +173,5 @@ app.use(router_actuator);
 
 server.listen(process.env.PORT, process.env.HOST, () => {
     deviceLogger.info(`Server is running on port ws://localhost:${process.env.PORT}/ws/smart-hydroponic/device`);
-    deviceLogger.info(`Server is running on port ws://localhost:${process.env.PORT}/ws/smart-hydroponic/control`);
     deviceLogger.info(`Server is running on port http://localhost:${process.env.PORT}`);
 });

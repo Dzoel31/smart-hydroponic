@@ -16,7 +16,7 @@
 // Network configuration
 const char *WIFI_SSID = "Podcast Area";
 const char *WIFI_PASSWORD = "iriunwebcam";
-const char *websocket_server = "ws://103.147.92.179/ws/smart-hydroponic/device";
+const char *websocket_server = "ws://172.23.14.166:15000/ws/smart-hydroponic/device";
 const char *device_id = "esp32-environment-device";
 
 // Timing constants

@@ -15,7 +15,7 @@
 // Configuration
 const char *WIFI_SSID = "Podcast Area";
 const char *WIFI_PASSWORD = "iriunwebcam";
-const char *WEBSOCKET_URL = "ws://103.147.92.179/ws/smart-hydroponic/device";
+const char *WEBSOCKET_URL = "ws://172.23.14.166:15000/ws/smart-hydroponic/device";
 const char* DEVICE_ID = "esp8266-actuator-device";
 const unsigned long DATA_SEND_INTERVAL = 5000; // 5 seconds
 const unsigned long WIFI_RECONNECT_TIMEOUT = 10000; // 10 seconds
@@ -28,6 +28,9 @@ int pumpStatus = 0;
 int lightStatus = 0;
 int automationStatus = 1;
 int moistureLevel = 0;
+
+float lastMoistureAvg = 0;
+float lastTemperatureAvg = 0;
 
 using namespace websockets;
 WebsocketsClient clientActuator;
@@ -68,9 +71,14 @@ void loop() {
   
   // Send status update periodically
   static unsigned long lastSendTime = 0;
-  if (millis() - lastSendTime >= DATA_SEND_INTERVAL) {
-    sendStatusUpdate();
-    lastSendTime = millis();
+  if (clientActuator.available()) {
+    if (millis() - lastSendTime >= DATA_SEND_INTERVAL) {
+      sendStatusUpdate();
+      lastSendTime = millis();
+    }
+  } else {
+    Serial.println("WebSocket not available");
+    setupWebSocket();
   }
 }
 
@@ -133,6 +141,12 @@ void onMessageCallback(WebsocketsMessage message) {
   if (data.containsKey("automationStatus")) {
     automationStatus = data["automationStatus"].as<int>();
     Serial.println("Automation status: " + String(automationStatus));
+  } if (data.containsKey("moistureAvg")) {
+    lastMoistureAvg = data["moistureAvg"].as<float>();
+    Serial.println("Moisture Avg: " + String(lastMoistureAvg));
+  } if (data.containsKey("temperatureAvg")) {
+    lastTemperatureAvg = data["temperatureAvg"].as<float>();
+    Serial.println("Temperature Avg: " + String(lastTemperatureAvg));
   }
 
   // Handle according to automation mode
@@ -148,16 +162,19 @@ void onMessageCallback(WebsocketsMessage message) {
 void handleAutomaticMode(JsonVariant data) {
   Serial.println("Operating in automatic mode");
   
-  // Pump control based on moisture
-  if (data.containsKey("moistureAvg") && !isnan(data["moistureAvg"].as<float>())) {
-    float moistureAvg = data["moistureAvg"].as<float>();
+  // Get moisture and temperature values
+  float moistureAvg = data.containsKey("moistureAvg") ? data["moistureAvg"].as<float>() : lastMoistureAvg;
+  float temperatureAvg = data.containsKey("temperatureAvg") ? data["temperatureAvg"].as<float>() : lastTemperatureAvg;
+  
+  // Only update if values are valid
+  if (!isnan(moistureAvg)) {
     pumpStatus = (moistureAvg < MOISTURE_THRESHOLD) ? 1 : 0;
+    Serial.println("Moisture: " + String(moistureAvg) + " -> Pump: " + String(pumpStatus));
   }
   
-  // Light control based on temperature
-  if (data.containsKey("temperatureAvg") && !isnan(data["temperatureAvg"].as<float>())) {
-    float temperatureAvg = data["temperatureAvg"].as<float>();
+  if (!isnan(temperatureAvg)) {
     lightStatus = (temperatureAvg < TEMPERATURE_THRESHOLD) ? 1 : 0;
+    Serial.println("Temperature: " + String(temperatureAvg) + " -> Light: " + String(lightStatus));
   }
 }
 

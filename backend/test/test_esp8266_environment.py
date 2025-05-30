@@ -15,6 +15,9 @@ DEVICE_ID = "esp8266-actuator-device"
 DATA_SEND_INTERVAL = 5  # seconds
 RECONNECT_DELAY = 5  # seconds between reconnection attempts
 
+# uri = f"ws://{os.getenv('HOST')}/ws/smart-hydroponic/device"
+uri = f"ws://{os.getenv('HOST')}:{os.getenv('PORT')}/ws/smart-hydroponic/device"
+
 # Simulated pin states
 pins = {
     "RELAY_PUMP_1": False,   # False = HIGH (off), True = LOW (on)
@@ -35,7 +38,7 @@ async def connect_to_websocket():
     """Simulates connecting to the WebSocket server"""
     try:
         websocket = await websockets.connect(
-            f"ws://{os.getenv('HOST')}/ws/smart-hydroponic/device"
+            uri
         )
         actuator_state["isActuatorConnected"] = True
         print("Connected to WebSocket server")
