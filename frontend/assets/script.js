@@ -1,9 +1,26 @@
-// Configuration
+/**
+ * Utility to handle fetch requests with error handling and optional JSON parsing
+ */
+async function apiRequest(url, options = {}, parseJson = true) {
+    try {
+        url = `http://localhost:15000${url}`;
+        const response = await fetch(url, options);
+        if (!response.ok) {
+            throw new Error(`Request failed: ${response.statusText}`);
+        }
+        return parseJson ? await response.json() : response;
+    } catch (error) {
+        console.error(`API request error (${url}):`, error);
+        throw error;
+    }
+}
 
-const config = {
-    wsUrl: `ws://172.23.14.166:15000/ws/smart-hydroponic/device`,
-    deviceId: "dashboard-device",
-    actuatorDeviceId: "esp8266-actuator-device"
+// API Endpoints
+const endpoints = {
+    sensorLatest: '/api/smart-hydroponic/v1/sensor/latest',
+    environmentLatest: '/api/smart-hydroponic/v1/environment/latest',
+    actuators: '/api/smart-hydroponic/v1/actuators',
+    actuatorLatest: '/api/smart-hydroponic/v1/actuator/latest',
 };
 
 // DOM Elements
@@ -22,13 +39,13 @@ const elements = {
     temperature_bawah: document.getElementById("temperature_bawah"),
     humidity_atas: document.getElementById("humidity_atas"),
     humidity_bawah: document.getElementById("humidity_bawah"),
-    avg_temperature: document.getElementById("avg_temperature")
+    avg_temperature: document.getElementById("avg_temperature"),
 };
 
 // State management
 const state = {
-    device_id: config.deviceId,
-    target_device_id: config.actuatorDeviceId,
+    device_id: "dashboard-device",
+    target_device_id: "esp8266-actuator-device",
     type: "command",
     data: {
         automationStatus: 0,
@@ -37,143 +54,99 @@ const state = {
     }
 };
 
-// WebSocket connections
-let wsDashboard = null;
-let wsControl = null;
-
 /**
  * Updates the UI based on current state
  */
 function updateUI() {
     elements.statusPump.textContent = `Pump Status: ${state.data.pumpStatus}`;
     elements.statusLamp.textContent = `Lamp Status: ${state.data.lightStatus}`;
-    
-    // Update button states
-    elements.pumpButton.disabled = state.data.automationStatus === 1;
-    elements.lampButton.disabled = state.data.automationStatus === 1;
-    
-    // Update checkbox states without triggering events
+    elements.pumpButton.disabled = elements.lampButton.disabled = state.data.automationStatus === 1;
     elements.otomationButton.checked = state.data.automationStatus === 1;
     elements.pumpButton.checked = state.data.pumpStatus === 1;
     elements.lampButton.checked = state.data.lightStatus === 1;
 }
 
 /**
- * Handles sensor data updates
- * @param {Object} data - The sensor data
+ * Handles sensor data updates and updates state/UI
  */
+
+// Handler untuk data sensor
 function handleSensorData(data) {
-    elements.flowRate.textContent = data.flowRate;
-    elements.distanceCm.textContent = data.distanceCm;
-    elements.totalLitres.textContent = data.totalLitres;
-    
-    // Update moisture readings
-    elements.moisture.forEach((element, i) => {
-        element.textContent = data[`moisture${i + 1}`];
-    });
-    
-    elements.moistureAvg.textContent = data.moistureAvg;
-    elements.temperature_atas.textContent = data.temperatureAtas;
-    elements.temperature_bawah.textContent = data.temperatureBawah;
-    elements.humidity_atas.textContent = data.humidityAtas;
-    elements.humidity_bawah.textContent = data.humidityBawah;
-    elements.avg_temperature.textContent = ((data.temperatureAtas + data.temperatureBawah) / 2).toFixed(1);
-    
-    // Update state
-    state.data.pumpStatus = data.pumpStatus ?? 0;
-    state.data.lightStatus = data.lightStatus ?? 0;
-    state.data.automationStatus = data.automationStatus ?? 0;
-    
+    elements.flowRate.textContent = data[0].flowrate ?? '-';
+    elements.distanceCm.textContent = data[0].distance_cm ?? '-';
+    elements.totalLitres.textContent = data[0].total_litres ?? '-';
+    elements.moisture.forEach((el, i) => { el.textContent = data[0][`moisture${i + 1}`] ?? '-'; });
+    elements.moistureAvg.textContent = data[0].moistureavg !== undefined && data[0].moistureavg !== null
+        ? Number(data[0].moistureavg).toFixed(2)
+        : '-';
+}
+
+// Handler untuk data environment
+function handleEnvironmentData(data) {
+    elements.temperature_atas.textContent = data[0].temperature_atas ?? '-';
+    elements.temperature_bawah.textContent = data[0].temperature_bawah ?? '-';
+    elements.humidity_atas.textContent = data[0].humidity_atas ?? '-';
+    elements.humidity_bawah.textContent = data[0].humidity_bawah ?? '-';
+    elements.avg_temperature.textContent = ((data[0].temperature_atas ?? 0) + (data[0].temperature_bawah ?? 0)) / 2;
+}
+
+// Handler untuk data actuator
+function handleActuatorData(data) {
+    state.data.pumpStatus = data[0].pump_status ?? 0;
+    state.data.lightStatus = data[0].light_status ?? 0;
+    state.data.automationStatus = data[0].automation_status ?? 0;
     updateUI();
 }
 
 /**
- * Connect to WebSocket services
+ * Fetch and handle sensor data from API
  */
-function connectWebSockets() {
-    // Dashboard WebSocket
+async function fetchSensorData() {
+    const dataToFetch = [endpoints.sensorLatest, endpoints.environmentLatest, endpoints.actuatorLatest];
     try {
-        wsDashboard = new WebSocket(config.wsUrl);
-    } catch (error) {
-        console.error("Failed to connect to Dashboard WebSocket:", error);
-        setTimeout(connectWebSockets, 5000);
-        return;
+        for (const endpoint of dataToFetch) {
+            const data = await apiRequest(endpoint);
+            if (endpoint === endpoints.sensorLatest) {
+                handleSensorData(data.data);
+            } else if (endpoint === endpoints.environmentLatest) {
+                handleEnvironmentData(data.data);
+            } else if (endpoint === endpoints.actuatorLatest) {
+                handleActuatorData(data.data);
+            }
+        }
+    } catch (e) {
+        console.error("Error fetching sensor data:", e);
     }
-    
-    wsDashboard.onopen = () => {
-        const registerData = {
-            device_id: config.deviceId,
-            type: "register"
-        };
-        if (wsDashboard.readyState === WebSocket.OPEN) {
-            wsDashboard.send(JSON.stringify(registerData));
-        }
-    };
-    
-    wsDashboard.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.type === "update_data") {
-            handleSensorData(data.data);
-        }
-    };
-    
-    wsDashboard.onclose = () => {
-        setTimeout(connectWebSockets, 5000);
-    };
-    // try {
-    //     wsControl = new WebSocket(config.controlUrl);
-    // } catch (error) {
-    //     console.error("Failed to connect to Control WebSocket:", error);
-    //     setTimeout(connectWebSockets, 5000);
-    //     return;
-    // }
-    // wsDashboard.onerror = () => {
-    //     wsDashboard.close();
-    // };
-    
-    // // Control WebSocket
-    // wsControl = new WebSocket(config.controlUrl);
-    
-    // wsControl.onopen = () => {};
-    
-    // wsControl.onclose = () => {
-    //     setTimeout(connectWebSockets, 5000);
-    // };
-    
-    // wsControl.onerror = () => {
-    //     wsControl.close();
-    // };
 }
 
 /**
- * Send command to control WebSocket
+ * Send current state as command to API
  */
-function sendCommand() {
-    if (wsDashboard && wsDashboard.readyState === WebSocket.OPEN) {
-        wsDashboard.send(JSON.stringify(state));
-    }
+async function sendCommand() {
+    try {
+        await apiRequest(endpoints.actuators, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(state)
+        }, false);
+    } catch (e) {}
 }
 
 // Event listeners
 elements.otomationButton.addEventListener('change', () => {
     state.data.automationStatus = elements.otomationButton.checked ? 1 : 0;
-    
-    // Reset actuators when switching to automation
     if (state.data.automationStatus === 1) {
         state.data.pumpStatus = 0;
         state.data.lightStatus = 0;
     }
-    
     updateUI();
     sendCommand();
 });
-
 elements.pumpButton.addEventListener("change", () => {
     state.data.pumpStatus = elements.pumpButton.checked ? 1 : 0;
     updateUI();
     sendCommand();
 });
-
 elements.lampButton.addEventListener("change", () => {
     state.data.lightStatus = elements.lampButton.checked ? 1 : 0;
     updateUI();
@@ -181,5 +154,6 @@ elements.lampButton.addEventListener("change", () => {
 });
 
 // Initialize
-connectWebSockets();
+fetchSensorData();
 updateUI();
+setInterval(fetchSensorData, 5000);
