@@ -1,10 +1,10 @@
 import json
 import time
-import asyncio
-import websockets
 import random
 import dotenv
 import os
+import requests
+import asyncio
 
 dotenv.load_dotenv()
 
@@ -13,10 +13,14 @@ MOISTURE_THRESHOLD = 65.0
 TEMPERATURE_THRESHOLD = 30.0
 DEVICE_ID = "esp8266-actuator-device"
 DATA_SEND_INTERVAL = 5  # seconds
+FETCH_DATA_INTERVAL = 2  # seconds
 RECONNECT_DELAY = 5  # seconds between reconnection attempts
 
-# uri = f"ws://{os.getenv('HOST')}/ws/smart-hydroponic/device"
-uri = f"ws://{os.getenv('HOST')}:{os.getenv('PORT')}/ws/smart-hydroponic/device"
+# Base URL for RESTful API
+base_url = f"http://{os.getenv('HOST')}:{os.getenv('PORT')}/api/smart-hydroponic/v1/actuators"
+# URL for fetching data (automation mode)
+fetch_url_auto_sensor = "http://localhost:15000/api/smart-hydroponic/v1/sensor/latest"
+fetch_url_auto_environment = "http://localhost:15000/api/smart-hydroponic/v1/environment/latest"
 
 # Simulated pin states
 pins = {
@@ -31,36 +35,8 @@ actuator_state = {
     "pumpStatus": 0,
     "lightStatus": 0,
     "automationStatus": 1,
-    "isActuatorConnected": False
+    "isActuatorConnected": True  # Assume device is always connected
 }
-
-async def connect_to_websocket():
-    """Simulates connecting to the WebSocket server"""
-    try:
-        websocket = await websockets.connect(
-            uri
-        )
-        actuator_state["isActuatorConnected"] = True
-        print("Connected to WebSocket server")
-        return websocket
-    except Exception as e:
-        print(f"Failed to connect to WebSocket server: {e}")
-        actuator_state["isActuatorConnected"] = False
-        return None
-
-async def register_device(websocket):
-    """Registers the device with the server"""
-    try:
-        register_data = {
-            "device_id": DEVICE_ID,
-            "type": "register"
-        }
-        await websocket.send(json.dumps(register_data))
-        print(f"Device registered: {json.dumps(register_data)}")
-        return True
-    except Exception as e:
-        print(f"Failed to register device: {e}")
-        return False
 
 def update_outputs():
     """Updates the simulated pin states based on actuator status"""
@@ -73,35 +49,42 @@ def update_outputs():
     print(f"Pump status: {'ON' if actuator_state['pumpStatus'] == 1 else 'OFF'}")
     print(f"Light status: {'ON' if actuator_state['lightStatus'] == 1 else 'OFF'}")
 
-def handle_automatic_mode(data):
+def handle_automatic_mode():
     """Handles automatic mode logic"""
     print("Operating in automatic mode")
-    
+
+    response_sensor = requests.get(fetch_url_auto_sensor)
+    response_environment = requests.get(fetch_url_auto_environment)
+
+    if response_sensor.status_code != 200 or response_environment.status_code != 200:
+        print("Failed to fetch sensor or environment data")
+        return
+
+    data_sensor = response_sensor.json()
+    data_environment = response_environment.json()
+    data = {**data_sensor['data'][0], **data_environment['data'][0]}  # Combine sensor and environment data
     # Pump control based on moisture
-    if "moistureAvg" in data and data["moistureAvg"] is not None:
-        moistureAvg = data["moistureAvg"]
+    if "moistureavg" in data and data["moistureavg"] is not None:
+        moistureAvg = data["moistureavg"]
         actuator_state["pumpStatus"] = 1 if moistureAvg < MOISTURE_THRESHOLD else 0
     
     # Light control based on temperature
-    if "temperatureAvg" in data and data["temperatureAvg"] is not None:
-        temperatureAvg = data["temperatureAvg"]
+    if "avg_temperature" in data and data["avg_temperature"] is not None:
+        temperatureAvg = data["avg_temperature"]
         actuator_state["lightStatus"] = 1 if temperatureAvg < TEMPERATURE_THRESHOLD else 0
 
 def handle_manual_mode(data):
     """Handles manual mode logic"""
     print("Operating in manual mode")
-    
-    if "pumpStatus" in data:
-        actuator_state["pumpStatus"] = data["pumpStatus"]
-    
-    if "lightStatus" in data:
-        actuator_state["lightStatus"] = data["lightStatus"]
 
-async def send_status_update(websocket):
+    if "pump_status" in data:
+        actuator_state["pumpStatus"] = data["pump_status"]
+
+    if "light_status" in data:
+        actuator_state["lightStatus"] = data["light_status"]
+
+def send_status_update():
     """Sends status update to the server"""
-    if not websocket or not actuator_state["isActuatorConnected"]:
-        return False
-        
     try:
         status_data = {
             "device_id": DEVICE_ID,
@@ -113,98 +96,76 @@ async def send_status_update(websocket):
             }
         }
         
-        await websocket.send(json.dumps(status_data))
-        print(f"Status sent: {json.dumps(status_data)}")
+        response = requests.post(base_url, json=status_data)
+        if response.status_code == 201:
+            print("Status created successfully.")
+            return True
+        response.raise_for_status()
+        print(f"Status sent: {response.json()}")
         return True
     except Exception as e:
         print(f"Failed to send status update: {e}")
-        actuator_state["isActuatorConnected"] = False
         return False
 
-async def handle_message(message):
-    """Processes incoming WebSocket messages"""
+def fetch_data():
+    """Fetches data from the server"""
     try:
-        data = json.loads(message)
-        print(f"Received: {message}")
-        
-        if "data" not in data:
-            print("No data field in message")
-            return
-        
-        message_data = data["data"]
-        
-        # Check for automation status update
-        if "automationStatus" in message_data:
-            actuator_state["automationStatus"] = message_data["automationStatus"]
-            print(f"Automation status: {actuator_state['automationStatus']}")
-        
-        # Handle according to automation mode
-        if actuator_state["automationStatus"] == 1:
-            handle_automatic_mode(message_data)
-        else:
-            handle_manual_mode(message_data)
-        
-        update_outputs()
-    except json.JSONDecodeError:
-        print("Invalid JSON received")
+        response = requests.get("http://localhost:15000/api/smart-hydroponic/v1/actuator/latest")
+        response.raise_for_status()
+        data = response.json()
+        print(f"Received: {data}")
+        return data
+    except Exception as e:
+        print(f"Failed to fetch data: {e}")
+        return None
 
-async def device_loop():
-    """Main device loop with connection handling"""
+def device_loop():
+    """Main device loop with separate intervals for fetching and sending data"""
+    last_send_time = time.time()
+    last_fetch_time = time.time()
     while True:
-        websocket = None
         try:
-            # Connect to WebSocket
-            websocket = await connect_to_websocket()
-            
-            # If connection successful, register device
-            if websocket:
-                registered = await register_device(websocket)
-                if not registered:
-                    raise Exception("Failed to register device")
-                
-                # Main operation loop
-                last_send_time = time.time()
-                
-                while True:
-                    # Poll for messages (non-blocking)
-                    try:
-                        message = await asyncio.wait_for(websocket.recv(), timeout=0.1)
-                        await handle_message(message)
-                    except asyncio.TimeoutError:
-                        pass
-                    except Exception as e:
-                        print(f"Error receiving message: {e}")
+            while True:
+                current_time = time.time()
+
+                # Fetch data at FETCH_DATA_INTERVAL
+                if current_time - last_fetch_time >= FETCH_DATA_INTERVAL:
+                    data = fetch_data()
+                    if data:
+                        # Check for automation status update
+                        if "automation_status" in data['data'][0]:
+                            actuator_state["automationStatus"] = data["data"][0]["automation_status"]
+                            print(f"Automation status: {actuator_state['automationStatus']}")
+
+                        # Handle according to automation mode
+                        if actuator_state["automationStatus"] == 1:
+                            handle_automatic_mode()
+                        else:
+                            handle_manual_mode(data['data'][0])
+
+                        update_outputs()
+                    last_fetch_time = current_time
+
+                # Send status updates at DATA_SEND_INTERVAL
+                if current_time - last_send_time >= DATA_SEND_INTERVAL:
+                    success = send_status_update()
+                    if not success:
                         break
-                    
-                    # Send status updates periodically
-                    current_time = time.time()
-                    if current_time - last_send_time >= DATA_SEND_INTERVAL:
-                        success = await send_status_update(websocket)
-                        if not success:
-                            break
-                        last_send_time = current_time
-                    
-                    # Simulate some hardware delay
-                    await asyncio.sleep(0.1)
-            
+                    last_send_time = current_time
+
+                # Simulate some hardware delay
+                time.sleep(0.1)
+
         except Exception as e:
             print(f"Connection error: {e}")
-        
-        finally:
-            # Clean up before trying to reconnect
-            if websocket:
-                try:
-                    await websocket.close()
-                except:
-                    print("Error closing WebSocket")
-            
-            actuator_state["isActuatorConnected"] = False
-            print(f"Disconnected. Reconnecting in {RECONNECT_DELAY} seconds...")
-            await asyncio.sleep(RECONNECT_DELAY)
 
-async def main():
+        finally:
+            print(f"Disconnected. Reconnecting in {RECONNECT_DELAY} seconds...")
+            time.sleep(RECONNECT_DELAY)
+
+def main():
     print("Starting ESP8266 environment simulator...")
-    await device_loop()
+    device_loop()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

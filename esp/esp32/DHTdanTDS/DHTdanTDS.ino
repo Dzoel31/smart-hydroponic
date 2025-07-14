@@ -1,11 +1,11 @@
 #include <WiFi.h>
+#include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <Arduino.h>
-#include <ArduinoWebsockets.h>
 #include "DHT.h"
 
 // Pin and sensor definitions
-#define TDS_SENSOR_PIN A0
+#define TDS_SENSOR_PIN 34
 #define VREF 3.3
 #define SCOUNT 30
 #define DHT11_PIN 14
@@ -14,13 +14,13 @@
 #define DHT22_TYPE DHT22
 
 // Network configuration
-const char *WIFI_SSID = "Podcast Area";
-const char *WIFI_PASSWORD = "iriunwebcam";
-const char *websocket_server = "ws://172.23.14.166:15000/ws/smart-hydroponic/device";
+const char *WIFI_SSID = "";
+const char *WIFI_PASSWORD = "";
+const char *server_url = "";
 const char *device_id = "esp32-environment-device";
 
 // Timing constants
-const unsigned long SEND_INTERVAL = 5000; // 10 seconds
+const unsigned long SEND_INTERVAL = 5000; // 5 seconds
 const unsigned long WIFI_TIMEOUT = 10000;  // 10 seconds
 const unsigned long TDS_SAMPLE_INTERVAL = 40; // 40 milliseconds
 
@@ -33,34 +33,32 @@ unsigned long lastAnalogSampleTime = 0;
 
 // Sensor readings
 float tdsValue = 0;
+float phValue = 0; // Placeholder for pH sensor value
 float temperature_atas = 0;
 float humidity_atas = 0;
 float temperature_bawah = 0;
 float humidity_bawah = 0;
 
 // Objects
-using namespace websockets;
-WebsocketsClient client;
 DHT dht11(DHT11_PIN, DHT11_TYPE);
 DHT dht22(DHT22_PIN, DHT22_TYPE);
 
 // Function prototypes
 int getMedianNum(int bArray[], int iFilterLen);
 void checkWiFiConnection();
-bool connectToWebSocket();
-void registerDevice();
 void readDHTSensors();
 void readTDSSensor();
+// void readPHSensor(); // Untuk membaca sensor pH jika ada
 void sendSensorData();
 
 void setup() {
   Serial.begin(115200);
   pinMode(TDS_SENSOR_PIN, INPUT);
-  
+
   // Initialize sensors
   dht11.begin();
   dht22.begin();
-  
+
   // Connect to WiFi
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to WiFi ..");
@@ -69,45 +67,13 @@ void setup() {
     Serial.print('.');
   }
   Serial.println("\nConnected to WiFi");
-  
-  // Connect to WebSocket server and register device
-  if (connectToWebSocket()) {
-    registerDevice();
-  }
-}
-
-void loop() {
-  unsigned long currentMillis = millis();
-  
-  // Sample TDS sensor at regular intervals
-  if (currentMillis - lastAnalogSampleTime > TDS_SAMPLE_INTERVAL) {
-    lastAnalogSampleTime = currentMillis;
-    analogBuffer[analogBufferIndex] = analogRead(TDS_SENSOR_PIN);
-    analogBufferIndex = (analogBufferIndex + 1) % SCOUNT;
-  }
-  
-  // Read DHT sensors
-  readDHTSensors();
-  
-  // Read TDS sensor
-  // readTDSSensor();
-  
-  // Send data at regular intervals
-  if (currentMillis - lastSendTime >= SEND_INTERVAL) {
-    lastSendTime = currentMillis;
-    sendSensorData();
-  }
-  
-  // Maintain connections
-  checkWiFiConnection();
-  client.poll();
 }
 
 int getMedianNum(int bArray[], int iFilterLen) {
   int bTab[iFilterLen];
   for (byte i = 0; i < iFilterLen; i++)
     bTab[i] = bArray[i];
-    
+
   int i, j, bTemp;
   for (j = 0; j < iFilterLen - 1; j++) {
     for (i = 0; i < iFilterLen - j - 1; i++) {
@@ -118,7 +84,9 @@ int getMedianNum(int bArray[], int iFilterLen) {
       }
     }
   }
-  return (iFilterLen & 1) ? bTab[(iFilterLen - 1) / 2] : (bTab[iFilterLen / 2] + bTab[iFilterLen / 2 - 1]) / 2;
+  int median = (iFilterLen & 1) ? bTab[(iFilterLen - 1) / 2] : (bTab[iFilterLen / 2] + bTab[iFilterLen / 2 - 1]) / 2;
+  Serial.print("Median value: "); Serial.println(median);
+  return median;
 }
 
 void checkWiFiConnection() {
@@ -142,56 +110,54 @@ void checkWiFiConnection() {
   }
 }
 
-bool connectToWebSocket() {
-  bool connected = client.connect(websocket_server);
-  if (connected) {
-    Serial.println("Connected to WebSocket Server");
-    return true;
-  } else {
-    Serial.println("Failed to connect to WebSocket Server");
-    return false;
-  }
-}
-
-void registerDevice() {
-  StaticJsonDocument<512> registerJson;
-  registerJson["device_id"] = device_id;
-  registerJson["type"] = "register";
-
-  String registerString;
-  serializeJson(registerJson, registerString);
-
-  Serial.println("Registering device: " + registerString);
-  client.send(registerString);
-}
-
 void readDHTSensors() {
   temperature_atas = dht11.readTemperature();
   humidity_atas = dht11.readHumidity();
   temperature_bawah = dht22.readTemperature();
   humidity_bawah = dht22.readHumidity();
 
-  if (isnan(temperature_atas) || isnan(humidity_atas) || isnan(temperature_bawah) || isnan(humidity_bawah)) {
+  if (isnan(temperature_atas))
     temperature_atas = 0;
+  if (isnan(humidity_atas))
     humidity_atas = 0;
+  if (isnan(temperature_bawah))
     temperature_bawah = 0;
+  if (isnan(humidity_bawah))
     humidity_bawah = 0;
-  }
 }
 
-// void readTDSSensor() {
-//   // Copy buffer for median calculation
-//   for (int i = 0; i < SCOUNT; i++) {
-//     analogBufferTemp[i] = analogBuffer[i];
-//   }
-  
-//   float averageVoltage = getMedianNum(analogBufferTemp, SCOUNT) * VREF / 4095.0;
-//   float compensationCoefficient = 1.0 + 0.02 * (temperature_bawah - 25.0); // Using temperature_bawah for compensation
-//   float compensationVoltage = averageVoltage / compensationCoefficient;
-//   tdsValue = (133.42 * pow(compensationVoltage, 3) - 255.86 * pow(compensationVoltage, 2) + 857.39 * compensationVoltage);
-// }
+void readPHSensor() {
+  // Kode membaca sensor pH disini
+  phValue = 0;
+}
+
+void readTDSSensor() {
+  for (int i = 0; i < SCOUNT; i++) {
+    analogBufferTemp[i] = analogBuffer[i];
+  }
+
+  float medianRaw = getMedianNum(analogBufferTemp, SCOUNT);
+  float averageVoltage = medianRaw * VREF / 4095.0;
+  float compensationCoefficient = 1.0 + 0.02 * (temperature_bawah - 25.0); // Using temperature_bawah for compensation
+  float compensationVoltage = averageVoltage / compensationCoefficient;
+  tdsValue = (133.42 * pow(compensationVoltage, 3) - 255.86 * pow(compensationVoltage, 2) + 857.39 * compensationVoltage);
+
+  Serial.print("TDS medianRaw: ");
+  Serial.println(medianRaw);
+  Serial.print("TDS averageVoltage: ");
+  Serial.println(averageVoltage, 4);
+  Serial.print("TDS compensationCoefficient: ");
+  Serial.println(compensationCoefficient, 4);
+  Serial.print("TDS compensationVoltage: ");
+  Serial.println(compensationVoltage, 4);
+  Serial.print("TDS value: ");
+  Serial.println(tdsValue, 2);
+}
 
 void sendSensorData() {
+  HTTPClient http;
+  http.begin(server_url);
+
   StaticJsonDocument<256> jsonDoc;
   jsonDoc["device_id"] = device_id;
   jsonDoc["type"] = "update_data";
@@ -201,20 +167,62 @@ void sendSensorData() {
   data["humidityAtas"] = humidity_atas;
   data["temperatureBawah"] = temperature_bawah;
   data["humidityBawah"] = humidity_bawah;
+  data["ph"] = phValue;
+  data["tds"] = tdsValue;
 
   String dataStr;
   serializeJson(jsonDoc, dataStr);
 
-  if (client.available()) {
-    client.send(dataStr);
-    Serial.println("Sent: " + dataStr);
+  Serial.println("Sending data: " + dataStr);
+
+  http.addHeader("Content-Type", "application/json");
+  int httpResponseCode = http.POST(dataStr);
+
+  if (httpResponseCode > 0) {
+    Serial.println("Data sent successfully");
   } else {
-    Serial.println("WebSocket client not available, attempting to reconnect...");
-    if (connectToWebSocket()) {
-      registerDevice();
-      // Try to send again after reconnection
-      client.send(dataStr);
-      Serial.println("Sent after reconnection: " + dataStr);
-    }
+    Serial.println("Failed to send data");
   }
+
+  http.end();
+}
+
+void loop() {
+  unsigned long currentMillis = millis();
+
+  // Sample TDS sensor at regular intervals
+  if (currentMillis - lastAnalogSampleTime > TDS_SAMPLE_INTERVAL) {
+    lastAnalogSampleTime = currentMillis;
+    analogBuffer[analogBufferIndex] = analogRead(TDS_SENSOR_PIN);
+    analogBufferIndex = (analogBufferIndex + 1) % SCOUNT;
+
+    // Only update TDS value after new sample
+    readTDSSensor();
+  }
+
+  // Send data and print debug at regular intervals
+  if (currentMillis - lastSendTime >= SEND_INTERVAL) {
+    lastSendTime = currentMillis;
+
+    // Read DHT sensors
+    readDHTSensors();
+    // readPHSensor(); // Uncomment if pH sensor is available
+
+    // Debug print every 5 seconds
+    Serial.print("DHT11: Temp = ");
+    Serial.print(temperature_atas);
+    Serial.print(" C, Humidity = ");
+    Serial.println(humidity_atas);
+    Serial.print("DHT22: Temp = ");
+    Serial.print(temperature_bawah);
+    Serial.print(" C, Humidity = ");
+    Serial.println(humidity_bawah);
+    Serial.print("TDS value: ");
+    Serial.println(tdsValue, 2);
+
+    sendSensorData();
+  }
+
+  // Maintain connections
+  checkWiFiConnection();
 }
