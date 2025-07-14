@@ -47,7 +47,11 @@
 
    for windows users, you can create a file named `pgpass.conf` in the `%APPDATA%\postgresql\` directory with the same content. Reference: [Neon PostgreSQL Password](https://neon.com/postgresql/postgresql-administration/postgresql-password-file-pgpass/)
 
-6. **Run Database Migrations**
+6. **Install TimescaleDB for PostgreSQL**
+
+   This project uses TimescaleDB for time-series data. Follow the installation instructions for your operating system from the [TimescaleDB documentation](https://docs.tigerdata.com/self-hosted/latest/install/).
+
+7. **Run Database Migrations**
 
    ```bash
     npm run migrate up
@@ -59,7 +63,7 @@
     npm run migrate:latest
     ```
 
-7. **Start the Backend Service**
+8. **Start the Backend Service**
 
    ```bash
     npm run start
