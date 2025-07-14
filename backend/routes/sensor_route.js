@@ -1,5 +1,6 @@
 const express = require('express');
 const {
+    addSensorData,
     getAllDataSensor,
     getSensorData,
     getLatestSensorData,
@@ -11,8 +12,9 @@ router.get('/api/smart-hydroponic/v1/sensors/hello', (req, res) => {
     res.send('Hello from sensors');
 });
 
+router.post('/api/smart-hydroponic/v1/sensors', addSensorData);
 router.get('/api/smart-hydroponic/v1/sensors', getAllDataSensor);
+router.get('/api/smart-hydroponic/v1/sensor/latest', getLatestSensorData);
 router.get('/api/smart-hydroponic/v1/sensor/:sensor', getSensorData);
-router.get('/api/smart-hydroponic/v1/sensor/:sensor/latest', getLatestSensorData);
 
 module.exports = router;
