@@ -5,6 +5,7 @@ const dotenv = require('dotenv');
 const router_sensor = require('./routes/sensor_route');
 const router_actuator = require('./routes/actuator_route');
 const router_environment = require('./routes/environment_route');
+const router_auth = require('./routes/auth_route');
 
 const db = require('./config/db');
 
@@ -32,6 +33,7 @@ app.get('/', (req, res) => {
 app.use(router_sensor);
 app.use(router_actuator);
 app.use(router_environment);
+app.use('/', router_auth);
 
 
 app.listen(process.env.PORT, process.env.HOST, () => {
