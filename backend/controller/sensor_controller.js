@@ -18,6 +18,9 @@ const addSensorData = async (req, res) => {
         const moistureavg = moistureValues.length > 0
             ? moistureValues.reduce((sum, val) => sum + val, 0) / moistureValues.length
             : null;
+        // Jika tidak ada nilai ph dan tds, set ke 0
+        data.ph = data.ph ?? 0;
+        data.tds = data.tds ?? 0;
 
         const query = `INSERT INTO sensor_data (deviceid, moisture1, moisture2, moisture3, moisture4, moisture5, moisture6, moistureavg, flowrate, total_litres, distance_cm, ph, tds) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`; 
         const values = [
