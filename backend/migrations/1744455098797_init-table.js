@@ -131,9 +131,9 @@ exports.up = (pgm) => {
     pgm.sql(`ALTER TABLE environment_data SET (timescaledb.compress, timescaledb.compress_segmentby = 'timestamp');`);
     pgm.sql(`ALTER TABLE actuator_data SET (timescaledb.compress, timescaledb.compress_segmentby = 'timestamp');`);
 
-    pgm.sql(`SELECT add_compression_policy('sensor_data', INTERVAL '1 month', if_not_exists => TRUE);`);
-    pgm.sql(`SELECT add_compression_policy('environment_data', INTERVAL '1 month', if_not_exists => TRUE);`);
-    pgm.sql(`SELECT add_compression_policy('actuator_data', INTERVAL '1 month', if_not_exists => TRUE);`);
+    pgm.sql(`SELECT add_compression_policy('sensor_data', compress_after => INTERVAL '7d', if_not_exists => TRUE);`);
+    pgm.sql(`SELECT add_compression_policy('environment_data', compress_after => INTERVAL '7d', if_not_exists => TRUE);`);
+    pgm.sql(`SELECT add_compression_policy('actuator_data', compress_after => INTERVAL '7d', if_not_exists => TRUE);`);
 
 };
 
