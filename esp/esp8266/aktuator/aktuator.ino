@@ -1,97 +1,241 @@
 #include <ESP8266WiFi.h>
-#include <ESP8266HTTPClient.h>
+// #include <WiFi.h>
+// #include <ESP8266HTTPClient.h>
 #include <ArduinoJson.h>
+#include <WiFiClientSecure.h>
 #include <Arduino.h>
+#include <ArduinoWebsockets.h>
 
 // Pin Definitions
-#define RELAY_PUMP_1  4   // D2
-#define RELAY_PUMP_2  5   // D1
-#define RELAY_LIGHT_1 12  // D6
-#define RELAY_LIGHT_2 14  // D5
+#define RELAY_PUMP_1 4   // D2
+#define RELAY_PUMP_2 5   // D1
+#define RELAY_LIGHT_1 12 // D6
+#define RELAY_LIGHT_2 14 // D5
 
 // Configuration
 const char *WIFI_SSID = "";
 const char *WIFI_PASSWORD = "";
-const char *API_URL = "";
-const char *ENDPOINT_AUTOMATIC_MODE_ENV = "";
-const char *ENDPOINT_AUTOMATIC_MODE_SENSOR = "";
-const char *FETCH_ENDPOINT_MANUAL_MODE = "";
-const char* DEVICE_ID = "esp8266-actuator-device";
-const unsigned long DATA_FETCH_INTERVAL = 2000; // 2 seconds
-const unsigned long DATA_SEND_INTERVAL = 5000; // 5 seconds
+const char *WEBSOCKET_URL = "";
+const char *DEVICE_ID = "esp8266-actuator-device";
+const unsigned long DATA_SEND_INTERVAL = 5000;      // 5 seconds
 const unsigned long WIFI_RECONNECT_TIMEOUT = 10000; // 10 seconds
 const float MOISTURE_THRESHOLD = 65;
 const float TEMPERATURE_THRESHOLD = 30.0;
 
 // State variables
+bool isActuatorConnected = false;
 int pumpStatus = 0;
 int lightStatus = 0;
 int automationStatus = 0;
+int moistureLevel = 0;
+
 float lastMoistureAvg = 0;
 float lastTemperatureAvg = 0;
 
+using namespace websockets;
+WebsocketsClient clientActuator;
+
+// Function prototypes
 void connectToWifi();
-void sendStatusUpdate();
-void fetchActuatorData();
-void handleAutomaticMode(float moistureAvg, float temperatureAvg);
+void setupWebSocket();
+void registerDevice();
+void handleAutomaticMode(JsonVariant data);
 void handleManualMode(JsonVariant data);
 void updateOutputs();
-bool ensureWifiConnection();
-void initializeRelays();
+void onMessageCallback(WebsocketsMessage message);
+void sendStatusUpdate();
+void checkConnections();
 
-void setup() {
+void setup()
+{
   Serial.begin(115200);
-  initializeRelays();
+
+  // Initialize output pins
+  pinMode(RELAY_PUMP_1, OUTPUT);
+  pinMode(RELAY_PUMP_2, OUTPUT);
+  pinMode(RELAY_LIGHT_1, OUTPUT);
+  pinMode(RELAY_LIGHT_2, OUTPUT);
+
+  // Default state for relays (LOW is ON for most relay modules)
+  digitalWrite(RELAY_PUMP_1, HIGH);  // OFF initially
+  digitalWrite(RELAY_PUMP_2, HIGH);  // OFF initially
+  digitalWrite(RELAY_LIGHT_1, HIGH); // OFF initially
+  digitalWrite(RELAY_LIGHT_2, HIGH); // OFF initially
+
   connectToWifi();
+  setupWebSocket();
 }
 
-void loop() {
+void loop()
+{
+  clientActuator.poll();
+  checkConnections();
+
+  // Send status update periodically
   static unsigned long lastSendTime = 0;
-  static unsigned long lastFetchTime = 0;
-
-  if (millis() - lastSendTime >= DATA_SEND_INTERVAL) {
-    sendStatusUpdate();
-    lastSendTime = millis();
+  if (clientActuator.available())
+  {
+    if (millis() - lastSendTime >= DATA_SEND_INTERVAL)
+    {
+      sendStatusUpdate();
+      lastSendTime = millis();
+    }
   }
-
-  if (millis() - lastFetchTime >= DATA_SEND_INTERVAL) {
-    fetchActuatorData();
-    lastFetchTime = millis();
+  else
+  {
+    Serial.println("WebSocket not available");
+    setupWebSocket();
   }
 }
 
-void connectToWifi() {
+void connectToWifi()
+{
   Serial.print("Connecting to WiFi...");
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  
-  while (WiFi.status() != WL_CONNECTED) {
+
+  while (WiFi.status() != WL_CONNECTED)
+  {
     delay(3000);
     Serial.print(".");
   }
-  
+
   Serial.println("\nConnected to WiFi");
   Serial.println("IP: " + WiFi.localIP().toString());
 }
 
-bool ensureWifiConnection() {
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi disconnected, reconnecting...");
-    connectToWifi();
-    return false;
+void setupWebSocket()
+{
+  if (clientActuator.connect(WEBSOCKET_URL))
+  {
+    Serial.println("Connected to WebSocket server");
+    clientActuator.onMessage(onMessageCallback);
+    registerDevice();
+    isActuatorConnected = true;
   }
-  return true;
+  else
+  {
+    Serial.println("Failed to connect to WebSocket server");
+    isActuatorConnected = false;
+  }
 }
 
-void sendStatusUpdate() {
-  if (!ensureWifiConnection()) return;
+void registerDevice()
+{
+  StaticJsonDocument<256> registerJson;
+  registerJson["deviceId"] = DEVICE_ID;
+  registerJson["type"] = "join";
+  registerJson["room"] = "command";
 
-  HTTPClient http;
-  http.begin(API_URL);
-  http.addHeader("Content-Type", "application/json");
+  String registerString;
+  serializeJson(registerJson, registerString);
+
+  clientActuator.send(registerString);
+  Serial.println("Device registered: " + registerString);
+}
+
+void onMessageCallback(WebsocketsMessage message)
+{
+  String command = message.data();
+  Serial.println("Received: " + command);
 
   StaticJsonDocument<256> jsonDoc;
-  jsonDoc["device_id"] = DEVICE_ID;
+  DeserializationError error = deserializeJson(jsonDoc, command);
+
+  if (error)
+  {
+    Serial.println("JSON parsing failed!");
+    return;
+  }
+
+  JsonVariant data = jsonDoc["data"];
+  if (data.isNull())
+  {
+    Serial.println("No data field in message");
+    return;
+  }
+
+  // Check for automation status update
+  if (data.containsKey("automationStatus"))
+  {
+    automationStatus = data["automationStatus"].as<int>();
+    Serial.println("Automation status: " + String(automationStatus));
+  }
+  if (data.containsKey("moistureAvg"))
+  {
+    lastMoistureAvg = data["moistureAvg"].as<float>();
+    Serial.println("Moisture Avg: " + String(lastMoistureAvg));
+  }
+  if (data.containsKey("temperatureAvg"))
+  {
+    lastTemperatureAvg = data["temperatureAvg"].as<float>();
+    Serial.println("Temperature Avg: " + String(lastTemperatureAvg));
+  }
+
+  // Handle according to automation mode
+  if (automationStatus == 1)
+  {
+    handleAutomaticMode(data);
+  }
+  else
+  {
+    handleManualMode(data);
+  }
+
+  updateOutputs();
+}
+
+void handleAutomaticMode(JsonVariant data)
+{
+  Serial.println("Operating in automatic mode");
+
+  // Get moisture and temperature values
+  float moistureAvg = data.containsKey("moistureAvg") ? data["moistureAvg"].as<float>() : lastMoistureAvg;
+  float temperatureAvg = data.containsKey("temperatureAvg") ? data["temperatureAvg"].as<float>() : lastTemperatureAvg;
+
+  // Only update if values are valid
+  if (!isnan(moistureAvg))
+  {
+    pumpStatus = (moistureAvg < MOISTURE_THRESHOLD) ? 1 : 0;
+    Serial.println("Moisture: " + String(moistureAvg) + " -> Pump: " + String(pumpStatus));
+  }
+
+  if (!isnan(temperatureAvg))
+  {
+    lightStatus = (temperatureAvg < TEMPERATURE_THRESHOLD) ? 1 : 0;
+    Serial.println("Temperature: " + String(temperatureAvg) + " -> Light: " + String(lightStatus));
+  }
+}
+
+void handleManualMode(JsonVariant data)
+{
+  Serial.println("Operating in manual mode");
+
+  if (data.containsKey("pumpStatus"))
+  {
+    pumpStatus = data["pumpStatus"].as<int>();
+  }
+
+  if (data.containsKey("lightStatus"))
+  {
+    lightStatus = data["lightStatus"].as<int>();
+  }
+}
+
+void updateOutputs()
+{
+  // LOW activates the relay, HIGH deactivates it
+  digitalWrite(RELAY_PUMP_1, pumpStatus ? LOW : HIGH);
+  digitalWrite(RELAY_PUMP_2, pumpStatus ? LOW : HIGH);
+  digitalWrite(RELAY_LIGHT_1, lightStatus ? LOW : HIGH);
+  digitalWrite(RELAY_LIGHT_2, lightStatus ? LOW : HIGH);
+}
+
+void sendStatusUpdate()
+{
+  StaticJsonDocument<256> jsonDoc;
+  jsonDoc["deviceId"] = DEVICE_ID;
   jsonDoc["type"] = "update_data";
+  jsonDoc["room"] = "command";
 
   JsonObject dataObj = jsonDoc.createNestedObject("data");
   dataObj["pumpStatus"] = pumpStatus;
@@ -101,133 +245,26 @@ void sendStatusUpdate() {
   String jsonString;
   serializeJson(jsonDoc, jsonString);
 
-  int httpResponseCode = http.POST(jsonString);
-  if (httpResponseCode > 0) {
+  if (clientActuator.available())
+  {
+    clientActuator.send(jsonString);
     Serial.println("Status sent: " + jsonString);
-    Serial.println("Response code: " + String(httpResponseCode));
-  } else {
-    Serial.println("Failed to send status update");
-  }
-
-  http.end();
-}
-
-void fetchActuatorData() {
-  if (!ensureWifiConnection()) return;
-
-  // Step 1: Fetch manual endpoint to get automationStatus and manual data
-  HTTPClient http;
-  http.begin(FETCH_ENDPOINT_MANUAL_MODE);
-  int httpResponseCode = http.GET();
-
-  if (httpResponseCode > 0) {
-    String payload = http.getString();
-    Serial.println("Received (manual): " + payload);
-
-    StaticJsonDocument<256> jsonDoc;
-    DeserializationError error = deserializeJson(jsonDoc, payload);
-
-    if (error) {
-      Serial.println("JSON parsing failed (manual)!");
-      http.end();
-      return;
-    }
-
-    JsonArray dataArr = jsonDoc["data"];
-    if (dataArr.isNull() || dataArr.size() == 0) {
-      Serial.println("No data field or empty array in manual response");
-      http.end();
-      return;
-    }
-    JsonObject data = dataArr[0];
-
-    // Selalu update automationStatus
-    automationStatus = data["automation_status"].as<int>();
-
-    if (automationStatus == 1) {
-      handleAutomaticMode();
-    } else {
-      handleManualMode(data);
-    }
-    updateOutputs();
-  } else {
-    Serial.println("Failed to fetch manual mode data");
-  }
-  http.end();
-}
-
-void handleAutomaticMode() {
-  Serial.println("Operating in automatic mode");
-
-  HTTPClient httpEnv;
-  httpEnv.begin(ENDPOINT_AUTOMATIC_MODE_ENV);
-  int httpResponseCode = httpEnv.GET();
-  HTTPClient httpSensor;
-  httpSensor.begin(ENDPOINT_AUTOMATIC_MODE_SENSOR);
-  int httpResponseCodeSensor = httpSensor.GET();
-
-  if (httpResponseCode > 0 && httpResponseCodeSensor > 0) {
-    String payloadEnv = httpEnv.getString();
-    String payloadSensor = httpSensor.getString();
-
-    Serial.println("Received (automatic env): " + payloadEnv);
-    Serial.println("Received (automatic sensor): " + payloadSensor);
-
-    StaticJsonDocument<256> jsonDocEnv;
-    StaticJsonDocument<256> jsonDocSensor;
-
-    DeserializationError errorEnv = deserializeJson(jsonDocEnv, payloadEnv);
-    DeserializationError errorSensor = deserializeJson(jsonDocSensor, payloadSensor);
-
-    if (errorEnv || errorSensor) {
-      Serial.println("JSON parsing failed for automatic mode!");
-      return;
-    }
-
-    JsonArray arrSensor = jsonDocSensor["data"];
-    JsonArray arrEnv = jsonDocEnv["data"];
-    if (arrSensor.isNull() || arrSensor.size() == 0 || arrEnv.isNull() || arrEnv.size() == 0) {
-      Serial.println("No data or empty array in automatic mode response");
-      return;
-    }
-    JsonObject objSensor = arrSensor[0];
-    JsonObject objEnv = arrEnv[0];
-
-    float moistureAvg = objSensor["moistureavg"].as<float>();
-    float temperatureAvg = objEnv["avg_temperature"].as<float>();
-
-    pumpStatus = (moistureAvg < MOISTURE_THRESHOLD) ? 1 : 0;
-    lightStatus = (temperatureAvg < TEMPERATURE_THRESHOLD) ? 1 : 0;
-
-    Serial.println("Moisture: " + String(moistureAvg) + " -> Pump: " + String(pumpStatus));
-    Serial.println("Temperature: " + String(temperatureAvg) + " -> Light: " + String(lightStatus));
-  } else {
-    Serial.println("Failed to fetch automatic mode data");
   }
 }
 
-void handleManualMode(JsonVariant data) {
-  Serial.println("Operating in manual mode");
+void checkConnections()
+{
+  // Check WiFi connection
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    Serial.println("WiFi disconnected, reconnecting...");
+    connectToWifi();
+  }
 
-  pumpStatus = data["pump_status"].as<int>();
-  lightStatus = data["light_status"].as<int>();
-}
-
-void updateOutputs() {
-  digitalWrite(RELAY_PUMP_1, pumpStatus ? LOW : HIGH);
-  digitalWrite(RELAY_PUMP_2, pumpStatus ? LOW : HIGH);
-  digitalWrite(RELAY_LIGHT_1, lightStatus ? LOW : HIGH);
-  digitalWrite(RELAY_LIGHT_2, lightStatus ? LOW : HIGH);
-}
-
-void initializeRelays() {
-  pinMode(RELAY_PUMP_1, OUTPUT);
-  pinMode(RELAY_PUMP_2, OUTPUT);
-  pinMode(RELAY_LIGHT_1, OUTPUT);
-  pinMode(RELAY_LIGHT_2, OUTPUT);
-
-  digitalWrite(RELAY_PUMP_1, HIGH);
-  digitalWrite(RELAY_PUMP_2, HIGH);
-  digitalWrite(RELAY_LIGHT_1, HIGH);
-  digitalWrite(RELAY_LIGHT_2, HIGH);
+  // Check WebSocket connection
+  if (!clientActuator.available() && !isActuatorConnected)
+  {
+    Serial.println("WebSocket disconnected, reconnecting...");
+    setupWebSocket();
+  }
 }

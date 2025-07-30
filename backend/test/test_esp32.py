@@ -1,47 +1,77 @@
-import requests
+import websockets
 import random
 import dotenv
 import os
-import time
+import asyncio
 import json
 
 dotenv.load_dotenv()
 
 DEVICE_ID = "esp32-plant-device"
-BASE_URL = f"http://{os.getenv('HOST')}:{os.getenv('PORT')}/api/smart-hydroponic/v1/sensors"
+# uri = f"ws://{os.getenv('HOST')}/ws/smart-hydroponic/device"
+uri = f"ws://{os.getenv('HOST')}:{os.getenv('PORT')}/ws/smart-hydroponic/device"
+
 
 def data_plant():
     return {
-        "device_id": DEVICE_ID,
+        "deviceId": "esp32-plant-device",
         "type": "update_data",
+        "room": "plant",
+        "broadcast": "command",
         "data": {
             "moisture1": 60,
             "moisture2": 60,
             "moisture3": 60,
-            "moisture4": 50,
+            "moisture4": 60,
             "moisture5": 60,
             "moisture6": 60,
             "flowrate": random.randint(1, 100),
             "total_litres": random.randint(1, 100),
             "distance_cm": random.randint(1, 100),
-            "ph": random.uniform(5.5, 7.5),
+            "ph": random.uniform(5.0, 7.0),
             "tds": random.randint(100, 1000),
         },
     }
 
-def send_data():
+
+async def send_pong(websocket):
     while True:
         try:
-            data = data_plant()
-            response = requests.post(BASE_URL, json=data)
-            if response.status_code == 201:
-                print(f"Sent data: {json.dumps(data)}\nResponse: {response.json()}")
-            else:
-                print(f"Failed to send data. Status code: {response.status_code}, Response: {response.text}")
-            time.sleep(5)  # Delay of 5 seconds before sending the next data
-        except requests.exceptions.RequestException as e:
-            print(f"Connection error: {e}. Retrying in 5 seconds...")
-            time.sleep(5)
+            await asyncio.sleep(5)  # Wait for 5 seconds before sending pong
+            await websocket.send("pong")
+            print("Sent pong")
+        except websockets.exceptions.ConnectionClosedError:
+            print("Connection closed, stopping pong sender.")
+            break
+
+
+async def main():
+    while True:
+        try:
+            ws = websockets.connect(uri)
+            async with ws as websocket:
+                register_data = {
+                    "deviceId": DEVICE_ID,
+                    "type": "join",
+                    "room": "plant",
+                }
+                await websocket.send(json.dumps(register_data))
+                print(f"Sent register data: {register_data}")
+                while True:
+                    data = data_plant()
+                    json_data = json.dumps(data)
+                    await websocket.send(json_data)
+                    print(f"Sent data: {json_data}\n")
+                    await asyncio.sleep(
+                        5
+                    )  # Delay of 5 seconds before sending the next data
+        except (
+            websockets.exceptions.ConnectionClosedError,
+            ConnectionRefusedError,
+        ) as e:
+            print(f"Connection error: {e}. Reconnecting in 5 seconds...")
+            await asyncio.sleep(5)
+
 
 if __name__ == "__main__":
-    send_data()
+    asyncio.get_event_loop().run_until_complete(main())

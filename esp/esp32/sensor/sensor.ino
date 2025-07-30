@@ -1,7 +1,7 @@
 #include <WiFi.h>
-#include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <Arduino.h>
+#include <ArduinoWebsockets.h>
 
 // Pin definitions
 // Moisture sensors
@@ -14,26 +14,26 @@
 
 // Water flow and ultrasonic sensor
 #define WATERFLOW_PIN 16 // OREN
-#define TRIGGER_PIN 18   // BIRU
+#define TRIGGER_PIN 18	 // BIRU
 #define ECHO_PIN 19
 
 // Constants
 #define SOUND_SPEED 0.034
-#define JARAK_SENSOR_KE_DASAR 30
+#define JARAK_SENSOR_KE_DASAR 40
 #define FLOW_CALIBRATION_FACTOR 4.5
 #define DAY_IN_MS 86400000
 
 // Network configuration
 const char *WIFI_SSID = "";
 const char *WIFI_PASSWORD = "";
-const char *API_URL = "";
+const char *WS_SERVER_URL = "";
 const char *DEVICE_ID = "esp32-plant-device";
 
 // Time intervals
-const unsigned long FLOW_INTERVAL = 1000;    // 1 second
+const unsigned long FLOW_INTERVAL = 1000;	   // 1 second
 const unsigned long ULTRASONIC_INTERVAL = 500; // 0.5 second
-const unsigned long SEND_INTERVAL = 5000;    // 5 seconds
-const unsigned long WIFI_TIMEOUT = 10000;    // 10 seconds
+const unsigned long SEND_INTERVAL = 5000;	   // 5 seconds
+const unsigned long WIFI_TIMEOUT = 10000;	   // 10 seconds
 
 // Global variables
 // Moisture sensor readings
@@ -51,8 +51,13 @@ unsigned long lastFlowCheck = 0;
 unsigned long lastUltrasonicCheck = 0;
 unsigned long lastSendTime = 0;
 
+// WebSocket client
+using namespace websockets;
+WebsocketsClient client;
+
 // Function prototypes
 void connectToWifi();
+void connectToWebSocket();
 void readMoistureSensors();
 void readWaterLevel();
 void readWaterFlow();
@@ -78,8 +83,9 @@ void setup()
 	// Setup interrupt
 	attachInterrupt(digitalPinToInterrupt(WATERFLOW_PIN), pulseCounter, FALLING);
 
-	// Connect to WiFi
+	// Connect to WiFi and WebSocket
 	connectToWifi();
+	connectToWebSocket();
 }
 
 void loop()
@@ -89,26 +95,39 @@ void loop()
 	// Check connections
 	checkConnections();
 
-	// Read sensors at appropriate intervals
-	if (currentMillis - lastFlowCheck >= FLOW_INTERVAL) {
-		readWaterFlow();
-		lastFlowCheck = currentMillis;
-	}
+	if (client.available())
+	{
+		// Read sensors at appropriate intervals
+		if (currentMillis - lastFlowCheck >= FLOW_INTERVAL)
+		{
+			readWaterFlow();
+			lastFlowCheck = currentMillis;
+		}
 
-	if (currentMillis - lastUltrasonicCheck >= ULTRASONIC_INTERVAL) {
-		readWaterLevel();
-		readMoistureSensors();
-		lastUltrasonicCheck = currentMillis;
-	}
+		if (currentMillis - lastUltrasonicCheck >= ULTRASONIC_INTERVAL)
+		{
+			readWaterLevel();
+			readMoistureSensors();
+			lastUltrasonicCheck = currentMillis;
+		}
 
-	if (currentMillis - lastSendTime >= SEND_INTERVAL) {
-		sendSensorData();
-		lastSendTime = currentMillis;
-	}
+		if (currentMillis - lastSendTime >= SEND_INTERVAL)
+		{
+			sendSensorData();
+			lastSendTime = currentMillis;
+		}
 
-	// Reset counters daily
-	if (currentMillis >= DAY_IN_MS) {
-		resetDailyCounters();
+		// Reset counters daily
+		if (currentMillis >= DAY_IN_MS)
+		{
+			resetDailyCounters();
+		}
+	}
+	else
+	{
+		// Reconnect if client is unavailable
+		Serial.println("Client not available");
+		connectToWebSocket();
 	}
 }
 
@@ -119,7 +138,8 @@ void connectToWifi()
 
 	WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-	while (WiFi.status() != WL_CONNECTED) {
+	while (WiFi.status() != WL_CONNECTED)
+	{
 		delay(1000);
 		Serial.println("Connecting to WiFi...");
 	}
@@ -128,14 +148,41 @@ void connectToWifi()
 	Serial.println(WiFi.localIP());
 }
 
+void connectToWebSocket()
+{
+	Serial.println("Connecting to WebSocket server...");
+
+	while (!client.connect(WS_SERVER_URL))
+	{
+		Serial.println("WebSocket connection failed, retrying...");
+		delay(1000);
+	}
+
+	Serial.println("Connected to WebSocket Server");
+
+	// Register device
+	StaticJsonDocument<256> registerJson;
+	registerJson["device_id"] = DEVICE_ID;
+	registerJson["type"] = "join";
+	registerJson["room"] = "plant";
+
+	String registerString;
+	serializeJson(registerJson, registerString);
+
+	Serial.println("Registering device: " + registerString);
+	client.send(registerString);
+}
+
 void readMoistureSensors()
 {
-	moisture[0] = (100 - ((analogRead(MOISTURE_PIN1) / 4095.0) * 100));
-	moisture[1] = (100 - ((analogRead(MOISTURE_PIN2) / 4095.0) * 100));
-	moisture[2] = (100 - ((analogRead(MOISTURE_PIN3) / 4095.0) * 100));
-	moisture[3] = (100 - ((analogRead(MOISTURE_PIN4) / 4095.0) * 100));
-	moisture[4] = (100 - ((analogRead(MOISTURE_PIN5) / 4095.0) * 100));
-	moisture[5] = (100 - ((analogRead(MOISTURE_PIN6) / 4095.0) * 100));
+	const int pins[6] = {MOISTURE_PIN1, MOISTURE_PIN2, MOISTURE_PIN3,
+						 MOISTURE_PIN4, MOISTURE_PIN5, MOISTURE_PIN6};
+
+	for (int i = 0; i < 6; i++)
+	{
+		moistureAnalog[i] = analogRead(pins[i]);
+		moisture[i] = (100 - ((moistureAnalog[i] / 4095.0) * 100));
+	}
 }
 
 void readWaterLevel()
@@ -165,40 +212,28 @@ void readWaterFlow()
 
 void sendSensorData()
 {
-	if (WiFi.status() == WL_CONNECTED) {
-		HTTPClient http;
-		http.begin(API_URL);
-		http.addHeader("Content-Type", "application/json");
+	StaticJsonDocument<256> jsonDoc;
+	jsonDoc["deviceId"] = DEVICE_ID;
+	jsonDoc["type"] = "update_data";
+	jsonDoc["room"] = "plant";
+	jsonDoc["broadcast"] = "command";
 
-		StaticJsonDocument<256> jsonDoc;
-		jsonDoc["device_id"] = DEVICE_ID;
-		jsonDoc["type"] = "update_data";
+	JsonObject dataObj = jsonDoc.createNestedObject("data");
+	dataObj["moisture1"] = moisture[0];
+	dataObj["moisture2"] = moisture[1];
+	dataObj["moisture3"] = moisture[2];
+	dataObj["moisture4"] = moisture[3];
+	dataObj["moisture5"] = moisture[4];
+	dataObj["moisture6"] = moisture[5];
+	dataObj["flowrate"] = flowRate;
+	dataObj["total_litres"] = totalLitres;
+	dataObj["distance_cm"] = waterLevel;
 
-		JsonObject dataObj = jsonDoc.createNestedObject("data");
-		dataObj["moisture1"] = moisture[0];
-		dataObj["moisture2"] = moisture[1];
-		dataObj["moisture3"] = moisture[2];
-		dataObj["moisture4"] = moisture[3];
-		dataObj["moisture5"] = moisture[4];
-		dataObj["moisture6"] = moisture[5];
-		dataObj["flowrate"] = flowRate;
-		dataObj["total_litres"] = totalLitres;
-		dataObj["distance_cm"] = waterLevel;
+	String jsonString;
+	serializeJson(jsonDoc, jsonString);
 
-		String jsonString;
-		serializeJson(jsonDoc, jsonString);
-
-		int httpResponseCode = http.POST(jsonString);
-		if (httpResponseCode > 0) {
-			Serial.println("Data sent successfully: " + jsonString);
-		} else {
-			Serial.println("Error sending data: " + String(httpResponseCode));
-		}
-
-		http.end();
-	} else {
-		Serial.println("WiFi not connected, unable to send data.");
-	}
+	client.send(jsonString);
+	Serial.println("Sent: " + jsonString);
 }
 
 void resetDailyCounters()
@@ -212,21 +247,26 @@ void resetDailyCounters()
 void checkConnections()
 {
 	// Check WiFi connection
-	if (WiFi.status() != WL_CONNECTED) {
+	if (WiFi.status() != WL_CONNECTED)
+	{
 		Serial.println("WiFi disconnected, attempting to reconnect...");
 
 		WiFi.disconnect();
 		WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 		unsigned long startAttemptTime = millis();
 
-		while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < WIFI_TIMEOUT) {
+		while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < WIFI_TIMEOUT)
+		{
 			Serial.println("Reconnecting...");
 			delay(500);
 		}
 
-		if (WiFi.status() == WL_CONNECTED) {
+		if (WiFi.status() == WL_CONNECTED)
+		{
 			Serial.println("Reconnected to WiFi!");
-		} else {
+		}
+		else
+		{
 			Serial.println("Failed to reconnect. Will retry later.");
 		}
 	}
