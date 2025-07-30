@@ -127,7 +127,7 @@ cron.schedule('0 0 1 * *', () => {
 });
 
 module.exports = {
-    deviceLogger: buildLogger('Device'),
+    deviceLogger: buildLogger('Backend'),
     dashboardLogger: buildLogger('Dashboard'),
     errorLogger: buildLogger('Error'),
 };
