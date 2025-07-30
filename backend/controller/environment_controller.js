@@ -4,6 +4,8 @@
 
 const db = require('../config/db');
 
+const { errorLogger } = require("../utils/logger");
+
 const addEnvironmentData = async (req, res) => {
     try {
         const { device_id, data } = req.body;
@@ -30,7 +32,7 @@ const addEnvironmentData = async (req, res) => {
             message: 'Environment data added successfully'
         });
     } catch (error) {
-        console.log('Error adding environment data: ', error);
+        errorLogger.error('Error adding environment data: ', error);
         res.status(500).json({ 
             message: 'Error adding environment data', 
             error: error.message 
@@ -51,7 +53,7 @@ const getAllDataEnvironment = async (req, res) => {
             totalRows: result.rowCount
         });
     } catch (error) {
-        console.log('Error getting data: ', error);
+        errorLogger.error('Error getting data: ', error);
         res.status(500).json({ 
             message: 'Error getting data', 
             error: error.message 
@@ -73,7 +75,7 @@ const getEnvironmentData = async (req, res) => {
             totalRows: result.rowCount
         });
     } catch (error) {
-        console.log('Error getting data: ', error);
+        errorLogger.error('Error getting data: ', error);
         res.status(500).json({ 
             message: 'Error getting data', 
             error: error.message 
@@ -90,7 +92,7 @@ const getLatestEnvironmentData = async (req, res) => {
             totalRows: result.rowCount
         });
     } catch (error) {
-        console.log('Error getting data: ', error);
+        errorLogger.error('Error getting data: ', error);
         res.status(500).json({ 
             message: 'Error getting data', 
             error: error.message 

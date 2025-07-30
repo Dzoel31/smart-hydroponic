@@ -4,6 +4,8 @@ Controller for sensor data
 
 const db = require('../config/db');
 
+const { errorLogger } = require("../utils/logger");
+
 const addSensorData = async (req, res) => {
     try {
         const { device_id, data } = req.body;
@@ -17,7 +19,7 @@ const addSensorData = async (req, res) => {
         const moistureValues = moistureKeys.map(key => Number(data[key])).filter(val => !isNaN(val));
         const moistureavg = moistureValues.length > 0
             ? moistureValues.reduce((sum, val) => sum + val, 0) / moistureValues.length
-            : null;
+            : 0;
         // Jika tidak ada nilai ph dan tds, set ke 0
         data.ph = data.ph ?? 0;
         data.tds = data.tds ?? 0;
@@ -44,7 +46,7 @@ const addSensorData = async (req, res) => {
             message: 'Sensor data added successfully'
         });
     } catch (error) {
-        console.log('Error adding sensor data: ', error);
+        errorLogger.error('Error adding sensor data: ', error);
         res.status(500).json({
             status: 'error',
             message: 'Error adding sensor data',
@@ -66,7 +68,7 @@ const getAllDataSensor = async (req, res) => {
             totalRows: result.rowCount
         });
     } catch (error) {
-        console.log('Error getting data: ', error);
+        errorLogger.error('Error getting data: ', error);
         res.status(500).json({ 
             message: 'Error getting data', 
             error: error.message 
@@ -88,7 +90,7 @@ const getSensorData = async (req, res) => {
             totalRows: result.rowCount
         });
     } catch (error) {
-        console.log('Error getting data: ', error);
+        errorLogger.error('Error getting data: ', error);
         res.status(500).json({ 
             message: 'Error getting data', 
             error: error.message 
@@ -104,7 +106,7 @@ const getLatestSensorData = async (req, res) => {
             data: result.rows
         });
     } catch (error) {
-        console.log('Error getting data: ', error);
+        errorLogger.error('Error getting data: ', error);
         res.status(500).json({ 
             message: 'Error getting data', 
             error: error.message 

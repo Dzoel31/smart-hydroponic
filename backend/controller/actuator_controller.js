@@ -4,6 +4,8 @@ Controller for actuator
 
 const db = require('../config/db');
 
+const { errorLogger } = require("../utils/logger");
+
 const addActuatorData = async (req, res) => {
     try {
          const { device_id, data } = req.body;
@@ -25,7 +27,7 @@ const addActuatorData = async (req, res) => {
             message: 'Actuator data added successfully'
         });
     } catch (error) {
-        console.log('Error adding actuator data: ', error);
+        errorLogger.error('Error adding actuator data: ', error);
         res.status(500).json({
             status: 'error',
             message: 'Error adding actuator data',
@@ -47,7 +49,7 @@ const getAllDataActuator = async (req, res) => {
             totalRows: result.rowCount
         });
     } catch (error) {
-        console.log('Error getting data: ', error);
+        errorLogger.error('Error getting data: ', error);
         res.status(500).json({ 
             message: 'Error getting data', 
             error: error.message 
@@ -69,7 +71,7 @@ const getActuatorData = async (req, res) => {
             totalRows: result.rowCount
         });
     } catch (error) {
-        console.log('Error getting data: ', error);
+        errorLogger.error('Error getting data: ', error);
         res.status(500).json({ 
             message: 'Error getting data', 
             error: error.message 
@@ -85,7 +87,7 @@ const getLatestActuatorData = async (req, res) => {
             data: result.rows
         });
     } catch (error) {
-        console.log('Error getting data: ', error);
+        errorLogger.error('Error getting data: ', error);
         res.status(500).json({ 
             message: 'Error getting data', 
             error: error.message 
