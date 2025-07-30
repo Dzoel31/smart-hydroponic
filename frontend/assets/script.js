@@ -3,7 +3,7 @@
  */
 async function apiRequest(url, options = {}, parseJson = true) {
     try {
-        url = `http://localhost:15000${url}`;
+        url = `http://172.23.14.161:15000${url}`;
         const response = await fetch(url, options);
         if (!response.ok) {
             throw new Error(`Request failed: ${response.statusText}`);
@@ -19,15 +19,13 @@ async function apiRequest(url, options = {}, parseJson = true) {
 const endpoints = {
     sensorLatest: '/api/smart-hydroponic/v1/sensor/latest',
     environmentLatest: '/api/smart-hydroponic/v1/environment/latest',
-    actuators: '/api/smart-hydroponic/v1/actuators',
-    actuatorLatest: '/api/smart-hydroponic/v1/actuator/latest',
 };
 
 // DOM Elements
 const elements = {
     pumpButton: document.getElementById("togglePumpButton"),
     lampButton: document.getElementById("toggleLampButton"),
-    otomationButton: document.getElementById("toggleAutomation"),
+    automationButton: document.getElementById("toggleAutomation"),
     statusPump: document.getElementById("statusPump"),
     statusLamp: document.getElementById("statusLamp"),
     flowRate: document.getElementById("flowRate"),
@@ -44,9 +42,9 @@ const elements = {
 
 // State management
 const state = {
-    device_id: "dashboard-device",
-    target_device_id: "esp8266-actuator-device",
+    deviceId: "dashboard-device",
     type: "command",
+    room: "command",
     data: {
         automationStatus: 0,
         pumpStatus: 0,
@@ -61,7 +59,7 @@ function updateUI() {
     elements.statusPump.textContent = `Pump Status: ${state.data.pumpStatus}`;
     elements.statusLamp.textContent = `Lamp Status: ${state.data.lightStatus}`;
     elements.pumpButton.disabled = elements.lampButton.disabled = state.data.automationStatus === 1;
-    elements.otomationButton.checked = state.data.automationStatus === 1;
+    elements.automationButton.checked = state.data.automationStatus === 1;
     elements.pumpButton.checked = state.data.pumpStatus === 1;
     elements.lampButton.checked = state.data.lightStatus === 1;
 }
@@ -102,7 +100,7 @@ function handleActuatorData(data) {
  * Fetch and handle sensor data from API
  */
 async function fetchSensorData() {
-    const dataToFetch = [endpoints.sensorLatest, endpoints.environmentLatest, endpoints.actuatorLatest];
+    const dataToFetch = [endpoints.sensorLatest, endpoints.environmentLatest];
     try {
         for (const endpoint of dataToFetch) {
             const data = await apiRequest(endpoint);
@@ -110,8 +108,6 @@ async function fetchSensorData() {
                 handleSensorData(data.data);
             } else if (endpoint === endpoints.environmentLatest) {
                 handleEnvironmentData(data.data);
-            } else if (endpoint === endpoints.actuatorLatest) {
-                handleActuatorData(data.data);
             }
         }
     } catch (e) {
@@ -122,19 +118,53 @@ async function fetchSensorData() {
 /**
  * Send current state as command to API
  */
+
+let ws;
+
+function registerWebSocket() {
+    const registerData = {
+        deviceId: state.deviceId,
+        type: "join",
+        room: state.room
+    };
+    ws = new WebSocket("ws://172.23.14.161:15000");
+
+    ws.onopen = () => {
+        ws.send(JSON.stringify(registerData));
+        console.log("WebSocket connection established and registered.");
+    };
+    ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        state.data.automationStatus = message.data.automationStatus;
+        state.data.pumpStatus = message.data.pumpStatus;
+        state.data.lightStatus = message.data.lightStatus;
+        updateUI();
+    };
+}
+
 async function sendCommand() {
     try {
-        await apiRequest(endpoints.actuators, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(state)
-        }, false);
-    } catch (e) {}
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            const commandData = {
+                deviceId: state.deviceId,
+                type: state.type,
+                room: state.room,
+                data: {
+                    automationStatus: state.data.automationStatus,
+                    pumpStatus: state.data.pumpStatus,
+                    lightStatus: state.data.lightStatus
+                }
+            };
+            ws.send(JSON.stringify(commandData));
+        }
+    } catch (error) {
+        console.error("Error sending command:", error);
+    }
 }
 
 // Event listeners
-elements.otomationButton.addEventListener('change', () => {
-    state.data.automationStatus = elements.otomationButton.checked ? 1 : 0;
+elements.automationButton.addEventListener('change', () => {
+    state.data.automationStatus = elements.automationButton.checked ? 1 : 0;
     if (state.data.automationStatus === 1) {
         state.data.pumpStatus = 0;
         state.data.lightStatus = 0;
@@ -155,5 +185,6 @@ elements.lampButton.addEventListener("change", () => {
 
 // Initialize
 fetchSensorData();
+registerWebSocket();
 updateUI();
 setInterval(fetchSensorData, 5000);
