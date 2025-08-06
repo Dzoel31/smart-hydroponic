@@ -64,7 +64,6 @@ wss.on('connection', (ws) => {
             }
 
             if (data.type === "update_data") {
-                deviceLogger.info(`Received update data: ${data.data}`);
                 const targetRoom = data.room;
                 const broadcast = data.broadcast || "command";
 

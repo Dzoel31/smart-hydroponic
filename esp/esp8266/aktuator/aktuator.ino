@@ -13,9 +13,9 @@
 #define RELAY_LIGHT_2 14 // D5
 
 // Configuration
-const char *WIFI_SSID = "";
-const char *WIFI_PASSWORD = "";
-const char *WEBSOCKET_URL = "";
+const char *WIFI_SSID = "Podcast Area";
+const char *WIFI_PASSWORD = "iriunwebcam";
+const char *WEBSOCKET_URL = "ws://103.147.92.179";
 const char *DEVICE_ID = "esp8266-actuator-device";
 const unsigned long DATA_SEND_INTERVAL = 5000;      // 5 seconds
 const unsigned long WIFI_RECONNECT_TIMEOUT = 10000; // 10 seconds
@@ -236,6 +236,8 @@ void sendStatusUpdate()
   jsonDoc["deviceId"] = DEVICE_ID;
   jsonDoc["type"] = "update_data";
   jsonDoc["room"] = "command";
+  jsonDoc["broadcast"] = "command";
+  
 
   JsonObject dataObj = jsonDoc.createNestedObject("data");
   dataObj["pumpStatus"] = pumpStatus;

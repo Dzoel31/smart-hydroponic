@@ -2,278 +2,228 @@
 #include <ArduinoJson.h>
 #include <Arduino.h>
 #include <ArduinoWebsockets.h>
-#include "DHT.h"
+#include <DHT.h>
 
-// Pin and sensor definitions
+// --- KONFIGURASI ---
+// Pin dan Sensor
 #define TDS_SENSOR_PIN 34
 #define VREF 3.3
 #define SCOUNT 30
-#define DHT11_PIN 14
-#define DHT22_PIN 26
+#define DHT11_PIN_ATAS 33
+#define DHT11_PIN_BAWAH 32
 #define DHT11_TYPE DHT11
-#define DHT22_TYPE DHT22
 
-// Network configuration
-const char *WIFI_SSID = "";
-const char *WIFI_PASSWORD = "";
-const char *server_url = "";
+// Konfigurasi Jaringan (Silakan isi dengan data Anda)
+const char *WIFI_SSID = "Podcast Area";
+const char *WIFI_PASSWORD = "iriunwebcam";
+const char *server_url = "ws://103.147.92.179";
 const char *device_id = "esp32-environment-device";
 
-// Timing constants
-const unsigned long SEND_INTERVAL = 5000;     // 5 seconds
-const unsigned long WIFI_TIMEOUT = 10000;     // 10 seconds
-const unsigned long TDS_SAMPLE_INTERVAL = 40; // 40 milliseconds
+// Konfigurasi Waktu
+const unsigned long SEND_INTERVAL = 5000;      // 5 detik
+const unsigned long WIFI_TIMEOUT = 15000;      // 15 detik
+const unsigned long TDS_SAMPLE_INTERVAL = 40;  // 40 milidetik
 
-// Global variables
+// --- VARIABEL GLOBAL ---
 int analogBuffer[SCOUNT];
 int analogBufferTemp[SCOUNT];
 int analogBufferIndex = 0;
 unsigned long lastSendTime = 0;
 unsigned long lastAnalogSampleTime = 0;
 
-// Sensor readings
+// Variabel penampung nilai sensor
 float tdsValue = 0;
-float phValue = 0; // Placeholder for pH sensor value
+float phValue = 0; // Placeholder
 float temperature_atas = 0;
 float humidity_atas = 0;
 float temperature_bawah = 0;
 float humidity_bawah = 0;
 
-// Objects
-DHT dht11(DHT11_PIN, DHT11_TYPE);
-DHT dht22(DHT22_PIN, DHT22_TYPE);
+// Objek library
+DHT dht11Atas(DHT11_PIN_ATAS, DHT11_TYPE);
+DHT dht11Bawah(DHT11_PIN_BAWAH, DHT11_TYPE);
+using namespace websockets;
+WebsocketsClient client;
 
-// Function prototypes
-int getMedianNum(int bArray[], int iFilterLen);
-void checkWiFiConnection();
-bool connectToWebSocket();
-void registerDevice();
-void readDHTSensors();
-void readTDSSensor();
-// void readPHSensor(); // Placeholder for pH sensor reading
-void sendSensorData();
-
+// =================================================================
+//                        FUNGSI SETUP
+// =================================================================
 void setup()
 {
   Serial.begin(115200);
   pinMode(TDS_SENSOR_PIN, INPUT);
 
-  // Initialize sensors
-  dht11.begin();
-  dht22.begin();
+  // Inisialisasi sensor DHT
+  dht11Atas.begin();
+  dht11Bawah.begin();
 
-  // Connect to WiFi
+  // --- LOGIKA KONEKSI WIFI ---
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("Connecting to WiFi ..");
-  while (WiFi.status() != WL_CONNECTED)
+  Serial.print("Menghubungkan ke WiFi ..");
+  unsigned long startAttemptTime = millis();
+
+  while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < WIFI_TIMEOUT)
   {
-    delay(1000);
+    delay(500);
     Serial.print('.');
   }
-  Serial.println("\nConnected to WiFi");
 
-  if (connectToWebSocket())
+  // Cek hasil koneksi WiFi
+  if (WiFi.status() == WL_CONNECTED)
   {
-    registerDevice();
-  }
-}
+    Serial.println("\nTerhubung ke WiFi!");
+    Serial.print("Alamat IP: ");
+    Serial.println(WiFi.localIP());
 
-int getMedianNum(int bArray[], int iFilterLen)
-{
-  int bTab[iFilterLen];
-  for (byte i = 0; i < iFilterLen; i++)
-    bTab[i] = bArray[i];
-
-  int i, j, bTemp;
-  for (j = 0; j < iFilterLen - 1; j++)
-  {
-    for (i = 0; i < iFilterLen - j - 1; i++)
+    // --- LOGIKA KONEKSI WEBSOCKET ---
+    Serial.println("Menghubungkan ke WebSocket server...");
+    if (client.connect(server_url))
     {
-      if (bTab[i] > bTab[i + 1])
-      {
-        bTemp = bTab[i];
-        bTab[i] = bTab[i + 1];
-        bTab[i + 1] = bTemp;
-      }
-    }
-  }
-  int median = (iFilterLen & 1) ? bTab[(iFilterLen - 1) / 2] : (bTab[iFilterLen / 2] + bTab[iFilterLen / 2 - 1]) / 2;
-  return median;
-}
+      Serial.println("Terhubung ke WebSocket Server!");
 
-void checkWiFiConnection()
-{
-  if (WiFi.status() != WL_CONNECTED)
-  {
-    Serial.println("WiFi disconnected, attempting to reconnect...");
-    WiFi.disconnect();
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+      // --- LOGIKA REGISTRASI PERANGKAT ---
+      StaticJsonDocument<256> registerJson;
+      registerJson["deviceId"] = device_id;
+      registerJson["type"] = "join";
+      registerJson["room"] = "environment";
 
-    unsigned long startAttemptTime = millis();
+      String registerString;
+      serializeJson(registerJson, registerString);
 
-    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < WIFI_TIMEOUT)
-    {
-      Serial.println("Reconnecting...");
-      delay(500);
-    }
-
-    if (WiFi.status() == WL_CONNECTED)
-    {
-      Serial.println("Reconnected to WiFi!");
+      Serial.println("Registrasi perangkat: " + registerString);
+      client.send(registerString);
     }
     else
     {
-      Serial.println("Failed to reconnect. Will retry later.");
+      Serial.println("Gagal terhubung ke WebSocket Server.");
     }
   }
-}
-
-bool connectToWebSocket()
-{
-  Serial.println("Connecting to WebSocket server...");
-  if (client.connect(websocket_server))
-  {
-    Serial.println("Connected to WebSocket Server");
-    return true;
-  }
   else
   {
-    Serial.println("Failed to connect to WebSocket Server");
-    return false;
+    Serial.println("\nGagal terhubung ke WiFi. Silakan restart perangkat.");
+    // Program akan berhenti di sini jika WiFi gagal, loop() tidak akan berjalan efektif.
   }
 }
 
-void registerDevice()
-{
-  StaticJsonDocument<512> registerJson;
-  registerJson["deviceId"] = device_id;
-  registerJson["type"] = "join";
-  registerJson["room"] = "environment";
 
-  String registerString;
-  serializeJson(registerJson, registerString);
-
-  Serial.println("Registering device: " + registerString);
-  client.send(registerString);
-}
-
-
-bool connectToWebSocket() {
-  bool connected = client.connect(websocket_server);
-  if (connected)
-  {
-    Serial.println("Connected to WebSocket Server");
-    return true;
-  }
-  else
-  {
-    Serial.println("Failed to connect to WebSocket Server");
-    return false;
-  }
-}
-
-void readDHTSensors()
-{
-  temperature_atas = dht11.readTemperature();
-  humidity_atas = dht11.readHumidity();
-  temperature_bawah = dht22.readTemperature();
-  humidity_bawah = dht22.readHumidity();
-
-  if (isnan(temperature_atas))
-    temperature_atas = 0;
-  if (isnan(humidity_atas))
-    humidity_atas = 0;
-  if (isnan(temperature_bawah))
-    temperature_bawah = 0;
-  if (isnan(humidity_bawah))
-    humidity_bawah = 0;
-}
-
-void readPHSensor()
-{
-  // Kode membaca sensor pH disini
-  phValue = 0;
-}
-
-void readTDSSensor()
-{
-  for (int i = 0; i < SCOUNT; i++)
-  {
-    analogBufferTemp[i] = analogBuffer[i];
-  }
-
-  float medianRaw = getMedianNum(analogBufferTemp, SCOUNT);
-  float averageVoltage = medianRaw * VREF / 4095.0;
-  float compensationCoefficient = 1.0 + 0.02 * (temperature_bawah - 25.0); // Using temperature_bawah for compensation
-  float compensationVoltage = averageVoltage / compensationCoefficient;
-  tdsValue = (133.42 * pow(compensationVoltage, 3) - 255.86 * pow(compensationVoltage, 2) + 857.39 * compensationVoltage);
-}
-
-void sendSensorData()
-{
-  StaticJsonDocument<256> jsonDoc;
-  jsonDoc["deviceId"] = device_id;
-  jsonDoc["type"] = "update_data";
-  jsonDoc["room"] = "environment";
-  jsonDoc["broadcast"] = "command";
-
-  JsonObject data = jsonDoc.createNestedObject("data");
-  data["temperatureAtas"] = temperature_atas;
-  data["humidityAtas"] = humidity_atas;
-  data["temperatureBawah"] = temperature_bawah;
-  data["humidityBawah"] = humidity_bawah;
-
-  String dataStr;
-  serializeJson(jsonDoc, dataStr);
-
-  if (client.available())
-  {
-    client.send(dataStr);
-    Serial.println("Sent: " + dataStr);
-  }
-  else
-  {
-    Serial.println("WebSocket client not available, attempting to reconnect...");
-    if (connectToWebSocket())
-    {
-      registerDevice();
-      // Try to send again after reconnection
-      client.send(dataStr);
-      Serial.println("Sent after reconnection: " + dataStr);
-    }
-  }
-}
-
+// =================================================================
+//                         FUNGSI LOOP
+// =================================================================
 void loop()
 {
   unsigned long currentMillis = millis();
 
-  // Sample TDS sensor at regular intervals
+  // --- LOGIKA PEMELIHARAAN KONEKSI WIFI ---
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    Serial.println("Koneksi WiFi terputus, mencoba menyambungkan kembali...");
+    WiFi.disconnect();
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    unsigned long startAttemptTime = millis();
+
+    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < WIFI_TIMEOUT)
+    {
+      delay(500);
+      Serial.print(".");
+    }
+
+    if (WiFi.status() == WL_CONNECTED)
+    {
+      Serial.println("\nBerhasil terhubung kembali ke WiFi!");
+    }
+    else
+    {
+      Serial.println("\nGagal menyambung kembali.");
+    }
+  }
+
+  // --- LOGIKA PEMBACAAN SENSOR TDS (NON-BLOCKING) ---
   if (currentMillis - lastAnalogSampleTime > TDS_SAMPLE_INTERVAL)
   {
     lastAnalogSampleTime = currentMillis;
     analogBuffer[analogBufferIndex] = analogRead(TDS_SENSOR_PIN);
     analogBufferIndex = (analogBufferIndex + 1) % SCOUNT;
-
-    // Only update TDS value after new sample
-    readTDSSensor();
   }
 
-  readDHTSensors();
-
-  // Send data and print debug at regular intervals
+  // --- LOGIKA PEMBACAAN DAN PENGIRIMAN DATA BERKALA ---
   if (currentMillis - lastSendTime >= SEND_INTERVAL)
   {
     lastSendTime = currentMillis;
 
-    // Read DHT sensors
-    // readPHSensor(); // Uncomment if pH sensor is available
+    // --- 1. LOGIKA PEMBACAAN SENSOR DHT ---
+    temperature_atas = dht11Atas.readTemperature();
+    humidity_atas = dht11Atas.readHumidity();
+    temperature_bawah = dht11Bawah.readTemperature();
+    humidity_bawah = dht11Bawah.readHumidity();
 
-    // Debug print every 5 seconds
-    sendSensorData();
+    if (isnan(temperature_atas)) temperature_atas = 0;
+    if (isnan(humidity_atas)) humidity_atas = 0;
+    if (isnan(temperature_bawah)) temperature_bawah = 0;
+    if (isnan(humidity_bawah)) humidity_bawah = 0;
+    
+    // --- 2. LOGIKA KALKULASI NILAI TDS ---
+    for (int i = 0; i < SCOUNT; i++)
+    {
+      analogBufferTemp[i] = analogBuffer[i];
+    }
+    // Proses sorting untuk mencari nilai median (pengganti fungsi getMedianNum)
+    for (int j = 0; j < SCOUNT - 1; j++)
+    {
+      for (int i = 0; i < SCOUNT - j - 1; i++)
+      {
+        if (analogBufferTemp[i] > analogBufferTemp[i + 1])
+        {
+          int bTemp = analogBufferTemp[i];
+          analogBufferTemp[i] = analogBufferTemp[i + 1];
+          analogBufferTemp[i + 1] = bTemp;
+        }
+      }
+    }
+    float medianRaw = (SCOUNT & 1) ? analogBufferTemp[(SCOUNT - 1) / 2] : (analogBufferTemp[SCOUNT / 2] + analogBufferTemp[SCOUNT / 2 - 1]) / 2;
+    
+    // Konversi ke nilai TDS
+    float averageVoltage = medianRaw * VREF / 4095.0;
+    float compensationCoefficient = 1.0 + 0.02 * (temperature_bawah - 25.0);
+    float compensationVoltage = averageVoltage / compensationCoefficient;
+    tdsValue = (133.42 * pow(compensationVoltage, 3) - 255.86 * pow(compensationVoltage, 2) + 857.39 * compensationVoltage);
+
+
+    // --- 3. LOGIKA PENGIRIMAN DATA VIA WEBSOCKET ---
+    StaticJsonDocument<512> jsonDoc;
+    jsonDoc["deviceId"] = device_id;
+    jsonDoc["type"] = "update_data";
+    jsonDoc["room"] = "environment";
+    jsonDoc["broadcast"] = "command";
+
+    JsonObject data = jsonDoc.createNestedObject("data");
+    data["temperatureAtas"] = temperature_atas;
+    data["humidityAtas"] = humidity_atas;
+    data["temperatureBawah"] = temperature_bawah;
+    data["humidityBawah"] = humidity_bawah;
+    data["tds"] = tdsValue; // Menambahkan data TDS
+    data["ph"] = phValue;   // Menambahkan data pH (placeholder)
+
+    String dataStr;
+    serializeJson(jsonDoc, dataStr);
+
+    if (client.available())
+    {
+      client.send(dataStr);
+      Serial.println("Terkirim: " + dataStr);
+    }
+    else
+    {
+      Serial.println("Koneksi WebSocket tidak tersedia, mencoba menyambungkan ulang...");
+      if (client.connect(server_url))
+      {
+        Serial.println("Berhasil terhubung kembali ke WebSocket!");
+        // Kirim ulang data setelah konek
+        client.send(dataStr);
+        Serial.println("Terkirim (setelah konek ulang): " + dataStr);
+      }
+    }
   }
 
-  // Maintain connections
-  checkWiFiConnection();
+  // Wajib dipanggil di loop untuk menjaga koneksi websocket
   client.poll();
 }

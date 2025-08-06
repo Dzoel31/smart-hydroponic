@@ -17,7 +17,7 @@ permissions:
 
 jobs:
     build-docs:
-      if: github.repository == 'project-iot-fik/smart-hydroponic'
+      if: github.repository == 'IoT-Smart-Hydroponic/smart-hydroponic'
       runs-on: ubuntu-latest
       steps:
         - name: Checkout code
