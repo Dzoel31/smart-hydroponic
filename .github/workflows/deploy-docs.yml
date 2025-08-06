@@ -21,16 +21,16 @@ jobs:
           with:
             fetch-depth: 0
 
-        - name: Install uv and set up Python
-          uses: astral-sh/setup-uv@v6
+        - name: Set up Python
+          uses: actions/setup-python@v5
           with:
             python-version: '3.13'
 
         - name: Install dependencies
-          run: uv pip install mkdocs mkdocs-material --system
+          run: pip install mkdocs mkdocs-material
 
         - name: Build documentation
-          run: uv run mkdocs build --clean --strict
+          run: mkdocs build --clean --strict
 
         - name: Upload pages artifact
           id: deployment
