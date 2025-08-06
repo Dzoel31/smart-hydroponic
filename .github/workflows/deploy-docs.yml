@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -26,7 +27,7 @@ jobs:
             python-version: '3.13'
 
         - name: Install dependencies
-          run: uv pip install mkdocs mkdocs-material
+          run: uv pip install mkdocs mkdocs-material --system
 
         - name: Build documentation
           run: uv run mkdocs build --clean --strict
