@@ -19,15 +19,19 @@
 
 // Constants
 #define SOUND_SPEED 0.034
-#define JARAK_SENSOR_KE_DASAR 40
+#define JARAK_SENSOR_KE_DASAR 43
 #define FLOW_CALIBRATION_FACTOR 4.5
 #define DAY_IN_MS 86400000
 
 // Network configuration
-const char *WIFI_SSID = "";
-const char *WIFI_PASSWORD = "";
-const char *WS_SERVER_URL = "";
+const char *WIFI_SSID = "Podcast Area";
+const char *WIFI_PASSWORD = "iriunwebcam";
+const char *WS_SERVER_URL = "ws://103.147.92.179";
 const char *DEVICE_ID = "esp32-plant-device";
+
+const char *WIFI_SSID = "Podcast Area";
+const char *WIFI_PASSWORD = "iriunwebcam";
+const char *server_url = "ws://103.147.92.179";
 
 // Time intervals
 const unsigned long FLOW_INTERVAL = 1000;	   // 1 second
