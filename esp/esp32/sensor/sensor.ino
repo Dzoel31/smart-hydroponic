@@ -24,14 +24,10 @@
 #define DAY_IN_MS 86400000
 
 // Network configuration
-const char *WIFI_SSID = "Podcast Area";
-const char *WIFI_PASSWORD = "iriunwebcam";
-const char *WS_SERVER_URL = "ws://103.147.92.179";
+const char *WIFI_SSID = "";
+const char *WIFI_PASSWORD = "";
+const char *WS_SERVER_URL = "";
 const char *DEVICE_ID = "esp32-plant-device";
-
-const char *WIFI_SSID = "Podcast Area";
-const char *WIFI_PASSWORD = "iriunwebcam";
-const char *server_url = "ws://103.147.92.179";
 
 // Time intervals
 const unsigned long FLOW_INTERVAL = 1000;	   // 1 second
@@ -229,6 +225,7 @@ void sendSensorData()
 	dataObj["moisture4"] = moisture[3];
 	dataObj["moisture5"] = moisture[4];
 	dataObj["moisture6"] = moisture[5];
+	dataObj["moistureAvg"] = (moisture[0] + moisture[1] + moisture[2] + moisture[3] + moisture[4] + moisture[5]) / 6;
 	dataObj["flowrate"] = flowRate;
 	dataObj["total_litres"] = totalLitres;
 	dataObj["distance_cm"] = waterLevel;
@@ -273,5 +270,12 @@ void checkConnections()
 		{
 			Serial.println("Failed to reconnect. Will retry later.");
 		}
+	}
+
+	// Check WebSocket connection
+	if (!client.available())
+	{
+		Serial.println("WebSocket disconnected, reconnecting...");
+		connectToWebSocket();
 	}
 }
