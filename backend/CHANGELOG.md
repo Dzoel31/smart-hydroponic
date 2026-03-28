@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.0.0-beta.8 (2026-03-28)
+
+### Features
+
+- Update user schema, implement timestamp utils, and cleanup legacy database
+  ([#15](https://github.com/IoT-Smart-Hydroponic/smart-hydroponic/pull/15),
+  [`7e9fd79`](https://github.com/IoT-Smart-Hydroponic/smart-hydroponic/commit/7e9fd795252f1e6232870094ba9750218c717b2f))
+
+
 ## v1.0.0-beta.7 (2026-01-27)
 
 ### Bug Fixes
