@@ -10,18 +10,18 @@ class Settings(BaseSettings):
         case_sensitive=True,
     )
 
-    DATABASE_HOST: str = Field(default="localhost", alias="PGHOST")
-    DATABASE_PORT: int = Field(default=5432, alias="PGPORT")
-    DATABASE_USER: str = Field(default="postgres", alias="PGUSER")
-    DATABASE_PASSWORD: str = Field(default="password", alias="PGPASSWORD")
-    DATABASE_NAME: str = Field(default="iot_hydroponik", alias="PGDATABASE")
+    DATABASE_HOST: str = Field(validation_alias="PGHOST")
+    DATABASE_PORT: int = Field(validation_alias="PGPORT")
+    DATABASE_USER: str = Field(validation_alias="PGUSER")
+    DATABASE_PASSWORD: str = Field(validation_alias="PGPASSWORD")
+    DATABASE_NAME: str = Field(validation_alias="PGDATABASE")
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE: str = Field(default="1h", alias="JWT_EXPIRES_IN")  # 60 minutes
-    SECRET_KEY: str = Field(default="mysecretkey", alias="JWT_SECRET")
-    SUPERUSER_USERNAME: str = Field(default="admin", alias="SUPERUSER_USERNAME")
-    SUPERUSER_EMAIL: str = Field(default="admin@example.com", alias="SUPERUSER_EMAIL")
-    SUPERUSER_PASSWORD: str = Field(default="adminpassword", alias="SUPERUSER_PASSWORD")
-    SUPERUSER_ROLE: str = Field(default="superadmin", alias="SUPERUSER_ROLE")
+    ACCESS_TOKEN_EXPIRE: str = Field(validation_alias="JWT_EXPIRES_IN")
+    SECRET_KEY: str = Field(validation_alias="JWT_SECRET")
+    SUPERUSER_USERNAME: str = Field(validation_alias="SUPERUSER_USERNAME")
+    SUPERUSER_EMAIL: str = Field(validation_alias="SUPERUSER_EMAIL")
+    SUPERUSER_PASSWORD: str = Field(validation_alias="SUPERUSER_PASSWORD")
+    SUPERUSER_ROLE: str = Field(validation_alias="SUPERUSER_ROLE")
 
     @computed_field
     @property

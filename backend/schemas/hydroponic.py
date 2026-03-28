@@ -56,8 +56,6 @@ class HydroponicDataEnvironment(BaseModel):
     temperature_bawah: float = Field(0.0, ge=0.0)
     humidity_atas: float = Field(0.0, ge=0.0)
     humidity_bawah: float = Field(0.0, ge=0.0)
-    light_intensity_atas: int = Field(0, ge=0)
-    light_intensity_bawah: int = Field(0, ge=0)
 
 
 class HydroponicDataActuator(BaseModel):
@@ -67,7 +65,7 @@ class HydroponicDataActuator(BaseModel):
 
 
 class HydroponicAggregate(
-    HydroponicDataSensor, HydroponicDataEnvironment, HydroponicDataActuator
+    HydroponicDataActuator, HydroponicDataEnvironment, HydroponicDataSensor
 ):
     dataid: UUID = Field(default_factory=uuid7)
 
@@ -122,9 +120,6 @@ class HydroponicOut(HydroponicAggregate):
     humidity_atas: Optional[float] = None
     humidity_bawah: Optional[float] = None
     humidity_avg: Optional[float] = None
-    light_intensity_atas: Optional[int] = None
-    light_intensity_bawah: Optional[int] = None
-    light_intensity_avg: Optional[float] = None
 
     pump_status: Optional[bool] = None
     light_status: Optional[bool] = None

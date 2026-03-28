@@ -35,6 +35,8 @@ class UserLogin(BaseModel):
 
 class UserUpdate(BaseModel):
     username: Optional[str] = Field(None, min_length=3, max_length=50)
+    fullname: Optional[str] = Field(None, min_length=3, max_length=100)
+    phone_number: Optional[str] = Field(None, min_length=10, max_length=13)
     password: Optional[str] = Field(None, min_length=8, max_length=255)
     role: Optional[UserRole] = None
 
@@ -42,6 +44,8 @@ class UserUpdate(BaseModel):
 class UserOut(UserBase):
     userid: UUID
     email: Optional[EmailStr] = None
+    fullname: Optional[str] = None
+    phone_number: Optional[str] = None
     role: UserRole
     created_at: datetime
 

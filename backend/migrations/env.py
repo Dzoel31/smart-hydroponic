@@ -10,6 +10,7 @@ from config.db import Base
 
 config = context.config
 
+
 # Optionally override from env rather than alembic.ini
 if settings.DATABASE_URL:
     config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)

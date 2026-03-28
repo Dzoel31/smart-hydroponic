@@ -6,10 +6,7 @@ from schemas.hydroponic import (
     HydroponicIn,
     HydroponicOut,
 )
-from schemas.plant import SensorBase, SensorIn, SensorOut
-from schemas.environment import EnvironmentBase, EnvironmentIn, EnvironmentOut
 from schemas.user import UserBase, UserCreate, UserOut, UserRole
-from schemas.actuator import ActuatorBase, ActuatorIn, ActuatorOut
 from schemas.responses import (
     MessageResponse,
     responses_400,
@@ -26,19 +23,10 @@ __all__ = [
     "HydroponicAggregate",
     "HydroponicIn",
     "HydroponicOut",
-    "SensorBase",
-    "SensorIn",
-    "SensorOut",
-    "EnvironmentBase",
-    "EnvironmentIn",
-    "EnvironmentOut",
     "UserBase",
     "UserCreate",
     "UserOut",
     "UserRole",
-    "ActuatorBase",
-    "ActuatorIn",
-    "ActuatorOut",
     "MessageResponse",
     "responses_400",
     "responses_401",

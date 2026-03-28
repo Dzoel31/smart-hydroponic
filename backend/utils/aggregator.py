@@ -10,6 +10,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s:     %(message)s",
+)
+logger = logging.getLogger(__name__)
+
 
 class HydroponicAggregator:
     def __init__(self, timeout: float = 5.0, min_interval: float = 1.0):

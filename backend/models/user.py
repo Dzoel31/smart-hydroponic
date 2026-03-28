@@ -17,8 +17,10 @@ class User(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     username: Mapped[str] = mapped_column(String(50), unique=True, index=True)
+    fullname: Mapped[str] = mapped_column(String(100), nullable=True)
     email: Mapped[str] = mapped_column(String(100), unique=True, index=True)
     password: Mapped[str] = mapped_column(String(255))
+    phone_number: Mapped[str] = mapped_column(String(20), nullable=True)
     role: Mapped[str] = mapped_column(
         Enum("admin", "user", "superadmin", name="user_roles"), default="user"
     )
