@@ -2,6 +2,7 @@ from fastapi import (
     APIRouter,
     Depends,
     Request,
+    Response,
     WebSocket,
     WebSocketDisconnect,
     HTTPException,
@@ -21,6 +22,7 @@ from schemas.user import UserOut
 from uuid import uuid4
 from utils.manager import manager
 from utils.aggregator import aggregator
+from utils.deps import require_role
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 import logging
@@ -59,11 +61,6 @@ DEVICE_CONFIG = {
 }
 
 
-def _require_role(current_user: UserOut, allowed_roles: set[str]) -> None:
-    if current_user.role not in allowed_roles:
-        raise HTTPException(status_code=403, detail="Permission denied")
-
-
 @router.get(
     "/data/latest",
     response_model=HydroponicOut | None,
@@ -74,12 +71,12 @@ async def get_latest_hydroponic_data(
     session: AsyncSession = Depends(get_session),
     current_user: UserOut = Depends(get_current_user),
 ) -> HydroponicOut | None:
-    _require_role(current_user, {"user", "admin", "superadmin"})
+    require_role(current_user, {"user", "admin", "superadmin"})
     service = HydroponicService(session)
     data = await service.get_latest_data()
 
     if data is None:
-        raise HTTPException(status_code=204, detail="No hydroponic data found")
+        return Response(status_code=204)
 
     return data
 
@@ -100,7 +97,7 @@ async def get_specific_hydroponic_data(
     session: AsyncSession = Depends(get_session),
     current_user: UserOut = Depends(get_current_user),
 ) -> ResponseList[HydroponicOut]:
-    _require_role(current_user, {"admin", "superadmin"})
+    require_role(current_user, {"admin", "superadmin"})
     service = HydroponicService(session)
     try:
         return await service.get_specific_data(
@@ -122,7 +119,7 @@ async def add_hydroponic_data(
     current_user: UserOut = Depends(get_current_user),
 ) -> HydroponicOut:
     """Endpoint untuk menambahkan data hidroponik baru."""
-    _require_role(current_user, {"admin", "superadmin"})
+    require_role(current_user, {"admin", "superadmin"})
     service = HydroponicService(session)
     return await service.add_data(hydroponic_data)
 
@@ -141,7 +138,7 @@ async def get_hydroponic_data(
     current_user: UserOut = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> ResponseList[HydroponicOut]:
-    _require_role(current_user, {"user", "admin", "superadmin"})
+    require_role(current_user, {"user", "admin", "superadmin"})
     service = HydroponicService(session)
     return await service.get_all_data(page, limit, start_date, end_date)
 
@@ -225,15 +222,11 @@ async def hydroponic_data_websocket(device_type: str, websocket: WebSocket):
                 )
 
     except WebSocketDisconnect:
-        await manager.disconnect(
-            room="hydroponics", role="sensor", client_id=session_id
-        )
+        await manager.disconnect(room=room, role=role, client_id=session_id)
         logger.info(f"Client {session_id} disconnected")
 
     except Exception as e:
-        await manager.disconnect(
-            room="hydroponics", role="sensor", client_id=session_id
-        )
+        await manager.disconnect(room=room, role=role, client_id=session_id)
         await websocket.close(code=1011)
         logger.error(f"Error: {e}")
 

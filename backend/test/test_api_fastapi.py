@@ -68,6 +68,8 @@ def test_db_test(client: TestClient):
 
 
 def test_register_user_success(client: TestClient, monkeypatch: pytest.MonkeyPatch):
+    _set_current_user_override(role="superadmin")
+
     async def fake_get_user_by_username(_self, _username):
         return None
 
@@ -93,6 +95,7 @@ def test_register_user_success(client: TestClient, monkeypatch: pytest.MonkeyPat
             "username": "newuser",
             "email": "newuser@example.com",
             "password": "supersecret123",
+            "role": "user",
         },
     )
 
@@ -168,6 +171,25 @@ def test_update_user_not_found(client: TestClient, monkeypatch: pytest.MonkeyPat
 
     assert response.status_code == 404
     assert response.json()["detail"] == "User not found"
+
+
+def test_update_user_forbidden_for_other_user(client: TestClient):
+    async def override_get_current_user():
+        return UserOut(
+            userid=uuid4(),
+            username="basic-user",
+            email="basic@example.com",
+            fullname="Basic User",
+            role="user",
+            created_at=datetime.now(timezone.utc),
+        )
+
+    app.dependency_overrides[get_current_user] = override_get_current_user
+
+    response = client.patch(f"/users/{uuid4()}", json={"fullname": "Hacked Name"})
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Permission denied"
 
 
 def test_delete_user_success(client: TestClient, monkeypatch: pytest.MonkeyPatch):

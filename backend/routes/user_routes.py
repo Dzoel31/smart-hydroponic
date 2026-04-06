@@ -10,7 +10,11 @@ from schemas.user import (
     UserUpdate,
 )
 from services.user_service import UserService
-from utils.deps import get_current_user, get_session
+from utils.deps import (
+    get_current_user,
+    get_session,
+    require_role,
+)
 from schemas.responses import (
     responses_400,
     responses_401,
@@ -30,6 +34,15 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
+def _integrity_error_detail(error: IntegrityError) -> str:
+    lowered = str(error).lower()
+    if "username" in lowered:
+        return "Username already registered"
+    if "email" in lowered:
+        return "Email already registered"
+    return "Data integrity violation"
+
+
 @router.post(
     "/register",
     response_model=UserOut,
@@ -40,7 +53,12 @@ router = APIRouter(prefix="/users", tags=["Users"])
         **responses_500,
     },
 )
-async def register_user(user: UserCreate, session: AsyncSession = Depends(get_session)):
+async def register_user(
+    user: UserCreate,
+    current_user: UserOut = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    require_role(current_user, {"superadmin"})
     service = UserService(session)
     try:
         existing_user = await service.get_user_by_username(user.username)
@@ -56,7 +74,7 @@ async def register_user(user: UserCreate, session: AsyncSession = Depends(get_se
     except IntegrityError as e:
         logger.error("Integrity error: %s", e)
         await session.rollback()
-        raise HTTPException(status_code=400, detail="Username already registered")
+        raise HTTPException(status_code=400, detail=_integrity_error_detail(e))
     except SQLAlchemyError as e:
         logger.error("Database error: %s", e)
         await session.rollback()
@@ -133,10 +151,9 @@ async def read_users(
     current_user: UserOut = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
+    require_role(current_user, {"admin", "superadmin"})
     service = UserService(session)
     try:
-        if current_user.role == "user":
-            raise HTTPException(status_code=403, detail="Permission denied")
         users = await service.get_all_users()
         return [UserOut.model_validate(user) for user in users]
     except SQLAlchemyError:
@@ -161,6 +178,10 @@ async def update_user(
     current_user: UserOut = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
+    require_role(current_user, {"user", "admin", "superadmin"})
+    if current_user.role == "user" and str(current_user.userid) != user_id:
+        raise HTTPException(status_code=403, detail="Permission denied")
+
     if current_user.role == "user" and (
         user_update.role == "admin" or user_update.role == "superadmin"
     ):
@@ -174,8 +195,8 @@ async def update_user(
 
         return UserOut.model_validate(updated_user)
 
-    except IntegrityError:
-        raise HTTPException(status_code=400, detail="Username already registered")
+    except IntegrityError as e:
+        raise HTTPException(status_code=400, detail=_integrity_error_detail(e))
     except SQLAlchemyError as e:
         logger.error("Database error: %s", e)
         raise HTTPException(status_code=500, detail="Database error")
@@ -197,10 +218,9 @@ async def delete_user(
     current_user: UserOut = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
+    require_role(current_user, {"admin", "superadmin"})
     service = UserService(session)
     try:
-        if current_user.role == "user":
-            raise HTTPException(status_code=403, detail="Permission denied")
         user = await service.get_user_by_id(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")

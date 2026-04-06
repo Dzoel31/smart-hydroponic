@@ -57,3 +57,8 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
             yield session
         finally:
             await session.close()
+
+
+def require_role(current_user: UserOut | None, allowed_roles: set[str]) -> None:
+    if current_user is None or current_user.role not in allowed_roles:
+        raise HTTPException(status_code=403, detail="Permission denied")

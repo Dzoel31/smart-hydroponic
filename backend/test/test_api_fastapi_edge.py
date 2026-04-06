@@ -80,6 +80,8 @@ def test_login_invalid_credentials(client: TestClient, monkeypatch: pytest.Monke
 def test_register_duplicate_username(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ):
+    _set_current_user_override(role="superadmin")
+
     async def fake_get_user_by_username(_self, _username):
         return {
             "userid": uuid4(),
@@ -99,11 +101,27 @@ def test_register_duplicate_username(
             "username": "newuser",
             "email": "newuser@example.com",
             "password": "supersecret123",
+            "role": "user",
         },
     )
 
     assert response.status_code == 400
     assert response.json()["detail"] == "Username already registered"
+
+
+def test_register_requires_auth(client: TestClient):
+    response = client.post(
+        "/users/register",
+        json={
+            "username": "newuser",
+            "email": "newuser@example.com",
+            "password": "supersecret123",
+            "role": "user",
+        },
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Not authenticated"
 
 
 def test_users_endpoint_requires_auth(client: TestClient):

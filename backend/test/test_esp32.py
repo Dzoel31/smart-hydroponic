@@ -17,16 +17,14 @@ uri = "ws://localhost:8000/hydroponics/ws/sensor-data"
 def data_plant():
     return {
         "moisture1": 60,
-        "moisture2": 60,
-        "moisture3": 60,
-        "moisture4": 60,
-        "moisture5": 60,
-        "moisture6": 60,
+        "moisture2": 70,
+        "moisture3": 80,
+        "moisture4": 100,
+        "moisture5": 40,
+        "moisture6": 50,
         "flowrate": random.randint(1, 100),
         "total_litres": random.randint(1, 100),
         "distance_cm": random.randint(1, 100),
-        "ph": random.uniform(5.0, 7.0),
-        "tds": random.randint(100, 1000),
     }
 
 

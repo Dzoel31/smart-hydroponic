@@ -86,12 +86,8 @@ const handleLogin = async (): Promise<void> => {
             username: inputUsername,
             password: inputPassword
         });
-        console.log('Login successful, token:', token);
 
-        const user = await UsersService.getCurrentUser();
-        console.log('Current user info:', user);
-
-        authState.setSession(token.access_token, user);
+        authState.setSession(token.access_token, token.user);
         router.push('/dashboard');
 
     } catch (error) {
