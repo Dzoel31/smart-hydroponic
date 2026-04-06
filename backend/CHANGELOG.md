@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.0.0-beta.10 (2026-04-06)
+
+### Features
+
+- User services, enhance auth flow, improve API tests and add graphs for analysis
+  ([#18](https://github.com/IoT-Smart-Hydroponic/smart-hydroponic/pull/18),
+  [`e658c4c`](https://github.com/IoT-Smart-Hydroponic/smart-hydroponic/commit/e658c4c49b72b48820e380720307098027339d07))
+
+
 ## v1.0.0-beta.9 (2026-04-06)
 
 ### Features
