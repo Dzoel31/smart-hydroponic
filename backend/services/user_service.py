@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta, timezone
+import re
+import uuid
 from fastapi import HTTPException
 from authlib.jose import jwt
 from config.config import settings
@@ -9,12 +11,25 @@ import bcrypt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import text
-from models.user import User
 
 
 class UserService:
     def __init__(self, session: AsyncSession):
         self.session = session
+
+    def _parse_expiry_seconds(self, expiry_value: str) -> int:
+        value = expiry_value.strip().lower()
+        if value.isdigit():
+            return int(value)
+
+        match = re.fullmatch(r"(\d+)\s*([smhd])", value)
+        if not match:
+            return 3600
+
+        amount = int(match.group(1))
+        unit = match.group(2)
+        multipliers = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+        return amount * multipliers[unit]
 
     async def authenticate_user(self, user_credentials: UserLogin):
         user = None
@@ -34,10 +49,11 @@ class UserService:
 
     def create_access_token(self, data: dict):
         now = datetime.now(timezone.utc)
+        expiry_seconds = self._parse_expiry_seconds(settings.ACCESS_TOKEN_EXPIRE)
         payload = TokenPayload(
             **data,
             iat=int(now.timestamp()),
-            exp=int((now + timedelta(hours=1)).timestamp()),
+            exp=int((now + timedelta(seconds=expiry_seconds)).timestamp()),
         )
         key = load_signing_key().decode()
         return jwt.encode(
@@ -51,11 +67,33 @@ class UserService:
 
         return claims
 
-    async def add_user(self, user: User):
-        self.session.add(user)
+    async def add_user(self, user_data: dict):
+        role = user_data.get("role", "user")
+        if hasattr(role, "value"):
+            role = role.value
+
+        user_id = user_data.get("userid", uuid.uuid4())
+
+        stmt = text(
+            """
+            INSERT INTO user_data (userid, username, email, password, role, is_superuser, fullname, phone_number)
+            VALUES (:userid, :username, :email, :password, :role, :is_superuser, :fullname, :phone_number)
+            RETURNING *
+            """
+        )
+        params = {
+            "userid": user_id,
+            "username": user_data["username"],
+            "email": user_data["email"],
+            "password": user_data["password"],
+            "role": role,
+            "is_superuser": bool(user_data.get("is_superuser", False)),
+            "fullname": user_data.get("fullname"),
+            "phone_number": user_data.get("phone_number"),
+        }
+        result = await self.session.execute(stmt, params)
         await self.session.commit()
-        await self.session.refresh(user)
-        return user
+        return result.mappings().first()
 
     async def get_user_by_username(self, username: str):
         stmt = text(
@@ -101,6 +139,8 @@ class UserService:
             return None
 
         update_data = user_update.model_dump(exclude_unset=True)
+        if not update_data:
+            return user
 
         if "password" in update_data:
             hashed = bcrypt.hashpw(
@@ -109,18 +149,35 @@ class UserService:
             update_data["password"] = hashed
 
         for key, value in update_data.items():
-            setattr(user, key, value)
+            if hasattr(value, "value"):
+                update_data[key] = value.value
+
+        set_clause = ", ".join(f"{key} = :{key}" for key in update_data.keys())
+        stmt = text(
+            f"""
+            UPDATE user_data
+            SET {set_clause}
+            WHERE userid = :user_id
+            """
+        )
+        params = {**update_data, "user_id": user_id}
 
         try:
-            self.session.add(user)
+            await self.session.execute(stmt, params)
             await self.session.commit()
-            await self.session.refresh(user)
-            return user
+            return await self.get_user_by_id(user_id)
         except IntegrityError:
             await self.session.rollback()
             raise ValueError("Username already registered")
 
-    async def delete_user(self, user: User):
-        await self.session.delete(user)
+    async def delete_user(self, user_id: str):
+        stmt = text(
+            """
+            DELETE FROM user_data
+            WHERE userid = :user_id
+            RETURNING userid
+            """
+        )
+        result = await self.session.execute(stmt, {"user_id": user_id})
         await self.session.commit()
-        return
+        return result.scalar_one_or_none() is not None

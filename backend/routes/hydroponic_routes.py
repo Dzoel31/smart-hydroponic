@@ -17,6 +17,7 @@ from schemas.hydroponic import (
     HydroponicDataActuator,
     ResponseList,
 )
+from schemas.user import UserOut
 from uuid import uuid4
 from utils.manager import manager
 from utils.aggregator import aggregator
@@ -58,6 +59,11 @@ DEVICE_CONFIG = {
 }
 
 
+def _require_role(current_user: UserOut, allowed_roles: set[str]) -> None:
+    if current_user.role not in allowed_roles:
+        raise HTTPException(status_code=403, detail="Permission denied")
+
+
 @router.get(
     "/data/latest",
     response_model=HydroponicOut | None,
@@ -66,7 +72,9 @@ DEVICE_CONFIG = {
 )
 async def get_latest_hydroponic_data(
     session: AsyncSession = Depends(get_session),
+    current_user: UserOut = Depends(get_current_user),
 ) -> HydroponicOut | None:
+    _require_role(current_user, {"user", "admin", "superadmin"})
     service = HydroponicService(session)
     data = await service.get_latest_data()
 
@@ -90,10 +98,16 @@ async def get_specific_hydroponic_data(
     start_date: str | None = None,
     end_date: str | None = None,
     session: AsyncSession = Depends(get_session),
-    current_user: dict = Depends(get_current_user),
+    current_user: UserOut = Depends(get_current_user),
 ) -> ResponseList[HydroponicOut]:
+    _require_role(current_user, {"admin", "superadmin"})
     service = HydroponicService(session)
-    return await service.get_specific_data(parameter, page, limit, start_date, end_date)
+    try:
+        return await service.get_specific_data(
+            parameter, page, limit, start_date, end_date
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post(
@@ -103,9 +117,12 @@ async def get_specific_hydroponic_data(
     operation_id="addHydroponicData",
 )
 async def add_hydroponic_data(
-    hydroponic_data: HydroponicIn, session: AsyncSession = Depends(get_session)
+    hydroponic_data: HydroponicIn,
+    session: AsyncSession = Depends(get_session),
+    current_user: UserOut = Depends(get_current_user),
 ) -> HydroponicOut:
     """Endpoint untuk menambahkan data hidroponik baru."""
+    _require_role(current_user, {"admin", "superadmin"})
     service = HydroponicService(session)
     return await service.add_data(hydroponic_data)
 
@@ -121,9 +138,10 @@ async def get_hydroponic_data(
     limit: int = 25,
     start_date: str | None = None,
     end_date: str | None = None,
-    current_user: dict = Depends(get_current_user),
+    current_user: UserOut = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> ResponseList[HydroponicOut]:
+    _require_role(current_user, {"user", "admin", "superadmin"})
     service = HydroponicService(session)
     return await service.get_all_data(page, limit, start_date, end_date)
 

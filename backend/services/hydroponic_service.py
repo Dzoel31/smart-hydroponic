@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
+from typing import Any
 from schemas.hydroponic import (
     HydroponicDataSensor,
     HydroponicDataEnvironment,
@@ -46,7 +47,7 @@ class HydroponicService:
         end_date: str | None = None,
     ) -> ResponseList[HydroponicOut]:
         filters = []
-        params = {"limit": limit, "offset": (page - 1) * limit}
+        params: dict[str, Any] = {"limit": limit, "offset": (page - 1) * limit}
 
         _start_date = get_uuidv7_from_timestamp(start_date) if start_date else None
         _end_date = (
@@ -116,7 +117,7 @@ class HydroponicService:
         columns = ", ".join(f'"{field}"' for field in _fields)
 
         filters = []
-        params = {"limit": limit, "offset": (page - 1) * limit}
+        params: dict[str, Any] = {"limit": limit, "offset": (page - 1) * limit}
 
         # Process date conversion to UUID v7
         _start_date = get_uuidv7_from_timestamp(start_date) if start_date else None

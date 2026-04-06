@@ -1,10 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from schemas.user import UserCreate, UserOut, UserLogin, Token, UserUpdate
+from schemas.user import (
+    UserCreate,
+    UserOut,
+    UserLogin,
+    LoginResponse,
+    AccountSummary,
+    UserUpdate,
+)
 from services.user_service import UserService
 from utils.deps import get_current_user, get_session
-from models.user import User
 from schemas.responses import (
     responses_400,
     responses_401,
@@ -13,6 +19,13 @@ from schemas.responses import (
     responses_500,
 )
 import bcrypt
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s:     %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -37,21 +50,22 @@ async def register_user(user: UserCreate, session: AsyncSession = Depends(get_se
             user.password.encode("utf-8"), bcrypt.gensalt()
         ).decode("utf-8")
 
-        user = user.model_copy(update={"password": hashed_password})
-        db_user = User(**user.model_dump())
-        user = await service.add_user(db_user)
-        return UserOut.model_validate(user)
-    except IntegrityError:
+        user_payload = user.model_copy(update={"password": hashed_password})
+        created_user = await service.add_user(user_payload.model_dump())
+        return UserOut.model_validate(created_user)
+    except IntegrityError as e:
+        logger.error("Integrity error: %s", e)
         await session.rollback()
         raise HTTPException(status_code=400, detail="Username already registered")
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
+        logger.error("Database error: %s", e)
         await session.rollback()
         raise HTTPException(status_code=500, detail="Database error")
 
 
 @router.post(
     "/login",
-    response_model=Token,
+    response_model=LoginResponse,
     operation_id="loginUser",
     responses={
         **responses_400,
@@ -72,7 +86,16 @@ async def login_user(
                 "role": user.role,
             }
         )
-        return Token(access_token=access_token)
+        return LoginResponse(
+            access_token=access_token,
+            user=AccountSummary(
+                userid=user.userid,
+                username=user.username,
+                email=user.email,
+                fullname=user.fullname,
+                role=user.role,
+            ),
+        )
     except SQLAlchemyError:
         raise HTTPException(status_code=500, detail="Database error")
 
@@ -88,10 +111,10 @@ async def login_user(
     },
 )
 async def read_current_user(
-    current_user: User = Depends(get_current_user),
+    current_user: UserOut = Depends(get_current_user),
 ):
     try:
-        return UserOut.model_validate(current_user)
+        return current_user
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
@@ -107,7 +130,7 @@ async def read_current_user(
     },
 )
 async def read_users(
-    current_user: User = Depends(get_current_user),
+    current_user: UserOut = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
     service = UserService(session)
@@ -135,7 +158,7 @@ async def read_users(
 async def update_user(
     user_id: str,
     user_update: UserUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: UserOut = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
     if current_user.role == "user" and (
@@ -153,7 +176,8 @@ async def update_user(
 
     except IntegrityError:
         raise HTTPException(status_code=400, detail="Username already registered")
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
+        logger.error("Database error: %s", e)
         raise HTTPException(status_code=500, detail="Database error")
 
 
@@ -170,7 +194,7 @@ async def update_user(
 )
 async def delete_user(
     user_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: UserOut = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
     service = UserService(session)
@@ -180,9 +204,9 @@ async def delete_user(
         user = await service.get_user_by_id(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        user = User(**user)
-        await service.delete_user(user)
+        await service.delete_user(user_id)
         return {"detail": "User deleted successfully"}
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         await session.rollback()
+        logger.error("Database error: %s", e)
         raise HTTPException(status_code=500, detail="Database error")

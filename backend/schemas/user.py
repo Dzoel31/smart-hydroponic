@@ -13,7 +13,7 @@ class UserRole(str, Enum):
 
 
 class UserBase(BaseModel):
-    username: str = Field(..., min_length=3, max_length=100)
+    username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
 
 
@@ -36,7 +36,7 @@ class UserLogin(BaseModel):
 class UserUpdate(BaseModel):
     username: Optional[str] = Field(None, min_length=3, max_length=50)
     fullname: Optional[str] = Field(None, min_length=3, max_length=100)
-    phone_number: Optional[str] = Field(None, min_length=10, max_length=13)
+    phone_number: Optional[str] = Field(None, min_length=10, max_length=20)
     password: Optional[str] = Field(None, min_length=8, max_length=255)
     role: Optional[UserRole] = None
 
@@ -60,6 +60,18 @@ class PasswordChange(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "Bearer"
+
+
+class AccountSummary(BaseModel):
+    userid: UUID
+    username: str
+    email: Optional[EmailStr] = None
+    fullname: Optional[str] = None
+    role: UserRole
+
+
+class LoginResponse(Token):
+    user: AccountSummary
 
 
 class TokenPayload(BaseModel):

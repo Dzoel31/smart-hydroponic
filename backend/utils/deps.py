@@ -3,8 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from config.db import Session
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from schemas.user import TokenPayload
-from models.user import User
+from schemas.user import TokenPayload, UserOut
 from services.user_service import UserService
 from contextlib import asynccontextmanager
 from authlib.jose.errors import JoseError
@@ -46,7 +45,7 @@ async def get_current_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    return User(**user)
+    return UserOut.model_validate(user)
 
 
 # Untuk penggunaan di luar konteks Depends e.g WebSocket
