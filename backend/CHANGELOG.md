@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.0.0-beta.9 (2026-04-06)
+
+### Features
+
+- **backend**: Add role-based authorization, improve user auth flow, and add API tests
+  ([#16](https://github.com/IoT-Smart-Hydroponic/smart-hydroponic/pull/16),
+  [`10f29c7`](https://github.com/IoT-Smart-Hydroponic/smart-hydroponic/commit/10f29c7327e7c217c5a578ab31553b02b3269bac))
+
+
 ## v1.0.0-beta.8 (2026-03-28)
 
 ### Features
