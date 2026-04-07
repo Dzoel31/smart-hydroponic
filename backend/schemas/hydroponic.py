@@ -136,3 +136,14 @@ class HydroponicOut(HydroponicAggregate):
         return date
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class HydroponicDashboardOut(BaseModel):
+    flowrate: Optional[float] = None
+    distance_cm: Optional[float] = None
+    total_litres: Optional[float] = None
+    moisture_avg: Optional[float] = None
+    temperature_avg: Optional[float] = None
+    humidity_avg: Optional[float] = None
+
+    model_config = ConfigDict(from_attributes=True)

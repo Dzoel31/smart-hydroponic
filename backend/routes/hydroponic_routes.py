@@ -13,6 +13,7 @@ from services.hydroponic_service import HydroponicService
 from schemas.hydroponic import (
     HydroponicIn,
     HydroponicOut,
+    HydroponicDashboardOut,
     HydroponicDataSensor,
     HydroponicDataEnvironment,
     HydroponicDataActuator,
@@ -63,22 +64,20 @@ DEVICE_CONFIG = {
 
 @router.get(
     "/data/latest",
-    response_model=HydroponicOut | None,
+    response_model=HydroponicDashboardOut | None,
     status_code=200,
     operation_id="getLatestHydroponicData",
 )
 async def get_latest_hydroponic_data(
     session: AsyncSession = Depends(get_session),
-    current_user: UserOut = Depends(get_current_user),
-) -> HydroponicOut | None:
-    require_role(current_user, {"user", "admin", "superadmin"})
+) -> HydroponicDashboardOut | None:
     service = HydroponicService(session)
     data = await service.get_latest_data()
 
     if data is None:
         return Response(status_code=204)
 
-    return data
+    return HydroponicDashboardOut.model_validate(data)
 
 
 @router.get(
@@ -141,6 +140,26 @@ async def get_hydroponic_data(
     require_role(current_user, {"user", "admin", "superadmin"})
     service = HydroponicService(session)
     return await service.get_all_data(page, limit, start_date, end_date)
+
+
+@router.post(
+    "/control",
+    response_model=HydroponicDataActuator,
+    status_code=200,
+    operation_id="controlHydroponicActuators",
+)
+async def control_hydroponic_actuators(
+    command: HydroponicDataActuator,
+    current_user: UserOut = Depends(get_current_user),
+) -> HydroponicDataActuator:
+    """Endpoint untuk mengontrol aktuator hidroponik (pump, light, automation)."""
+    require_role(current_user, {"admin", "superadmin"})
+    await manager.send_to_room(
+        room="hydroponics",
+        role="actuator",
+        message={"type": "command", "payload": command.model_dump()},
+    )
+    return command
 
 
 @router.websocket("/ws/{device_type}")

@@ -255,7 +255,14 @@ def test_get_latest_hydroponic_data(
     response = client.get("/hydroponics/data/latest")
 
     assert response.status_code == 200
-    assert response.json()["dataid"] == str(sample.dataid)
+    assert response.json() == {
+        "flowrate": sample.flowrate,
+        "distance_cm": sample.distance_cm,
+        "total_litres": sample.total_litres,
+        "moisture_avg": sample.moisture_avg,
+        "temperature_avg": sample.temperature_avg,
+        "humidity_avg": sample.humidity_avg,
+    }
 
 
 def test_get_hydroponic_data_list(client: TestClient, monkeypatch: pytest.MonkeyPatch):
