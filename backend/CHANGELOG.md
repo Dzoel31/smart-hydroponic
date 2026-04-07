@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.0.0-beta.12 (2026-04-07)
+
+### Features
+
+- Add HydroponicDashboardOut schema and update latest data endpoint
+  ([#19](https://github.com/IoT-Smart-Hydroponic/smart-hydroponic/pull/19),
+  [`55e0b28`](https://github.com/IoT-Smart-Hydroponic/smart-hydroponic/commit/55e0b280ccad89ba1b8237dfcc7462c77b11635e))
+
+
 ## v1.0.0-beta.11 (2026-04-07)
 
 ### Features
