@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.0-beta.11 (2026-04-07)
+
+### Features
+
+- Update some features and synchronize all
+  ([`b4a95ac`](https://github.com/IoT-Smart-Hydroponic/smart-hydroponic/commit/b4a95acf9e7249e9671285ad3b32caec5a23482b))
+
+
 ## v1.0.0-beta.10 (2026-04-06)
 
 ### Features
