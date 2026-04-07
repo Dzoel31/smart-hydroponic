@@ -28,16 +28,16 @@
           </svg>
           <span class="nav-text">Hydroponic Data</span>
         </router-link>
-
-        <router-link to="/analytics" class="nav-item" active-class="active">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-          </svg>
-          <span class="nav-text">Analytics</span>
-        </router-link>
       </template>
-      
-      <template v-if="userRole === 'superadmin'">
+
+      <router-link to="/analytics" class="nav-item" active-class="active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+        </svg>
+        <span class="nav-text">Analytics</span>
+      </router-link>
+
+     <template v-if="userRole === 'superadmin'">
         <router-link to="/manage-admin" class="nav-item" active-class="active">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="9" cy="7" r="4"></circle>

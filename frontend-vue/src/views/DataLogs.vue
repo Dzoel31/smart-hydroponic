@@ -96,7 +96,7 @@
                 </template>
 
                 <template v-if="showCol('environment')">
-                  <td>{{ item.ph }}</td>
+                  <td>{{ item.ph !== null ? item.ph.toFixed(2) : '-' }}</td>
                   <td>{{ item.tds }}</td>
                   <td>{{ item.temperature_atas }}</td>
                   <td>{{ item.temperature_bawah }}</td>
@@ -336,8 +336,8 @@ const exportData = () => {
 
     // Tambahkan data Environment jika kategori 'All' atau 'Environment'
     if (showCol('environment')) {
-      exportItem['pH'] = item.ph;
-      exportItem['TDS (ppm)'] = item.tds;
+      exportItem['pH'] = item.ph !== null ? Number(item.ph.toFixed(2)) : null;
+      exportItem['TDS (ppm)'] = item.tds !== null ? Number(item.tds.toFixed(2)) : null;
       exportItem['Temp Atas (°C)'] = item.temperature_atas;
       exportItem['Temp Bawah (°C)'] = item.temperature_bawah;
       exportItem['Hum Atas (%)'] = item.humidity_atas;

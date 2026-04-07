@@ -11,9 +11,9 @@
           
           <div class="profile-card">
             <div class="profile-header-bg"></div>
-            <div class="avatar-large">AD</div>
-            <h2 class="profile-name">{{ userProfile.name }}</h2>
-            <p class="profile-role">{{ userProfile.role }}</p>
+            <div class="avatar-large">{{ avatarInitials }}</div>
+            <h2 class="profile-name">{{ userProfile.fullname || userProfile.username || '-' }}</h2>
+            <p class="profile-role">{{ displayRole }}</p>
             
             <div class="profile-stats">
               <div class="stat-item">
@@ -22,7 +22,7 @@
               </div>
               <div class="stat-divider"></div>
               <div class="stat-item">
-                <span class="stat-value">Oct 2025</span>
+                <span class="stat-value">{{ joinedDate }}</span>
                 <span class="stat-label">Joined</span>
               </div>
             </div>
@@ -41,6 +41,9 @@
               </button>
             </div>
 
+            <p v-if="fetchError" class="feedback error">{{ fetchError }}</p>
+            <p v-if="saveSuccess" class="feedback success">{{ saveSuccess }}</p>
+
             <form @submit.prevent="saveProfile" class="profile-form">
               <div class="form-grid">
                 
@@ -48,7 +51,7 @@
                   <label>Full Name</label>
                   <input 
                     type="text" 
-                    v-model="editForm.name" 
+                    v-model="editForm.fullname" 
                     :disabled="!isEditing"
                     :class="{ 'is-disabled': !isEditing }"
                   />
@@ -68,9 +71,9 @@
                   <label>Email Address</label>
                   <input 
                     type="email" 
-                    v-model="editForm.email" 
-                    :disabled="!isEditing"
-                    :class="{ 'is-disabled': !isEditing }"
+                    v-model="editForm.email"
+                    disabled
+                    class="is-disabled"
                   />
                 </div>
 
@@ -78,7 +81,7 @@
                   <label>Phone Number</label>
                   <input 
                     type="text" 
-                    v-model="editForm.phone" 
+                    v-model="editForm.phone_number" 
                     :disabled="!isEditing"
                     :class="{ 'is-disabled': !isEditing }"
                   />
@@ -88,7 +91,7 @@
                   <label>Role</label>
                   <input 
                     type="text" 
-                    v-model="editForm.role" 
+                    :value="displayRole" 
                     disabled
                     class="is-disabled"
                   />
@@ -97,8 +100,8 @@
               </div>
 
               <div class="form-actions" v-if="isEditing">
-                <button type="button" @click="cancelEdit" class="btn-cancel">Cancel</button>
-                <button type="submit" class="btn-save">Save Changes</button>
+                <button type="button" @click="cancelEdit" class="btn-cancel" :disabled="isSaving">Cancel</button>
+                <button type="submit" class="btn-save" :disabled="isSaving">{{ isSaving ? 'Saving...' : 'Save Changes' }}</button>
               </div>
             </form>
 
@@ -111,38 +114,159 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
-import Sidebar from '@/components/Sidebar.vue';
-import Topbar from '@/components/Topbar.vue';
-import brandLogo from '@/assets/images/logo-hydroponic.png';
+import { ref, reactive, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import Sidebar from '../components/Sidebar.vue';
+import Topbar from '../components/Topbar.vue';
+import brandLogo from '../assets/images/logo-hydroponic.png';
+import { UsersService, ApiError, type UserOut, type MessageResponse } from '../api';
+import { authState } from '../auth';
 
-// Data asli user
-const userProfile = reactive({
-  name: "Adinda Rizki Sya'bana Diva",
-  username: 'adindarizki',
-  email: 'adinda@upnvj.ac.id',
-  phone: '+62 812 3456 7890',
-  role: 'IoT Researcher'
+type ProfileData = {
+  userid: string;
+  fullname: string;
+  username: string;
+  email: string;
+  phone_number: string;
+  role: string;
+  created_at: string;
+};
+
+const router = useRouter();
+const isEditing = ref(false);
+const isSaving = ref(false);
+const fetchError = ref('');
+const saveSuccess = ref('');
+
+const userProfile = reactive<ProfileData>({
+  userid: '',
+  fullname: '',
+  username: '',
+  email: '',
+  phone_number: '',
+  role: '',
+  created_at: ''
 });
 
-const editForm = reactive({ ...userProfile });
-const isEditing = ref(false);
+const editForm = reactive<ProfileData>({ ...userProfile });
+
+const displayRole = computed(() => {
+  if (!userProfile.role) return '-';
+  return userProfile.role.charAt(0).toUpperCase() + userProfile.role.slice(1);
+});
+
+const joinedDate = computed(() => {
+  if (!userProfile.created_at) return '-';
+  const parsed = new Date(userProfile.created_at);
+  if (Number.isNaN(parsed.getTime())) return '-';
+  return parsed.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+});
+
+const avatarInitials = computed(() => {
+  const source = userProfile.fullname || userProfile.username;
+  if (!source) return 'U';
+
+  const parts = source.trim().split(/\s+/).filter(Boolean);
+  const first = parts[0] || '';
+  const second = parts[1] || '';
+
+  if (!first) return 'U';
+  if (!second) return first.slice(0, 2).toUpperCase();
+
+  return `${first[0] || ''}${second[0] || ''}`.toUpperCase();
+});
+
+const normalizeUser = (user: UserOut): ProfileData => ({
+  userid: user.userid,
+  fullname: user.fullname || '',
+  username: user.username,
+  email: user.email || '',
+  phone_number: user.phone_number || '',
+  role: user.role,
+  created_at: user.created_at
+});
+
+const syncProfile = (user: UserOut) => {
+  const normalized = normalizeUser(user);
+  Object.assign(userProfile, normalized);
+  Object.assign(editForm, normalized);
+
+  const token = localStorage.getItem('token');
+  if (token) {
+    authState.setSession(token, user);
+  }
+};
+
+const loadCurrentUser = async () => {
+  fetchError.value = '';
+
+  try {
+    const current = await UsersService.getCurrentUser();
+    syncProfile(current);
+  } catch (error: unknown) {
+    if (error instanceof ApiError) {
+      if (error.status === 401) {
+        authState.logout();
+        await router.push('/login');
+        return;
+      }
+      fetchError.value = (error.body as MessageResponse)?.detail || 'Failed to load user profile.';
+      return;
+    }
+
+    fetchError.value = 'Failed to load user profile.';
+  }
+};
 
 const startEdit = () => {
+  saveSuccess.value = '';
   Object.assign(editForm, userProfile);
   isEditing.value = true;
 };
 
 const cancelEdit = () => {
   isEditing.value = false;
+  saveSuccess.value = '';
   Object.assign(editForm, userProfile);
 };
 
-const saveProfile = () => {
-  Object.assign(userProfile, editForm);
-  isEditing.value = false;
-  console.log("Profile updated:", userProfile);
+const saveProfile = async () => {
+  if (!userProfile.userid) return;
+
+  isSaving.value = true;
+  saveSuccess.value = '';
+  fetchError.value = '';
+
+  try {
+    const updated = await UsersService.updateUser(userProfile.userid, {
+      fullname: editForm.fullname,
+      username: editForm.username,
+      phone_number: editForm.phone_number
+    });
+
+    syncProfile(updated);
+    isEditing.value = false;
+    saveSuccess.value = 'Profile updated successfully.';
+  } catch (error: unknown) {
+    if (error instanceof ApiError) {
+      fetchError.value = (error.body as MessageResponse)?.detail || 'Failed to update profile.';
+      return;
+    }
+
+    fetchError.value = 'Failed to update profile.';
+  } finally {
+    isSaving.value = false;
+  }
 };
+
+onMounted(async () => {
+  if (!authState.isLoggedIn) {
+    await router.push('/login');
+    return;
+  }
+
+  await loadCurrentUser();
+});
 </script>
 
 <style scoped>
@@ -384,6 +508,20 @@ const saveProfile = () => {
 
 .btn-save:hover {
   background-color: #43a047;
+}
+
+.feedback {
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.feedback.error {
+  color: #b91c1c;
+}
+
+.feedback.success {
+  color: #15803d;
 }
 
 @media (max-width: 1024px) {

@@ -7,7 +7,7 @@
 
       <section class="toolbar-card">
         <div class="toolbar-meta">
-          <h2>Hydroponic Timeline Analytics</h2>
+          <h2>Hydroponic Trend Analytics</h2>
           <p>
             Last update:
             <span class="last-updated">{{ lastUpdatedLabel }}</span>
@@ -38,7 +38,7 @@
 
       <section class="main-chart-card">
         <div class="card-header">
-          <h3>Moisture Timeline</h3>
+          <h3>Moisture Trends</h3>
           <span class="badge-text">%</span>
         </div>
         <div class="chart-container chart-main">
@@ -50,7 +50,7 @@
       <section class="sub-charts-grid">
         <article class="sub-chart-card">
           <div class="card-header">
-            <h3>Temperature Timeline</h3>
+            <h3>Temperature Trends</h3>
             <span class="badge-text">°C</span>
           </div>
           <div class="chart-container">
@@ -61,7 +61,7 @@
 
         <article class="sub-chart-card">
           <div class="card-header">
-            <h3>Humidity Timeline</h3>
+            <h3>Humidity Trends</h3>
             <span class="badge-text">%</span>
           </div>
           <div class="chart-container">
@@ -72,7 +72,7 @@
 
         <article class="sub-chart-card">
           <div class="card-header">
-            <h3>pH Timeline</h3>
+            <h3>pH Trends</h3>
           </div>
           <div class="chart-container">
             <Line v-if="hasTimelineData" :data="phChartData" :options="timelineOptions" />
@@ -82,7 +82,7 @@
 
         <article class="sub-chart-card">
           <div class="card-header">
-            <h3>TDS Timeline</h3>
+            <h3>TDS Trends</h3>
           </div>
           <div class="chart-container">
             <Line v-if="hasTimelineData" :data="tdsChartData" :options="timelineOptions" />
@@ -111,7 +111,7 @@ import {
 import Sidebar from '@/components/Sidebar.vue';
 import Topbar from '@/components/Topbar.vue';
 import brandLogo from '@/assets/images/logo-hydroponic.png';
-import { HydroponicsService, type HydroponicOut, type ResponseList_HydroponicOut_ } from '@/api';
+import { HydroponicsService, type HydroponicOut, type ResponseList_HydroponicOut_ } from '../api';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 

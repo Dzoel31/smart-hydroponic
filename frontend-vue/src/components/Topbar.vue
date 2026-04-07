@@ -11,8 +11,8 @@
 
       <div v-else class="user-profile-wrapper">
         <div class="user-profile" @click="toggleDropdown">
-          <div class="avatar">U</div>
-          <span>User</span>
+          <div class="avatar">{{ userInitial }}</div>
+          <span>{{ user }}</span>
           <svg :class="{ 'rotate': isDropdownOpen }" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
@@ -36,9 +36,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, defineProps } from "vue";
+import { ref, onMounted, onUnmounted, defineProps, computed } from "vue";
 import { useRouter } from "vue-router";
-import { authState } from "@/auth";
+import { authState } from "../auth";
 
 defineProps({
   title: {
@@ -46,6 +46,18 @@ defineProps({
     required: true,
     default: "Dashboard"
   }
+});
+
+const user = computed(() => {
+  if (!authState.isLoggedIn) return 'Guest';
+
+  const userName = authState.user?.username || 'Admin';
+  
+  return userName;
+});
+
+const userInitial = computed(() => {
+  return user.value.charAt(0).toUpperCase();
 });
 
 const router = useRouter();
