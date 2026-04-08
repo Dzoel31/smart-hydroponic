@@ -9,6 +9,8 @@ export type { OpenAPIConfig } from './core/OpenAPI';
 
 export type { AccountSummary } from './models/AccountSummary';
 export type { HTTPValidationError } from './models/HTTPValidationError';
+export type { HydroponicDashboardOut } from './models/HydroponicDashboardOut';
+export type { HydroponicDataActuator } from './models/HydroponicDataActuator';
 export type { HydroponicIn } from './models/HydroponicIn';
 export type { HydroponicOut } from './models/HydroponicOut';
 export type { LoginResponse } from './models/LoginResponse';

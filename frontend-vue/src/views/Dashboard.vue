@@ -39,44 +39,54 @@
               <p v-else style="color: #64748b; font-size: 13px;">Memuat data grafik...</p>
             </div>
           </div>
-
-          <div class="bento-card control-panel">
-            <h3>Kontrol Panel</h3>
-            <div class="control-content">
-              <div class="control-item">
-                <div class="control-text">
-                  <h4>Automatisasi</h4>
-                  <p>Kontrol Automatisasi pompa dan lampu</p>
+        
+          <template v-if="userRole === 'superadmin' || userRole === 'admin'">
+            <div class="bento-card control-panel">
+              <h3>Kontrol Panel</h3>
+              <div class="control-content">
+                <div class="control-item">
+                  <div class="control-text">
+                    <h4>Automatisasi</h4>
+                    <p>Kontrol Automatisasi pompa dan lampu</p>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" v-model="controls.automation" :disabled="isControlUpdating" @change="toggleControl('automation')">
+                    <span class="slider"></span>
+                  </label>
                 </div>
-                <label class="toggle-switch">
-                  <input type="checkbox" v-model="controls.automation" @change="toggleControl('automation')">
-                  <span class="slider"></span>
-                </label>
-              </div>
 
-              <div class="control-item" :class="{ 'disabled': controls.automation }">
-                <div class="control-text">
-                  <h4>Pompa</h4>
-                  <p>Kontrol Pompa</p>
+                <div class="control-item" :class="{ 'disabled': controls.automation || isControlUpdating }">
+                  <div class="control-text">
+                    <h4>Pompa</h4>
+                    <p>Kontrol Pompa</p>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" v-model="controls.pump" :disabled="controls.automation || isControlUpdating" @change="toggleControl('pump')">
+                    <span class="slider"></span>
+                  </label>
                 </div>
-                <label class="toggle-switch">
-                  <input type="checkbox" v-model="controls.pump" :disabled="controls.automation" @change="toggleControl('pump')">
-                  <span class="slider"></span>
-                </label>
-              </div>
 
-              <div class="control-item" :class="{ 'disabled': controls.automation }">
-                <div class="control-text">
-                  <h4>Lampu</h4>
-                  <p>Kontrol Lampu</p>
+                <div class="control-item" :class="{ 'disabled': controls.automation || isControlUpdating }">
+                  <div class="control-text">
+                    <h4>Lampu</h4>
+                    <p>Kontrol Lampu</p>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" v-model="controls.light" :disabled="controls.automation || isControlUpdating" @change="toggleControl('light')">
+                    <span class="slider"></span>
+                  </label>
                 </div>
-                <label class="toggle-switch">
-                  <input type="checkbox" v-model="controls.light" :disabled="controls.automation" @change="toggleControl('light')">
-                  <span class="slider"></span>
-                </label>
+
+                <p
+                  v-if="controlStatusMessage"
+                  class="control-status"
+                  :class="{ 'is-error': controlStatusType === 'error' }"
+                >
+                  {{ controlStatusMessage }}
+                </p>
               </div>
             </div>
-          </div>
+          </template>
         </div>
       </div>
     </main>
@@ -91,7 +101,7 @@ import Topbar from '@/components/Topbar.vue';
 import brandLogo from '@/assets/images/logo-hydroponic.png';
 
 // Mengambil model data dan service
-import { HydroponicsService, type HydroponicOut, type ResponseList_HydroponicOut_ } from "../api";
+import { HydroponicsService, type HydroponicDataActuator, type HydroponicOut, type ResponseList_HydroponicOut_ } from "../api";
 
 import { Line } from 'vue-chartjs';
 import {
@@ -117,6 +127,13 @@ const firstName = computed(() => {
   const firstWord = fullName.split(' ')[0];
   
   return firstWord.charAt(0).toUpperCase() + firstWord.slice(1);
+});
+
+const userRole = computed(() => {
+  if (authState.isLoggedIn && authState.user) {
+    return authState.user.role;
+  }
+  return 'guest';
 });
 
 // --- KONFIGURASI GRAFIK ---
@@ -155,7 +172,7 @@ const phChartData = computed<ChartData<'line'>>(() => ({
   labels: chartLabels.value,
   datasets: [{
     label: 'pH Level',
-    data: timelineSeries.value.map(row => row.ph !== null ? Number(row.ph.toFixed(2)) : null),
+    data: timelineSeries.value.map(row => row.ph !== null ? Number(row.ph?.toFixed(2)) : null),
     borderColor: '#16a34a', // Hijau
     backgroundColor: 'rgba(22, 163, 74, 0.2)',
     fill: true,
@@ -170,7 +187,7 @@ const tdsChartData = computed<ChartData<'line'>>(() => ({
   labels: chartLabels.value,
   datasets: [{
     label: 'TDS (ppm)',
-    data: timelineSeries.value.map(row => row.tds !== null ? Number(row.tds.toFixed(2)) : null),
+    data: timelineSeries.value.map(row => row.tds !== null ? Number(row.tds?.toFixed(2)) : null),
     borderColor: '#3b82f6', // Biru
     backgroundColor: 'rgba(59, 130, 246, 0.2)',
     fill: true,
@@ -234,10 +251,52 @@ const controls = reactive({
   light: true
 });
 
-const toggleControl = (type: string) => {
-  console.log(`Toggling ${type} to: ${controls[type as keyof typeof controls]}`);
-  if (type === 'automation' && controls.automation) {
-    console.log("Automatisasi Aktif. Mengambil alih kontrol...");
+type ControlType = keyof typeof controls;
+
+const isControlUpdating = ref(false);
+const controlStatusMessage = ref('');
+const controlStatusType = ref<'success' | 'error' | ''>('');
+
+const mapLatestControlState = (payload: HydroponicDataActuator) => {
+  controls.automation = payload.automation_status ?? controls.automation;
+  controls.pump = payload.pump_status ?? controls.pump;
+  controls.light = payload.light_status ?? controls.light;
+};
+
+const getActuatorPayload = (): HydroponicDataActuator => ({
+  automation_status: controls.automation,
+  pump_status: controls.pump,
+  light_status: controls.light,
+});
+
+const toggleControl = async (type: ControlType) => {
+  if (isControlUpdating.value) return;
+
+  const previousState = {
+    automation: controls.automation,
+    pump: controls.pump,
+    light: controls.light,
+  };
+  previousState[type] = !previousState[type];
+
+  isControlUpdating.value = true;
+  controlStatusMessage.value = '';
+  controlStatusType.value = '';
+
+  try {
+    const response = await HydroponicsService.controlHydroponicActuators(getActuatorPayload());
+    mapLatestControlState(response);
+    controlStatusMessage.value = 'Kontrol berhasil diperbarui.';
+    controlStatusType.value = 'success';
+  } catch (error) {
+    controls.automation = previousState.automation;
+    controls.pump = previousState.pump;
+    controls.light = previousState.light;
+    controlStatusMessage.value = 'Gagal memperbarui kontrol. Coba lagi.';
+    controlStatusType.value = 'error';
+    console.error('Error updating actuator controls:', error);
+  } finally {
+    isControlUpdating.value = false;
   }
 };
 
@@ -256,18 +315,25 @@ const formatMetric = (value: number | null | undefined, digits: number): string 
   return typeof value === 'number' ? value.toFixed(digits) : '0';
 };
 
+const setMetricValue = (index: number, value: string) => {
+  const metric = metrics.value[index];
+  if (metric) {
+    metric.value = value;
+  }
+};
+
 const refreshLatestMetrics = async () => {
   try {
     const data = await HydroponicsService.getLatestHydroponicData();
     if(data){
-      metrics.value[0].value = formatMetric(data.flowrate, 2);
-      metrics.value[1].value = formatMetric(data.distance_cm, 2);
-      metrics.value[2].value = formatMetric(data.total_litres, 2);
-      metrics.value[3].value = formatMetric(data.moisture_avg, 2);
-      metrics.value[4].value = formatMetric(data.temperature_avg, 1);
-      metrics.value[5].value = formatMetric(data.humidity_avg, 1);
-      metrics.value[6].value = formatMetric(data.tds, 3);
-      metrics.value[7].value = formatMetric(data.ph, 2);
+      setMetricValue(0, formatMetric(data.flowrate, 2));
+      setMetricValue(1, formatMetric(data.distance_cm, 2));
+      setMetricValue(2, formatMetric(data.total_litres, 2));
+      setMetricValue(3, formatMetric(data.moisture_avg, 2));
+      setMetricValue(4, formatMetric(data.temperature_avg, 1));
+      setMetricValue(5, formatMetric(data.humidity_avg, 1));
+      setMetricValue(6, formatMetric(data.tds, 3));
+      setMetricValue(7, formatMetric(data.ph, 2));
     }
   } catch (error) {
     console.error("Error fetching latest data:", error);
@@ -339,6 +405,8 @@ onUnmounted(() => {
 .control-text h4 { margin: 0 0 4px 0; font-size: 15px; color: #0f172a; }
 .control-text p { margin: 0; font-size: 13px; color: #64748b; }
 .control-item.disabled { opacity: 0.5; pointer-events: none; }
+.control-status { margin: 12px 0 0 0; font-size: 13px; color: #16a34a; }
+.control-status.is-error { color: #dc2626; }
 
 /* TOGGLE SWITCH STYLE */
 .toggle-switch { position: relative; display: inline-block; width: 50px; height: 26px; }

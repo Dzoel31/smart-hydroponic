@@ -53,6 +53,7 @@
           <table class="data-table">
             <thead>
               <tr>
+                <th>No</th>
                 <th>Id</th>
                 <th>Timestamp</th>
                 <template v-if="showCol('sensor')">
@@ -80,6 +81,7 @@
             </thead>
             <tbody>
               <tr v-for="(item, index) in paginatedData" :key="index">
+                <td>{{ index + 1 }}</td>
                 <td>{{ item.id }}</td>
                 <td>{{ item.timestamp }}</td>
                 

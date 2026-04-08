@@ -2,6 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { HydroponicDashboardOut } from '../models/HydroponicDashboardOut';
+import type { HydroponicDataActuator } from '../models/HydroponicDataActuator';
 import type { HydroponicIn } from '../models/HydroponicIn';
 import type { HydroponicOut } from '../models/HydroponicOut';
 import type { ResponseList_HydroponicOut_ } from '../models/ResponseList_HydroponicOut_';
@@ -14,7 +16,7 @@ export class HydroponicsService {
      * @returns any Successful Response
      * @throws ApiError
      */
-    public static getLatestHydroponicData(): CancelablePromise<(HydroponicOut | null)> {
+    public static getLatestHydroponicData(): CancelablePromise<(HydroponicDashboardOut | null)> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/hydroponics/data/latest',
@@ -98,6 +100,26 @@ export class HydroponicsService {
                 'start_date': startDate,
                 'end_date': endDate,
             },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Control Hydroponic Actuators
+     * Endpoint untuk mengontrol aktuator hidroponik (pump, light, automation).
+     * @param requestBody
+     * @returns HydroponicDataActuator Successful Response
+     * @throws ApiError
+     */
+    public static controlHydroponicActuators(
+        requestBody: HydroponicDataActuator,
+    ): CancelablePromise<HydroponicDataActuator> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/hydroponics/control',
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: `Validation Error`,
             },
