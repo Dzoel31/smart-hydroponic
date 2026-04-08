@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.0.0-beta.13 (2026-04-08)
+
+### Bug Fixes
+
+- Ph and tds fiels in backend. Add index column, fix data retrieve and hide control panel from guest
+  ([#20](https://github.com/IoT-Smart-Hydroponic/smart-hydroponic/pull/20),
+  [`37bcdfb`](https://github.com/IoT-Smart-Hydroponic/smart-hydroponic/commit/37bcdfbca814a93ae5208173e7e4f788f9e4b765))
+
+
 ## v1.0.0-beta.12 (2026-04-07)
 
 ### Features
