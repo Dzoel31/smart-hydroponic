@@ -25,6 +25,7 @@ class User(Base):
         Enum("admin", "user", "superadmin", name="user_roles"), default="user"
     )
     is_superuser: Mapped[bool] = mapped_column(default=False)
+    token_version: Mapped[int] = mapped_column(default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

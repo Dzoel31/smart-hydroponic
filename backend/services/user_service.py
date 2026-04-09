@@ -147,6 +147,7 @@ class UserService:
                 update_data["password"].encode("utf-8"), bcrypt.gensalt()
             ).decode("utf-8")
             update_data["password"] = hashed
+            update_data["token_version"] = int(user.get("token_version", 0)) + 1
 
         for key, value in update_data.items():
             if hasattr(value, "value"):
@@ -181,3 +182,39 @@ class UserService:
         result = await self.session.execute(stmt, {"user_id": user_id})
         await self.session.commit()
         return result.scalar_one_or_none() is not None
+
+    async def change_password(
+        self, user_id: str, current_password: str, new_password: str
+    ) -> bool:
+        user = await self.get_user_by_id(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        stored_password = user["password"]
+        if not bcrypt.checkpw(
+            current_password.encode("utf-8"), stored_password.encode("utf-8")
+        ):
+            raise HTTPException(status_code=400, detail="Current password is invalid")
+
+        if bcrypt.checkpw(
+            new_password.encode("utf-8"), stored_password.encode("utf-8")
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="New password must be different from current password",
+            )
+
+        hashed = bcrypt.hashpw(new_password.encode("utf-8"), bcrypt.gensalt()).decode(
+            "utf-8"
+        )
+        stmt = text(
+            """
+            UPDATE user_data
+            SET password = :password,
+                token_version = token_version + 1
+            WHERE userid = :user_id
+            """
+        )
+        await self.session.execute(stmt, {"password": hashed, "user_id": user_id})
+        await self.session.commit()
+        return True
