@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test WebSocket Sensor Data</title>
+</head>
+<body>
+    <h1>Test WebSocket Sensor Data</h1>
+    <div id="sensor-data"></div>
+
+    <h2>Send sensor data (JSON)</h2>
+    <form id="sensor-form">
+        <div>
+            <label>Moisture 1 <input id="moisture1" type="number" min="0" step="1" value="0" required></label>
+        </div>
+        <div>
+            <label>Moisture 2 <input id="moisture2" type="number" min="0" step="1" value="0" required></label>
+        </div>
+        <div>
+            <label>Moisture 3 <input id="moisture3" type="number" min="0" step="1" value="0" required></label>
+        </div>
+        <div>
+            <label>Moisture 4 <input id="moisture4" type="number" min="0" step="1" value="0" required></label>
+        </div>
+        <div>
+            <label>Moisture 5 <input id="moisture5" type="number" min="0" step="1" value="0" required></label>
+        </div>
+        <div>
+            <label>Moisture 6 <input id="moisture6" type="number" min="0" step="1" value="0" required></label>
+        </div>
+        <div>
+            <label>Flow rate (L/min) <input id="flowrate" type="number" min="0" step="0.01" value="0.00" required></label>
+        </div>
+        <div>
+            <label>Total litres (L) <input id="total_litres" type="number" min="0" step="0.01" value="0.00" required></label>
+        </div>
+        <div>
+            <label>Distance (cm) <input id="distance_cm" type="number" min="0" step="0.1" value="0.0" required></label>
+        </div>
+        <button type="submit">Send JSON</button>
+    </form>
+
+    <script>
+        const sensorDataDiv = document.getElementById('sensor-data');
+        const ws = new WebSocket('ws://localhost:8000/hydroponics/ws/sensor-data');
+
+        ws.onopen = () => {
+            console.log('WebSocket connection established');
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            sensorDataDiv.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        };
+
+        ws.onclose = () => {
+            console.log('WebSocket connection closed');
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+
+        document.getElementById('sensor-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            if (ws.readyState === WebSocket.OPEN) {
+                const payload = {
+                    moisture1: parseInt(document.getElementById('moisture1').value),
+                    moisture2: parseInt(document.getElementById('moisture2').value),
+                    moisture3: parseInt(document.getElementById('moisture3').value),
+                    moisture4: parseInt(document.getElementById('moisture4').value),
+                    moisture5: parseInt(document.getElementById('moisture5').value),
+                    moisture6: parseInt(document.getElementById('moisture6').value),
+                    flowrate: parseFloat(document.getElementById('flowrate').value),
+                    total_litres: parseFloat(document.getElementById('total_litres').value),
+                    distance_cm: parseFloat(document.getElementById('distance_cm').value)
+                };
+                ws.send(JSON.stringify(payload));
+                console.log('Sent:', payload);
+            } else {
+                console.warn('WebSocket not open; cannot send');
+            }
+        });
+    </script>
+</body>
+</html>

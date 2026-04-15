@@ -1,0 +1,67 @@
+[project]
+name = "smart-hydroponic-backend"
+version = "2.0.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "alembic>=1.17.2",
+    "asyncpg>=0.31.0",
+    "authlib>=1.6.6",
+    "fastapi[standard]>=0.128.0",
+    "python-dotenv>=1.2.1",
+    "sqlalchemy>=2.0.45",
+    "websockets>=15.0.1",
+    "pydantic-settings>=2.12.0",
+    "pyjwt>=2.10.1",
+    "bcrypt>=5.0.0",
+    "jinja2>=3.1.6",
+    "aiocoap>=0.4.17",
+    "pydantic[email]>=2.12.5",
+    "alembic-postgresql-enum>=1.8.0",
+]
+
+[dependency-groups]
+dev = [
+    "python-semantic-release>=10.5.3",
+    "ruff>=0.14.10",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+]
+
+[tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]
+commit_parser = "conventional"
+upload_to_release = true
+upload_to_pypi = false
+changelog_file = "CHANGELOG.md"
+tag_format = "backend-v{version}"
+build_command = """
+    uv lock --upgrade-package "$PACKAGE_NAME"
+    git add uv.lock
+"""
+commit_message = "chore(release): bump to {version}"
+
+[tool.semantic_release.branches.main]
+match = "main"
+
+[tool.semantic_release.branches.dev-python]
+match = "dev-python"
+prerelease = true
+prerelease_token = "beta"
+
+[tool.semantic_release.commit_parser_options]
+allowed_tags = ["build", "chore", "ci", "docs", "feat", "fix", "perf", "style", "refactor", "test"]
+minor_re = "(?i)^(feat)"
+patch_re = "(?i)^(fix|perf|refactor)"
+
+[tool.semantic_release.changelog]
+exclude_commit_patterns = [
+    '''chore(?:\([^)]*?\))?: .+''',
+    '''ci(?:\([^)]*?\))?: .+''',
+    '''refactor(?:\([^)]*?\))?: .+''',
+    '''style(?:\([^)]*?\))?: .+''',
+    '''test(?:\([^)]*?\))?: .+''',
+    '''build\((?!deps\): .+)''',
+    '''Initial [Cc]ommit.*''',
+]

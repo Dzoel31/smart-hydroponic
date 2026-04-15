@@ -51,7 +51,6 @@ def data_actuator():
 uri = f"ws://{os.getenv('IP4_ADDRESS')}:{os.getenv('PORT')}/ws/smart-hydroponic/device"
 
 
-
 async def send_data(uri, data):
     async with websockets.connect(uri) as websocket:
         await websocket.send(data)

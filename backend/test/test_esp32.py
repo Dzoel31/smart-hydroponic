@@ -1,36 +1,30 @@
 import websockets
 import random
 import dotenv
-import os
 import asyncio
 import json
 
 dotenv.load_dotenv()
 
+# Ensure a current event loop exists for asyncio
+asyncio.set_event_loop(asyncio.new_event_loop())
+
 DEVICE_ID = "esp32-plant-device"
 # uri = f"ws://{os.getenv('HOST')}/ws/smart-hydroponic/device"
-uri = f"ws://{os.getenv('HOST')}:{os.getenv('PORT')}/ws/smart-hydroponic/device"
+uri = "ws://localhost:8000/hydroponics/ws/sensor-data"
 
 
 def data_plant():
     return {
-        "deviceId": "esp32-plant-device",
-        "type": "update_data",
-        "room": "plant",
-        "broadcast": "command",
-        "data": {
-            "moisture1": 60,
-            "moisture2": 60,
-            "moisture3": 60,
-            "moisture4": 60,
-            "moisture5": 60,
-            "moisture6": 60,
-            "flowrate": random.randint(1, 100),
-            "total_litres": random.randint(1, 100),
-            "distance_cm": random.randint(1, 100),
-            "ph": random.uniform(5.0, 7.0),
-            "tds": random.randint(100, 1000),
-        },
+        "moisture1": 60,
+        "moisture2": 70,
+        "moisture3": 80,
+        "moisture4": 100,
+        "moisture5": 40,
+        "moisture6": 50,
+        "flowrate": random.randint(1, 100),
+        "total_litres": random.randint(1, 100),
+        "distance_cm": random.randint(1, 100),
     }
 
 
@@ -50,13 +44,13 @@ async def main():
         try:
             ws = websockets.connect(uri)
             async with ws as websocket:
-                register_data = {
-                    "deviceId": DEVICE_ID,
-                    "type": "join",
-                    "room": "plant",
-                }
-                await websocket.send(json.dumps(register_data))
-                print(f"Sent register data: {register_data}")
+                # register_data = {
+                #     "deviceId": DEVICE_ID,
+                #     "type": "join",
+                #     "room": "plant",
+                # }
+                # await websocket.send(json.dumps(register_data))
+                # print(f"Sent register data: {register_data}")
                 while True:
                     data = data_plant()
                     json_data = json.dumps(data)

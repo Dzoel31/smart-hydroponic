@@ -8,6 +8,7 @@ on:
 jobs:
   build-and-push:
     name: "Build and Push Docker Image"
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'backend-v')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -23,7 +24,7 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
-          ref: ${{ github.event.workflow_run.head_branch }}
+          ref: ${{ github.event.release.tag_name }}
 
       - name: Set up QEMU (optional for multi-arch)
         uses: docker/setup-qemu-action@v3
@@ -44,6 +45,6 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ matrix.name }}:latest
-            ${{ secrets.DOCKER_USERNAME }}/${{ matrix.name }}:${{ github.ref_name }}
+            ${{ secrets.DOCKER_USERNAME }}/${{ matrix.name }}:${{ github.event.release.tag_name }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

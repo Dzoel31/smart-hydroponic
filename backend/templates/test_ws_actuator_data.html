@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test WebSocket Actuator Data</title>
+</head>
+<body>
+    <h1>Test WebSocket Actuator Data</h1>
+    <div id="actuator-data"></div>
+
+    <h2>Send actuator data (JSON)</h2>
+    <form id="actuator-form">
+        <div>
+            <label>Status Pompa <input id="status_pompa" type="checkbox" required></label>
+        </div>
+        <div>
+            <label>Status Lampu <input id="status_lampu" type="checkbox" required></label>
+        </div>
+        <div>
+            <label>Status Automasi <input id="status_otomatis" type="checkbox" required></label>
+        </div>
+        <button type="submit">Send JSON</button>
+    </form>
+
+    <script>
+        const actuatorDataDiv = document.getElementById('actuator-data');
+        const ws = new WebSocket('ws://localhost:8000/hydroponics/ws/actuator-data');
+
+        ws.onopen = () => {
+            console.log('WebSocket connection established');
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            actuatorDataDiv.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        };
+
+        ws.onclose = () => {
+            console.log('WebSocket connection closed');
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+
+        document.getElementById('actuator-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            if (ws.readyState === WebSocket.OPEN) {
+                const payload = {
+                    pump_status: document.getElementById('status_pompa').checked,
+                    light_status: document.getElementById('status_lampu').checked,
+                    automation_status: document.getElementById('status_otomatis').checked
+                };
+                ws.send(JSON.stringify(payload));
+                console.log('Sent:', payload);
+            } else {
+                console.warn('WebSocket not open; cannot send');
+            }
+        });
+    </script>
+</body>
+</html>

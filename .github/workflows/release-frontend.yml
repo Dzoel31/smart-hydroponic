@@ -1,0 +1,42 @@
+name: "Frontend Release"
+
+on:
+  push:
+    branches:
+      - main
+      - dev-python
+    paths:
+      - 'frontend-vue/**'
+      - '.github/workflows/release-frontend.yml'
+  workflow_dispatch:
+
+jobs:
+  release:
+    if: github.repository == 'IoT-Smart-Hydroponic/smart-hydroponic' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: release-frontend-dev-python
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: frontend-vue
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: npx semantic-release

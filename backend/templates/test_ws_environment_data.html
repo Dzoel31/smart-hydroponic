@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test WebSocket Environment Data</title>
+</head>
+<body>
+    <h1>Test WebSocket Environment Data</h1>
+    <div id="environment-data"></div>
+
+    <h2>Send environment data (JSON)</h2>
+    <form id="environment-form">
+        <div>
+            <label> ph <input id="ph" type="number" min="0" step="0.01" value="7.00" required></label>
+        </div>
+        <div>
+            <label>tds (ppm) <input id="tds" type="number" min="0" step="1" value="0" required></label>
+        </div>
+        <div>
+            <label>temperature atas (°C) <input id="temp_atas" type="number" min="0" step="0.1" value="25.0" required></label>
+        </div>
+        <div>
+            <label>temperature bawah (°C) <input id="temp_bawah" type="number" min="0" step="0.1" value="25.0" required></label>
+        </div>
+        <div>
+            <label>humidity atas (%) <input id="humidity_atas" type="number" min="0" step="0.1" value="50.0" required></label>
+        </div>
+        <div>
+            <label>humidity bawah (%) <input id="humidity_bawah" type="number" min="0" step="0.1" value="50.0" required></label>
+        </div>
+        <div>
+            <label>light intensity atas (lux) <input id="light_atas" type="number" min="0" step="1" value="1000" required></label>
+        </div>
+        <div>
+            <label>light intensity bawah (lux) <input id="light_bawah" type="number" min="0" step="1" value="1000" required></label>
+        </div>
+        <button type="submit">Send JSON</button>
+    </form>
+
+    <script>
+        const environmentDataDiv = document.getElementById('environment-data');
+        const ws = new WebSocket('ws://localhost:8000/hydroponics/ws/environment-data');
+
+        ws.onopen = () => {
+            console.log('WebSocket connection established');
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            environmentDataDiv.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        };
+
+        ws.onclose = () => {
+            console.log('WebSocket connection closed');
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+
+        document.getElementById('environment-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            if (ws.readyState === WebSocket.OPEN) {
+                const payload = {
+                    ph: parseFloat(document.getElementById('ph').value),
+                    tds: parseInt(document.getElementById('tds').value),
+                    temperature_atas: parseFloat(document.getElementById('temp_atas').value),
+                    temperature_bawah: parseFloat(document.getElementById('temp_bawah').value),
+                    humidity_atas: parseFloat(document.getElementById('humidity_atas').value),
+                    humidity_bawah: parseFloat(document.getElementById('humidity_bawah').value),
+                    light_intensity_atas: parseInt(document.getElementById('light_atas').value),
+                    light_intensity_bawah: parseInt(document.getElementById('light_bawah').value)
+                };
+                ws.send(JSON.stringify(payload));
+                console.log('Sent:', payload);
+            } else {
+                console.warn('WebSocket not open; cannot send');
+            }
+        });
+    </script>
+</body>
+</html>

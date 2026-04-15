@@ -19,7 +19,7 @@ const char *WEBSOCKET_URL = "ws://103.147.92.179";
 const char *DEVICE_ID = "esp8266-actuator-device";
 const unsigned long DATA_SEND_INTERVAL = 5000;      // 5 seconds
 const unsigned long WIFI_RECONNECT_TIMEOUT = 10000; // 10 seconds
-const float MOISTURE_THRESHOLD = 65;
+const float MOISTURE_THRESHOLD = 60;
 const float TEMPERATURE_THRESHOLD = 30.0;
 
 // State variables
@@ -165,9 +165,9 @@ void onMessageCallback(WebsocketsMessage message)
     lastMoistureAvg = data["moistureAvg"].as<float>();
     Serial.println("Moisture Avg: " + String(lastMoistureAvg));
   }
-  if (data.containsKey("temperatureAvg"))
+  if (data.containsKey("avg_temperature"))
   {
-    lastTemperatureAvg = data["temperatureAvg"].as<float>();
+    lastTemperatureAvg = data["avg_temperature"].as<float>();
     Serial.println("Temperature Avg: " + String(lastTemperatureAvg));
   }
 
@@ -190,7 +190,7 @@ void handleAutomaticMode(JsonVariant data)
 
   // Get moisture and temperature values
   float moistureAvg = data.containsKey("moistureAvg") ? data["moistureAvg"].as<float>() : lastMoistureAvg;
-  float temperatureAvg = data.containsKey("temperatureAvg") ? data["temperatureAvg"].as<float>() : lastTemperatureAvg;
+  float temperatureAvg = data.containsKey("avg_temperature") ? data["avg_temperature"].as<float>() : lastTemperatureAvg;
 
   // Only update if values are valid
   if (!isnan(moistureAvg))

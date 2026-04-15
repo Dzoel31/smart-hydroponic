@@ -3,7 +3,11 @@ name: "Continuous Delivery"
 on:
   push:
     branches:
+      - main
       - dev-python
+    paths:
+      - 'backend/**'
+      - '.github/workflows/release-backend.yml'
   workflow_dispatch:
 
 jobs:
