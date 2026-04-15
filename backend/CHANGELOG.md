@@ -2,6 +2,10 @@
 
 <!-- version list -->
 
+## v1.0.0 (2026-04-15)
+
+- Initial Release
+
 ## v2.0.0
 
 - Initial stable release for the backend application.
