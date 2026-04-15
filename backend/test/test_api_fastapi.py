@@ -10,10 +10,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from main import app
 from schemas.hydroponic import HydroponicOut, MetaData, ResponseList
-from schemas.user import UserOut
+from schemas.user import UserOut, UserRole
 from services.hydroponic_service import HydroponicService
 from services.user_service import UserService
 from utils.deps import get_current_user, get_session
+from fastapi import HTTPException
 
 
 class _DummyResult:
@@ -46,7 +47,7 @@ def _set_current_user_override(role: str = "admin"):
             username="tester",
             email="tester@example.com",
             fullname="Test User",
-            role=role,
+            role=UserRole(role),
             created_at=datetime.now(timezone.utc),
         )
 
@@ -115,15 +116,22 @@ def test_login_user_success(client: TestClient, monkeypatch: pytest.MonkeyPatch)
             username="newuser",
             email="newuser@example.com",
             fullname="New User",
-            role="user",
+            role=UserRole.USER,
             created_at=datetime.now(timezone.utc),
         )
 
     def fake_create_access_token(_self, data):
         return "token-123"
 
+    async def fake_get_user_by_id(_self, _user_id):
+        return {
+            "userid": user_id,
+            "token_version": 0,
+        }
+
     monkeypatch.setattr(UserService, "authenticate_user", fake_authenticate_user)
     monkeypatch.setattr(UserService, "create_access_token", fake_create_access_token)
+    monkeypatch.setattr(UserService, "get_user_by_id", fake_get_user_by_id)
 
     response = client.post(
         "/users/login",
@@ -148,6 +156,48 @@ def test_get_current_user(client: TestClient):
 
     assert response.status_code == 200
     assert response.json()["username"] == "tester"
+
+
+def test_change_password_success(client: TestClient, monkeypatch: pytest.MonkeyPatch):
+    _set_current_user_override(role="user")
+
+    async def fake_change_password(_self, _user_id, _current_password, _new_password):
+        return True
+
+    monkeypatch.setattr(UserService, "change_password", fake_change_password)
+
+    response = client.post(
+        "/users/change-password",
+        json={
+            "current_password": "supersecret123",
+            "new_password": "mynewsecret123",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["detail"] == "Password updated successfully"
+
+
+def test_change_password_invalid_current_password(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+):
+    _set_current_user_override(role="user")
+
+    async def fake_change_password(_self, _user_id, _current_password, _new_password):
+        raise HTTPException(status_code=400, detail="Current password is invalid")
+
+    monkeypatch.setattr(UserService, "change_password", fake_change_password)
+
+    response = client.post(
+        "/users/change-password",
+        json={
+            "current_password": "wrongpass123",
+            "new_password": "mynewsecret123",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Current password is invalid"
 
 
 def test_get_all_users_forbidden_for_user_role(client: TestClient):
@@ -180,7 +230,7 @@ def test_update_user_forbidden_for_other_user(client: TestClient):
             username="basic-user",
             email="basic@example.com",
             fullname="Basic User",
-            role="user",
+            role=UserRole.USER,
             created_at=datetime.now(timezone.utc),
         )
 

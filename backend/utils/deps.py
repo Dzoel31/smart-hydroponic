@@ -45,6 +45,14 @@ async def get_current_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
+
+    user_token_version = int(user.get("token_version", 0))
+    if payload.tv != user_token_version:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been invalidated",
+        )
+
     return UserOut.model_validate(user)
 
 

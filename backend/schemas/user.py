@@ -54,7 +54,7 @@ class UserOut(UserBase):
 
 
 class PasswordChange(BaseModel):
-    old_password: str = Field(..., min_length=8, max_length=255)
+    current_password: str = Field(..., min_length=8, max_length=255)
     new_password: str = Field(..., min_length=8, max_length=255)
 
 
@@ -79,5 +79,6 @@ class TokenPayload(BaseModel):
     sub: str
     id: str
     role: str
+    tv: int = 0
     iat: int
     exp: int

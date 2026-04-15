@@ -8,6 +8,7 @@ from schemas.user import (
     LoginResponse,
     AccountSummary,
     UserUpdate,
+    PasswordChange,
 )
 from services.user_service import UserService
 from utils.deps import (
@@ -16,6 +17,7 @@ from utils.deps import (
     require_role,
 )
 from schemas.responses import (
+    MessageResponse,
     responses_400,
     responses_401,
     responses_403,
@@ -97,11 +99,14 @@ async def login_user(
     service = UserService(session)
     try:
         user = await service.authenticate_user(user_credentials)
+        db_user = await service.get_user_by_id(str(user.userid))
+        token_version = int(db_user.get("token_version", 0)) if db_user else 0
         access_token = service.create_access_token(
             data={
                 "sub": user.username,
                 "id": str(user.userid),
                 "role": user.role,
+                "tv": token_version,
             }
         )
         return LoginResponse(
@@ -226,6 +231,38 @@ async def delete_user(
             raise HTTPException(status_code=404, detail="User not found")
         await service.delete_user(user_id)
         return {"detail": "User deleted successfully"}
+    except SQLAlchemyError as e:
+        await session.rollback()
+        logger.error("Database error: %s", e)
+        raise HTTPException(status_code=500, detail="Database error")
+
+
+@router.post(
+    "/change-password",
+    response_model=MessageResponse,
+    operation_id="changePassword",
+    responses={
+        **responses_400,
+        **responses_401,
+        **responses_404,
+        **responses_500,
+    },
+)
+async def change_password(
+    payload: PasswordChange,
+    current_user: UserOut = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    service = UserService(session)
+    try:
+        await service.change_password(
+            str(current_user.userid),
+            payload.current_password,
+            payload.new_password,
+        )
+        return MessageResponse(detail="Password updated successfully")
+    except HTTPException:
+        raise
     except SQLAlchemyError as e:
         await session.rollback()
         logger.error("Database error: %s", e)

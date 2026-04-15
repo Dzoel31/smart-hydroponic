@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.0.0-beta.14 (2026-04-09)
+
+### Features
+
+- Change password and auto revoke token
+  ([#21](https://github.com/IoT-Smart-Hydroponic/smart-hydroponic/pull/21),
+  [`62776c0`](https://github.com/IoT-Smart-Hydroponic/smart-hydroponic/commit/62776c0840e7105289aa33351dd0b2ed2758160b))
+
+
 ## v1.0.0-beta.13 (2026-04-08)
 
 ### Bug Fixes
