@@ -31,14 +31,26 @@
           <div class="details-card">
             <div class="card-header">
               <h3>Personal Information</h3>
-              <button 
-                v-if="!isEditing" 
-                @click="startEdit" 
-                class="btn-edit"
-              >
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                Edit Profile
-              </button>
+              
+              <div class="header-actions">
+                <button 
+                  type="button" 
+                  class="btn-outline" 
+                  @click="openPasswordModal"
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                  Ubah Password
+                </button>
+
+                <button 
+                  v-if="!isEditing" 
+                  @click="startEdit" 
+                  class="btn-edit"
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                  Edit Profile
+                </button>
+              </div>
             </div>
 
             <p v-if="fetchError" class="feedback error">{{ fetchError }}</p>
@@ -107,9 +119,79 @@
 
           </div>
         </div>
-
       </div>
     </main>
+
+    <div v-if="showPasswordModal" class="modal-overlay" @click.self="closePasswordModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Ubah Password</h3>
+          <button class="btn-close" @click="closePasswordModal">&times;</button>
+        </div>
+        
+        <form @submit.prevent="submitPasswordChange" class="modal-form">
+          <div class="form-group">
+            <label>Password Saat Ini</label>
+            <div class="password-wrapper">
+              <input 
+                :type="showCurrentPassword ? 'text' : 'password'" 
+                v-model="passwordForm.current_password" 
+                required 
+                placeholder="Masukkan password saat ini" 
+                :disabled="isSubmittingPassword" 
+              />
+              <button type="button" class="btn-toggle-password" @click="showCurrentPassword = !showCurrentPassword" tabindex="-1">
+                <svg v-if="showCurrentPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+              </button>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Password Baru</label>
+            <div class="password-wrapper">
+              <input 
+                :type="showNewPassword ? 'text' : 'password'" 
+                v-model="passwordForm.new_password" 
+                required 
+                minlength="8"
+                placeholder="Masukkan password baru" 
+                :disabled="isSubmittingPassword" 
+              />
+              <button type="button" class="btn-toggle-password" @click="showNewPassword = !showNewPassword" tabindex="-1">
+                <svg v-if="showNewPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Konfirmasi Password Baru</label>
+            <div class="password-wrapper">
+              <input 
+                :type="showConfirmPassword ? 'text' : 'password'" 
+                v-model="passwordForm.confirm_password" 
+                required 
+                placeholder="Ulangi password baru" 
+                :disabled="isSubmittingPassword" 
+              />
+              <button type="button" class="btn-toggle-password" @click="showConfirmPassword = !showConfirmPassword" tabindex="-1">
+                <svg v-if="showConfirmPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+              </button>
+            </div>
+          </div>
+
+          <p v-if="passwordError" class="error-message">{{ passwordError }}</p>
+
+          <div class="modal-actions">
+            <button type="button" class="btn-cancel" @click="closePasswordModal" :disabled="isSubmittingPassword">Batal</button>
+            <button type="submit" class="btn-save" :disabled="isSubmittingPassword">{{ isSubmittingPassword ? 'Menyimpan...' : 'Simpan Password' }}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -119,8 +201,9 @@ import { useRouter } from 'vue-router';
 import Sidebar from '../components/Sidebar.vue';
 import Topbar from '../components/Topbar.vue';
 import brandLogo from '../assets/images/logo-hydroponic.png';
-import { UsersService, ApiError, type UserOut, type MessageResponse } from '../api';
+import { UsersService, ApiError, type UserOut } from '../api';
 import { authState } from '../auth';
+import { getApiErrorMessage } from '../utils/apiError';
 
 type ProfileData = {
   userid: string;
@@ -137,6 +220,75 @@ const isEditing = ref(false);
 const isSaving = ref(false);
 const fetchError = ref('');
 const saveSuccess = ref('');
+
+/* --- Logika untuk Ubah Password --- */
+const showPasswordModal = ref(false);
+const showCurrentPassword = ref(false);
+const showNewPassword = ref(false);
+const showConfirmPassword = ref(false);
+const isSubmittingPassword = ref(false);
+const passwordError = ref('');
+
+const passwordForm = reactive({
+  current_password: '',
+  new_password: '',
+  confirm_password: ''
+});
+
+const openPasswordModal = () => {
+  showPasswordModal.value = true;
+};
+
+const closePasswordModal = () => {
+  showPasswordModal.value = false;
+  passwordError.value = '';
+  passwordForm.current_password = '';
+  passwordForm.new_password = '';
+  passwordForm.confirm_password = '';
+  showCurrentPassword.value = false;
+  showNewPassword.value = false;
+  showConfirmPassword.value = false;
+};
+
+const submitPasswordChange = async () => {
+  if (passwordForm.new_password.length < 8) {
+    passwordError.value = 'Password baru harus minimal 8 karakter!';
+    return;
+  }
+  
+  if (passwordForm.new_password !== passwordForm.confirm_password) {
+    passwordError.value = 'Konfirmasi password tidak cocok!';
+    return;
+  }
+
+  if (!userProfile.userid) {
+    passwordError.value = 'Data user tidak valid.';
+    return;
+  }
+
+  isSubmittingPassword.value = true;
+  passwordError.value = '';
+
+  try {
+    await UsersService.changePassword({
+      current_password: passwordForm.current_password,
+      new_password: passwordForm.new_password
+    });
+    
+    closePasswordModal();
+    alert('Password berhasil diubah!');
+    router.push('/login');
+    
+  } catch (error: unknown) {
+    if (error instanceof ApiError) {
+      passwordError.value = getApiErrorMessage(error, 'Gagal mengubah password.');
+      return;
+    }
+    passwordError.value = 'Gagal mengubah password.';
+  } finally {
+    isSubmittingPassword.value = false;
+  }
+}
 
 const userProfile = reactive<ProfileData>({
   userid: '',
@@ -210,10 +362,9 @@ const loadCurrentUser = async () => {
         await router.push('/login');
         return;
       }
-      fetchError.value = (error.body as MessageResponse)?.detail || 'Failed to load user profile.';
+      fetchError.value = getApiErrorMessage(error, 'Failed to load user profile.');
       return;
     }
-
     fetchError.value = 'Failed to load user profile.';
   }
 };
@@ -249,10 +400,9 @@ const saveProfile = async () => {
     saveSuccess.value = 'Profile updated successfully.';
   } catch (error: unknown) {
     if (error instanceof ApiError) {
-      fetchError.value = (error.body as MessageResponse)?.detail || 'Failed to update profile.';
+      fetchError.value = getApiErrorMessage(error, 'Failed to update profile.');
       return;
     }
-
     fetchError.value = 'Failed to update profile.';
   } finally {
     isSaving.value = false;
@@ -264,7 +414,6 @@ onMounted(async () => {
     await router.push('/login');
     return;
   }
-
   await loadCurrentUser();
 });
 </script>
@@ -401,6 +550,32 @@ onMounted(async () => {
   color: #0f172a;
 }
 
+/* KUMPULAN TOMBOL HEADER */
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* TOMBOL UBAH PASSWORD (OUTLINE) */
+.btn-outline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #16a34a;
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-outline:hover {
+  background-color: #18823f;
+}
+
 .btn-edit {
   display: flex;
   align-items: center;
@@ -524,6 +699,95 @@ onMounted(async () => {
   color: #15803d;
 }
 
+/* ====================================================
+   MODAL & PASSWORD TOGGLE STYLES
+==================================================== */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modal-content {
+  background: #ffffff;
+  width: 100%;
+  max-width: 450px;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  animation: modalPop 0.3s ease-out;
+}
+
+@keyframes modalPop {
+  0% { transform: scale(0.95); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-header h3 { margin: 0; font-size: 18px; color: #0f172a; }
+.btn-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b; }
+.btn-close:hover { color: #0f172a; }
+
+.modal-form { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.password-wrapper input {
+  width: 100%;
+  padding-right: 42px; /* Memberi ruang agar teks tidak tertimpa ikon */
+}
+
+.btn-toggle-password {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  outline: none;
+  transition: color 0.2s;
+}
+
+.btn-toggle-password:focus { outline: none; }
+.btn-toggle-password:hover { color: #16a34a; }
+.btn-toggle-password svg { width: 20px; height: 20px; }
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.error-message {
+  color: #ef4444;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+}
+
 @media (max-width: 1024px) {
   .profile-container {
     grid-template-columns: 1fr;
@@ -533,5 +797,6 @@ onMounted(async () => {
 @media (max-width: 768px) {
   .main-content { margin-left: 0; max-width: 100%; padding: 16px; }
   .form-grid { grid-template-columns: 1fr; }
+  .header-actions { flex-direction: column-reverse; align-items: flex-end; } /* Responsif agar rapi di HP */
 }
 </style>

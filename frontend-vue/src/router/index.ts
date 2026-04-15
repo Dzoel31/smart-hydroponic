@@ -19,7 +19,7 @@ const routes = [
     component: () => import('@/views/Dashboard.vue'),
   },
   {
-    path: '/sensor-data',
+    path: '/data-logs',
     name: 'SensorData',
     component: () => import('@/views/DataLogs.vue'),
     meta: { requiresAuth: true, allowedRoles: ['admin', 'superadmin'] }

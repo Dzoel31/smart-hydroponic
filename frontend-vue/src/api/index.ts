@@ -16,6 +16,7 @@ export type { HydroponicOut } from './models/HydroponicOut';
 export type { LoginResponse } from './models/LoginResponse';
 export type { MessageResponse } from './models/MessageResponse';
 export type { MetaData } from './models/MetaData';
+export type { PasswordChange } from './models/PasswordChange';
 export type { ResponseList_HydroponicOut_ } from './models/ResponseList_HydroponicOut_';
 export type { UserCreate } from './models/UserCreate';
 export type { UserLogin } from './models/UserLogin';

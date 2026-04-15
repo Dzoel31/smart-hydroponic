@@ -110,7 +110,31 @@
           
           <div class="form-group">
             <label>Password Sementara</label>
-            <input type="password" v-model="newAdmin.password" required placeholder="Buat password awal" :disabled="isSubmitting" />
+            <div class="password-wrapper">
+              <input 
+              :type="showPassword ? 'text': 'password'" 
+              v-model="newAdmin.password" 
+              required 
+              placeholder="Buat password awal" 
+              :disabled="isSubmitting" 
+              />
+
+              <button 
+                type="button" 
+                class="btn-toggle-password" 
+                @click="showPassword = !showPassword" 
+                tabindex="-1"
+              >
+                <svg v-if="showPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>
+              </button>
+            </div>
           </div>
 
           <p v-if="submitError" class="error-message">{{ submitError }}</p>
@@ -154,7 +178,8 @@ import Sidebar from '@/components/Sidebar.vue';
 import Topbar from '@/components/Topbar.vue';
 import brandLogo from '@/assets/images/logo-hydroponic.png';
 import { authState } from "../auth";
-import { UsersService, ApiError, UserRole, type MessageResponse } from '../api';
+import { UsersService, ApiError, UserRole } from '../api';
+import { getApiErrorMessage } from '../utils/apiError';
 
 type AdminTableItem = {
   id: string;
@@ -220,7 +245,7 @@ const fetchAdmins = async () => {
       .map(mapUserToAdminItem);
   } catch (error: unknown) {
     if (error instanceof ApiError) {
-      fetchError.value = (error.body as MessageResponse)?.detail || 'Gagal mengambil data admin.';
+      fetchError.value = getApiErrorMessage(error, 'Gagal mengambil data admin.');
       if (error.status === 401) {
         authState.logout();
         await router.push('/login');
@@ -239,6 +264,7 @@ const fetchAdmins = async () => {
 // --- LOGIKA MODAL TAMBAH ADMIN ---
 const showAddModal = ref(false);
 const newAdmin = reactive({ name: '', username: '', email: '', password: '' });
+const showPassword = ref(false);
 
 const closeModal = () => {
   showAddModal.value = false;
@@ -247,6 +273,7 @@ const closeModal = () => {
   newAdmin.username = '';
   newAdmin.email = '';
   newAdmin.password = '';
+  showPassword.value = false;
 };
 
 const submitNewAdmin = async () => {
@@ -256,14 +283,10 @@ const submitNewAdmin = async () => {
   submitError.value = '';
 
   try {
-    const createdUser = await UsersService.registerUser({
+    await UsersService.registerUser({
       username: newAdmin.username.trim(),
       email: newAdmin.email.trim(),
-      password: newAdmin.password
-    });
-
-    await UsersService.updateUser(createdUser.userid, {
-      fullname: newAdmin.name.trim(),
+      password: newAdmin.password,
       role: UserRole.ADMIN
     });
 
@@ -271,7 +294,7 @@ const submitNewAdmin = async () => {
     await fetchAdmins();
   } catch (error: unknown) {
     if (error instanceof ApiError) {
-      submitError.value = (error.body as MessageResponse)?.detail || 'Gagal menambahkan admin baru.';
+      submitError.value = getApiErrorMessage(error, 'Gagal menambahkan admin baru.');
     } else {
       submitError.value = 'Terjadi gangguan saat menambahkan admin.';
     }
@@ -308,7 +331,7 @@ const confirmDelete = async () => {
     adminToDelete.value = null;
   } catch (error: unknown) {
     if (error instanceof ApiError) {
-      fetchError.value = (error.body as MessageResponse)?.detail || 'Gagal menghapus akun admin.';
+      fetchError.value = getApiErrorMessage(error, 'Gagal menghapus akun admin.');
     } else {
       fetchError.value = 'Terjadi gangguan saat menghapus akun admin.';
     }
@@ -541,6 +564,48 @@ onMounted(async () => {
 .form-group label { font-size: 13px; font-weight: 600; color: #475569; }
 .form-group input { padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; color: #0f172a; background-color: #ffffff; outline: none; }
 .form-group input:focus { border-color: #16a34a; box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2); }
+
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.password-wrapper input {
+  width: 100%;
+  padding-right: 40px;
+}
+
+.btn-toggle-password {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  outline: none;
+  transition: color 0.2s;
+}
+
+.btn-toggle-password:focus {
+  outline: none;
+}
+
+.btn-toggle-password:hover {
+  color: #16a34a; 
+}
+
+.btn-toggle-password svg {
+  width: 18px;
+  height: 18px;
+}
 
 .modal-actions {
   display: flex;

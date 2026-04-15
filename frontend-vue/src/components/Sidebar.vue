@@ -1,11 +1,25 @@
 <template>
   <aside class="sidebar" :class="{ 'is-collapsed': isCollapsed }">
     
-    <div class="brand" @click="toggleSidebar">
-      <span class="brand-logo">
-        <img :src="logo" alt="Logo Smart Hydroponic" class="logo-img" />
-      </span>
-      <h2>Smart Hydroponic</h2>
+    <div class="sidebar-header">
+      <router-link to="/dashboard" class="brand">
+        <span class="brand-logo">
+          <img :src="logo" alt="Logo Smart Hydroponic" class="logo-img" />
+        </span>
+        <h2 v-if="!isCollapsed">Smart Hydroponic</h2>
+      </router-link>
+
+      <button class="toggle-btn" @click="toggleSidebar">
+        <svg v-if="isCollapsed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+        <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
     </div>
 
     <nav class="nav-menu">
@@ -16,11 +30,11 @@
           <rect x="14" y="14" width="7" height="7"></rect>
           <rect x="3" y="14" width="7" height="7"></rect>
         </svg>
-        <span class="nav-text">Dashboard</span>
+        <span class="nav-text" v-if="!isCollapsed">Dashboard</span>
       </router-link>
 
       <template v-if="userRole === 'admin' || userRole === 'superadmin'">
-        <router-link to="/sensor-data" class="nav-item" active-class="active">
+        <router-link to="/data-logs" class="nav-item" active-class="active">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
             <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
@@ -77,10 +91,15 @@ const userRole = computed(() => {
   return 'guest';
 });
 
-const isCollapsed = ref(false);
+const savedState = localStorage.getItem('sidebarCollapsed');
+
+const isCollapsed = ref(
+  savedState !== null ? savedState === 'true' : window.innerWidth <= 1024
+);
 
 const toggleSidebar = () => {
   isCollapsed.value = !isCollapsed.value;
+  localStorage.setItem('sidebarCollapsed', isCollapsed.value.toString());
 };
 
 // Deteksi ukuran layar otomatis saat browser di-resize
@@ -88,12 +107,18 @@ const checkScreenSize = () => {
   if (window.innerWidth <= 1024) {
     isCollapsed.value = true;
   } else {
-    isCollapsed.value = false;
-  }
+    if (localStorage.getItem('sidebarCollapsed') === 'true') {
+      isCollapsed.value = true;
+    } else {
+      isCollapsed.value = false;
+    }
+  } 
 };
 
 onMounted(() => {
-  checkScreenSize();
+  if (savedState === null) {
+    checkScreenSize();
+  }
   window.addEventListener('resize', checkScreenSize);
 });
 
@@ -124,7 +149,7 @@ onUnmounted(() => {
   top: 0;
   flex-shrink: 0;
   z-index: 100;
-  transition: width 0.3s ease, padding 0.3s ease; /* Efek mulus saat buka-tutup */
+  transition: width 0.3s ease; /* Efek mulus saat buka-tutup */
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -132,14 +157,24 @@ onUnmounted(() => {
 /* Sembunyikan scrollbar agar rapi */
 .sidebar::-webkit-scrollbar { display: none; }
 
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 20px;
+  margin-bottom: 10px;
+  transition: all 0.3s ease;
+}
+
 /* BRANDING */
 .brand {
   display: flex;
   align-items: center;
-  padding: 7px 20px 35px 20px; 
+  padding: 4px; 
   gap: 12px;
   cursor: pointer;
-  transition: padding 0.3s ease;
+  border-radius: 8px;
+  transition: background-color 0.3s ease;
 }
 
 .brand:hover { background-color: #f8fafc; }
@@ -154,10 +189,37 @@ onUnmounted(() => {
 }
 
 .logo-img {
-  width: 60px;
-  height: 60px;
+  width: 50px;
+  height: 50px;
   object-fit: contain;
   transition: all 0.3s ease;
+}
+
+.toggle-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.toggle-btn:focus {
+  outline: none;
+}
+
+.toggle-btn:hover {
+  background-color: #f1f5f9;
+  color: #16a34a;
+}
+
+.toggle-btn svg {
+  width: 24px;
+  height: 24px;
 }
 
 /* NAVIGATION MENU */
@@ -200,8 +262,12 @@ onUnmounted(() => {
 
 .sidebar.is-collapsed {
   width: 88px;
-  padding: 24px 12px;
-  align-items: center;
+}
+
+.sidebar.is-collapsed .sidebar-header {
+  flex-direction: column;
+  padding: 24px 8px;
+  gap: 20px;
 }
 
 .sidebar.is-collapsed .brand h2, 

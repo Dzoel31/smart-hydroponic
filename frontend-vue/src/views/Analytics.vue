@@ -112,6 +112,7 @@ import Sidebar from '@/components/Sidebar.vue';
 import Topbar from '@/components/Topbar.vue';
 import brandLogo from '@/assets/images/logo-hydroponic.png';
 import { HydroponicsService, type HydroponicOut, type ResponseList_HydroponicOut_ } from '../api';
+import { getApiErrorMessage } from '../utils/apiError';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 
@@ -424,8 +425,9 @@ const refreshData = async (): Promise<void> => {
     timelineSeries.value = downsampleSeries(sortedRows);
     lastUpdatedAt.value = new Date();
   } catch (error) {
-    console.error('Failed to refresh hydroponic analytics:', error);
-    errorMessage.value = 'Failed to fetch timeline data. Please try again.';
+    const message = getApiErrorMessage(error, 'Failed to fetch timeline data. Please try again.');
+    console.error('Failed to refresh hydroponic analytics:', message);
+    errorMessage.value = message;
     timelineSeries.value = [];
   } finally {
     isLoading.value = false;

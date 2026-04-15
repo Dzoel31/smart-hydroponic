@@ -174,6 +174,7 @@ import Sidebar from '@/components/Sidebar.vue';
 import Topbar from '@/components/Topbar.vue';
 import brandLogo from '@/assets/images/logo-hydroponic.png';
 import { HydroponicsService, type HydroponicOut } from '../api';
+import { getApiErrorMessage } from '../utils/apiError';
 
 // --- State ---
 const filters = reactive({
@@ -279,8 +280,9 @@ const fetchDataFromAPI = async () => {
       .filter((item) => item.timestamp)
       .map(mapHydroponicDataToTableItem);
   } catch (error) {
-    console.error('Gagal mengambil data hidroponik:', error);
-    fetchError.value = 'Gagal mengambil data dari server.';
+    const message = getApiErrorMessage(error, 'Gagal mengambil data dari server.');
+    console.error('Gagal mengambil data hidroponik:', message);
+    fetchError.value = message;
     sensorLogs.value = [];
   } finally {
     isLoading.value = false;

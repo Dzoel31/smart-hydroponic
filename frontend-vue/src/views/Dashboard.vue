@@ -102,6 +102,7 @@ import brandLogo from '@/assets/images/logo-hydroponic.png';
 
 // Mengambil model data dan service
 import { HydroponicsService, type HydroponicDataActuator, type HydroponicOut, type ResponseList_HydroponicOut_ } from "../api";
+import { getApiErrorMessage } from '../utils/apiError';
 
 import { Line } from 'vue-chartjs';
 import {
@@ -240,7 +241,10 @@ const loadWeeklyChartData = async () => {
     timelineSeries.value = sampledRows;
 
   } catch (error) {
+    const message = getApiErrorMessage(error, 'Gagal mengambil data grafik 7 hari terakhir.');
     console.error("Gagal mengambil data grafik 7 hari terakhir:", error);
+    controlStatusMessage.value = message;
+    controlStatusType.value = 'error';
   }
 };
 
@@ -292,7 +296,7 @@ const toggleControl = async (type: ControlType) => {
     controls.automation = previousState.automation;
     controls.pump = previousState.pump;
     controls.light = previousState.light;
-    controlStatusMessage.value = 'Gagal memperbarui kontrol. Coba lagi.';
+    controlStatusMessage.value = getApiErrorMessage(error, 'Gagal memperbarui kontrol. Coba lagi.');
     controlStatusType.value = 'error';
     console.error('Error updating actuator controls:', error);
   } finally {
@@ -336,7 +340,8 @@ const refreshLatestMetrics = async () => {
       setMetricValue(7, formatMetric(data.ph, 2));
     }
   } catch (error) {
-    console.error("Error fetching latest data:", error);
+    const message = getApiErrorMessage(error, 'Gagal memuat metrik terbaru.');
+    console.error("Error fetching latest data:", message);
   }
 };
 

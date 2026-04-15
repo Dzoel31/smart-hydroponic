@@ -3,6 +3,8 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { LoginResponse } from '../models/LoginResponse';
+import type { MessageResponse } from '../models/MessageResponse';
+import type { PasswordChange } from '../models/PasswordChange';
 import type { UserCreate } from '../models/UserCreate';
 import type { UserLogin } from '../models/UserLogin';
 import type { UserOut } from '../models/UserOut';
@@ -133,6 +135,29 @@ export class UsersService {
             errors: {
                 401: `Unauthorized`,
                 403: `Forbidden`,
+                404: `Not Found`,
+                422: `Validation Error`,
+                500: `Internal Server Error`,
+            },
+        });
+    }
+    /**
+     * Change Password
+     * @param requestBody
+     * @returns MessageResponse Successful Response
+     * @throws ApiError
+     */
+    public static changePassword(
+        requestBody: PasswordChange,
+    ): CancelablePromise<MessageResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/users/change-password',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Bad Request`,
+                401: `Unauthorized`,
                 404: `Not Found`,
                 422: `Validation Error`,
                 500: `Internal Server Error`,
