@@ -11,13 +11,73 @@
     [
       "@semantic-release/commit-analyzer",
       {
-        "preset": "conventionalcommits"
+        "preset": "conventionalcommits",
+        "presetConfig": {
+          "scope": [
+            "frontend",
+            "frontend-*",
+            "ui",
+            "web"
+          ],
+          "scopeOnly": true
+        },
+        "releaseRules": [
+          {
+            "type": "feat",
+            "scope": "frontend*",
+            "release": "minor"
+          },
+          {
+            "type": "feat",
+            "scope": "ui",
+            "release": "minor"
+          },
+          {
+            "type": "feat",
+            "scope": "web",
+            "release": "minor"
+          },
+          {
+            "type": "fix",
+            "scope": "frontend*",
+            "release": "patch"
+          },
+          {
+            "type": "fix",
+            "scope": "ui",
+            "release": "patch"
+          },
+          {
+            "type": "fix",
+            "scope": "web",
+            "release": "patch"
+          },
+          {
+            "scope": "backend*",
+            "release": false
+          }
+        ]
       }
     ],
     [
       "@semantic-release/release-notes-generator",
       {
-        "preset": "conventionalcommits"
+        "preset": "conventionalcommits",
+        "presetConfig": {
+          "scope": [
+            "frontend",
+            "frontend-*",
+            "ui",
+            "web"
+          ],
+          "scopeOnly": true
+        },
+        "writerOpts": {
+          "commitsSort": [
+            "scope",
+            "subject"
+          ]
+        }
       }
     ],
     [

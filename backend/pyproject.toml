@@ -31,7 +31,7 @@ dev = [
 
 [tool.semantic_release]
 version_toml = ["pyproject.toml:project.version"]
-commit_parser = "conventional"
+commit_parser = "conventional-monorepo"
 upload_to_release = true
 upload_to_pypi = false
 changelog_file = "CHANGELOG.md"
@@ -51,6 +51,8 @@ prerelease = true
 prerelease_token = "beta"
 
 [tool.semantic_release.commit_parser_options]
+path_filters = ["."]
+scope_prefix = "backend"
 allowed_tags = ["build", "chore", "ci", "docs", "feat", "fix", "perf", "style", "refactor", "test"]
 minor_re = "(?i)^(feat)"
 patch_re = "(?i)^(fix|perf|refactor)"
