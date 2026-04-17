@@ -33,7 +33,8 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 COPY . .
 
-RUN chmod +x /app/entrypoint.sh
+RUN sed -i 's/\r$//' /app/entrypoint.sh \
+	&& chmod +x /app/entrypoint.sh
 
 EXPOSE 8000
 
