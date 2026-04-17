@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/IoT-Smart-Hydroponic/smart-hydroponic/compare/frontend-v1.0.0...frontend-v1.1.0) (2026-04-17)
+
+### Features
+
+* fix web title and icon ([e210f60](https://github.com/IoT-Smart-Hydroponic/smart-hydroponic/commit/e210f60ebed05d6b63533b4ec7e329d70f5f29df))
+
 ## 1.0.0 (2026-04-15)
 
 ### Features
