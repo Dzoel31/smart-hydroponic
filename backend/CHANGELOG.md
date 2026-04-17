@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.1.0 (2026-04-17)
+
+### Features
+
+- Fix newline
+  ([`0f191ad`](https://github.com/IoT-Smart-Hydroponic/smart-hydroponic/commit/0f191ad4c410ee10e5969718186485eb4b59dfba))
+
+
 ## v1.0.0 (2026-04-15)
 
 - Initial Release
