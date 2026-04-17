@@ -1,0 +1,49 @@
+# docker-compose.yml
+# Must edit! Adjust environment as needed.
+services:
+  db:
+    image: timescale/timescaledb:2.24.0-pg18
+    container_name: timescaledb
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${PGDATABASE}
+      POSTGRES_USER: ${PGUSER}
+      POSTGRES_PASSWORD: ${PGPASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PGUSER} -d ${PGDATABASE} -h localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    image: hidroponikfikupnvj/smart-hydroponic-backend:latest
+    container_name: hydroponic-backend
+    env_file:
+      - .env
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: ${PGUSER}
+      PGPASSWORD: ${PGPASSWORD}
+      PGDATABASE: ${PGDATABASE}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  client:
+    image: hidroponikfikupnvj/smart-hydroponic-frontend:latest
+    container_name: hydroponic-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+      
+volumes:
+  timescale_data:
