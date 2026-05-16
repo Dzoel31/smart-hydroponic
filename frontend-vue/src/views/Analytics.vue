@@ -391,7 +391,7 @@ const fetchHydroponicRows = async (period: PeriodKey): Promise<Array<HydroponicO
   let totalPages = 1;
 
   while (page <= totalPages) {
-    const response: ResponseList_HydroponicOut_ = await HydroponicsService.getHydroponicData(
+    const response: ResponseList_HydroponicOut_ = await HydroponicsService.getPublicHydroponicData(
       page,
       limit,
       startIso,

@@ -2,10 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export const UserRole = {
-    ADMIN: 'admin',
-    USER: 'user',
-    SUPERADMIN: 'superadmin',
-} as const;
-
-export type UserRole = (typeof UserRole)[keyof typeof UserRole];
+export enum UserRole {
+    ADMIN = 'admin',
+    USER = 'user',
+    SUPERADMIN = 'superadmin',
+}
