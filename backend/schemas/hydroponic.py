@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pydantic import BaseModel, Field, ConfigDict, computed_field
 import datetime
 from typing import Optional
@@ -62,6 +64,15 @@ class HydroponicDataActuator(BaseModel):
     pump_status: bool = Field(False)
     light_status: bool = Field(False)
     automation_status: bool = Field(False)
+
+
+class HydroponicControlResult(HydroponicDataActuator):
+    command_id: str
+    confirmed: bool = False
+    time_start: float
+    time_end: float | None = None
+    latency_ms: float | None = None
+    actuator_response: dict | None = None
 
 
 class HydroponicAggregate(

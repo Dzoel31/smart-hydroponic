@@ -44,6 +44,7 @@ void handleManualMode(JsonVariant data);
 void updateOutputs();
 void onMessageCallback(WebsocketsMessage message);
 void sendStatusUpdate();
+void sendActuatorAck(const char *messageType, const char *messageId);
 void checkConnections();
 
 void setup()
@@ -182,6 +183,15 @@ void onMessageCallback(WebsocketsMessage message)
   }
 
   updateOutputs();
+
+  if (jsonDoc.containsKey("command_id"))
+  {
+    sendActuatorAck("dashboard_control", jsonDoc["command_id"].as<const char *>());
+  }
+  else if (jsonDoc.containsKey("correlation_id"))
+  {
+    sendActuatorAck("inter_node_forward", jsonDoc["correlation_id"].as<const char *>());
+  }
 }
 
 void handleAutomaticMode(JsonVariant data)
@@ -251,6 +261,29 @@ void sendStatusUpdate()
   {
     clientActuator.send(jsonString);
     Serial.println("Status sent: " + jsonString);
+  }
+}
+
+void sendActuatorAck(const char *messageType, const char *messageId)
+{
+  StaticJsonDocument<256> ackDoc;
+  ackDoc["type"] = "actuator_ack";
+  ackDoc["ack_type"] = messageType;
+  ackDoc["command_id"] = messageId;
+  ackDoc["correlation_id"] = messageId;
+  ackDoc["pump_status"] = pumpStatus;
+  ackDoc["light_status"] = lightStatus;
+  ackDoc["automation_status"] = automationStatus;
+  ackDoc["device_id"] = DEVICE_ID;
+  ackDoc["ack_time_ms"] = millis();
+
+  String ackString;
+  serializeJson(ackDoc, ackString);
+
+  if (clientActuator.available())
+  {
+    clientActuator.send(ackString);
+    Serial.println("[ACTUATOR_ACK] " + ackString);
   }
 }
 
