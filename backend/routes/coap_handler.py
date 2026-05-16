@@ -1,6 +1,7 @@
 import aiocoap.resource as resource
 import aiocoap
 import json
+import time
 from schemas import (
     HydroponicDataSensor,
     HydroponicDataEnvironment,
@@ -36,6 +37,12 @@ class HydroponicCoAPResource(resource.Resource):
         try:
             payload = request.payload.decode("utf-8")
             data_json = json.loads(payload)
+            seq = data_json.get("seq", -1)
+            arrival_timestamp = time.time()
+
+            print(
+                f"[SERVER_METRIC] Node: {self.role} | Seq: {seq} | Arrival_Timestamp: {arrival_timestamp}"
+            )
 
             print(f"[COAP] Received data for role '{self.role}': {data_json}")
 
@@ -46,17 +53,28 @@ class HydroponicCoAPResource(resource.Resource):
                 )
 
                 if snapshot:
+                    snapshot_payload = snapshot.model_dump()
+                    snapshot_payload["seq"] = seq
+                    snapshot_payload["arrival_timestamp"] = arrival_timestamp
+
                     async with get_db_session() as session:
                         service = HydroponicService(session)
                         await service.add_data(snapshot)
                     await self.manager.send_to_room(
                         room="hydroponics",
                         role="web-client",
-                        message=snapshot.model_dump(),
+                        message=snapshot_payload,
                     )
                     print("[COAP] Snapshot complete and Broadcasted!")
 
-            return aiocoap.Message(code=aiocoap.CHANGED, payload=b"Data received")
+            ack_payload = json.dumps(
+                {
+                    "status": "ack",
+                    "seq": seq,
+                    "arrival_timestamp": arrival_timestamp,
+                }
+            ).encode("utf-8")
+            return aiocoap.Message(code=aiocoap.CHANGED, payload=ack_payload)
 
         except Exception as e:
             print(f"[COAP][ERROR] {e}")

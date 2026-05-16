@@ -11,7 +11,7 @@ asyncio.set_event_loop(asyncio.new_event_loop())
 
 DEVICE_ID = "esp32-plant-device"
 # uri = f"ws://{os.getenv('HOST')}/ws/smart-hydroponic/device"
-uri = "ws://localhost:8000/hydroponics/ws/sensor-data"
+uri = "ws://localhost:8000/smart-hydroponic/api/v2/hydroponics/ws/sensor-data"
 
 
 def data_plant():

@@ -8,6 +8,12 @@ from utils.deps import get_session
 from routes.user_routes import router as user_router
 from routes.hydroponic_routes import router as hydroponic_router
 
+import aiocoap
+import aiocoap.resource as resource
+from contextlib import asynccontextmanager
+from routes.coap_handler import HydroponicCoAPResource
+from utils.aggregator import aggregator
+from utils.manager import manager
 import logging
 
 logging.basicConfig(
@@ -16,12 +22,52 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Starting CoAP server...")
+
+    root = resource.Site()
+
+    root.add_resource(
+        ["coap", "hydroponics", "plant"],
+        HydroponicCoAPResource(
+            role="sensor",
+            aggregator=aggregator,
+            manager=manager,
+        ),
+    )
+    root.add_resource(
+        ["coap", "hydroponics", "environment"],
+        HydroponicCoAPResource(
+            role="environment",
+            aggregator=aggregator,
+            manager=manager,
+        ),
+    )
+    root.add_resource(
+        ["coap", "hydroponics", "actuator"],
+        HydroponicCoAPResource(
+            role="actuator",
+            aggregator=aggregator,
+            manager=manager,
+        ),
+    )
+
+    coap_context = await aiocoap.Context.create_server_context(
+        root, bind=("172.25.21.236", 8683)
+    )
+
+    yield 
+
+    logger.info("Shutting down CoAP server...")
+    await coap_context.shutdown()
 
 app = FastAPI(
     title="Smart Hydroponic API",
     version="2.0.0",
     root_path="/smart-hydroponic/api/v2",
     redoc_url=None,
+    lifespan=lifespan,
     servers=[
         {
             "url": "http://localhost:8000/smart-hydroponic/api/v2",
