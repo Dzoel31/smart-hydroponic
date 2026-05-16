@@ -242,7 +242,6 @@ const loadWeeklyChartData = async () => {
 
   } catch (error) {
     const message = getApiErrorMessage(error, 'Gagal mengambil data grafik 7 hari terakhir.');
-    console.error("Gagal mengambil data grafik 7 hari terakhir:", error);
     controlStatusMessage.value = message;
     controlStatusType.value = 'error';
   }
@@ -298,7 +297,6 @@ const toggleControl = async (type: ControlType) => {
     controls.light = previousState.light;
     controlStatusMessage.value = getApiErrorMessage(error, 'Gagal memperbarui kontrol. Coba lagi.');
     controlStatusType.value = 'error';
-    console.error('Error updating actuator controls:', error);
   } finally {
     isControlUpdating.value = false;
   }
@@ -341,7 +339,6 @@ const refreshLatestMetrics = async () => {
     }
   } catch (error) {
     const message = getApiErrorMessage(error, 'Gagal memuat metrik terbaru.');
-    console.error("Error fetching latest data:", message);
   }
 };
 

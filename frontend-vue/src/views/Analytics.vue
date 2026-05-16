@@ -400,11 +400,7 @@ const fetchHydroponicRows = async (period: PeriodKey): Promise<Array<HydroponicO
 
     rows.push(...response.data);
     totalPages = Math.max(response.meta.total_pages ?? 1, 1);
-    page += 1;
-
-    if (page > 15) {
-      break;
-    }
+    page = (response.meta.current_page ?? page) + 1;
   }
 
   return rows;
@@ -426,7 +422,6 @@ const refreshData = async (): Promise<void> => {
     lastUpdatedAt.value = new Date();
   } catch (error) {
     const message = getApiErrorMessage(error, 'Failed to fetch timeline data. Please try again.');
-    console.error('Failed to refresh hydroponic analytics:', message);
     errorMessage.value = message;
     timelineSeries.value = [];
   } finally {

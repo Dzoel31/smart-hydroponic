@@ -80,7 +80,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(item, index) in paginatedData" :key="index">
+              <tr v-for="(item, index) in filteredData" :key="index">
                 <td>{{ index + 1 }}</td>
                 <td>{{ item.id }}</td>
                 <td>{{ item.timestamp }}</td>
@@ -140,7 +140,7 @@
         <div class="pagination-outer-container">
           <div class="pagination-settings">
             <label>Rows per page:</label>
-            <select v-model="itemsPerPage" @change="currentPage = 1" class="rows-select">
+            <select v-model="itemsPerPage" @change="handlePageSizeChange" class="rows-select">
               <option :value="10">10</option>
               <option :value="25">25</option>
               <option :value="50">50</option>
@@ -149,17 +149,17 @@
           </div>
 
           <div class="pagination-container">
-            <button class="pagination-button" :disabled="currentPage === 1" @click="currentPage--">← Prev</button>
+            <button class="pagination-button" :disabled="currentPage === 1" @click="goToPage(currentPage - 1)">← Prev</button>
 
             <div class="pagination-info">
               Halaman <strong>{{ currentPage }}</strong> dari <strong>{{ totalPages || 1 }}</strong>
             </div>
 
-            <button class="pagination-button" :disabled="currentPage === totalPages || totalPages === 0" @click="currentPage++">Next →</button>
+            <button class="pagination-button" :disabled="currentPage === totalPages || totalPages === 0" @click="goToPage(currentPage + 1)">Next →</button>
           </div>
 
           <div class="pagination-status">
-            Showing <strong>{{ dataRange.start }}-{{ dataRange.end }}</strong> of <strong>{{ filteredData.length }}</strong>
+            Showing <strong>{{ dataRange.start }}-{{ dataRange.end }}</strong> of <strong>{{ totalRows }}</strong>
           </div>
         </div>
       </section>
@@ -187,6 +187,8 @@ const itemsPerPage = ref(10);
 const sensorLogs = ref<HydroponicTableItem[]>([]);
 const isLoading = ref(false);
 const fetchError = ref('');
+const totalPages = ref(1);
+const totalRows = ref(0);
 
 type HydroponicTableItem = {
   id: string;
@@ -260,39 +262,41 @@ const buildCsvFromRows = (rows: Array<Record<string, unknown>>): string => {
   return [headerLine, ...bodyLines].join('\n');
 };
 
+const getIsoStartOfDay = (value: string): string => `${value}T00:00:00.000Z`;
+
+const getIsoEndOfDay = (value: string): string => `${value}T23:59:59.999Z`;
+
 // --- Fungsi Fetch Data dari API ---
-const fetchDataFromAPI = async () => {
+const fetchDataFromAPI = async (page = currentPage.value) => {
   isLoading.value = true;
   fetchError.value = '';
 
   try {
-    const limit = 100;
-    let currentApiPage = 1;
-    let totalPages = 1;
-    const allData: HydroponicOut[] = [];
+    const response = await HydroponicsService.getHydroponicData(
+      page,
+      itemsPerPage.value,
+      filters.startDate ? getIsoStartOfDay(filters.startDate) : undefined,
+      filters.endDate ? getIsoEndOfDay(filters.endDate) : undefined,
+    );
 
-    do {
-      const response = await HydroponicsService.getHydroponicData(currentApiPage, limit);
-      allData.push(...response.data);
-      totalPages = response.meta.total_pages || 1;
-      currentApiPage += 1;
-    } while (currentApiPage <= totalPages);
-
-    sensorLogs.value = allData
+    sensorLogs.value = response.data
       .filter((item) => item.timestamp)
       .map(mapHydroponicDataToTableItem);
+    currentPage.value = response.meta.current_page || page;
+    totalPages.value = response.meta.total_pages || 1;
+    totalRows.value = response.meta.total_rows || response.data.length;
   } catch (error) {
     const message = getApiErrorMessage(error, 'Gagal mengambil data dari server.');
-    console.error('Gagal mengambil data hidroponik:', message);
     fetchError.value = message;
     sensorLogs.value = [];
+    totalRows.value = 0;
   } finally {
     isLoading.value = false;
   }
 };
 
 onMounted(() => {
-  fetchDataFromAPI();
+  void fetchDataFromAPI();
 });
 
 // --- Logic Filter & Menampilkan Kolom ---
@@ -305,14 +309,58 @@ const filteredData = computed(() => {
   if (!sensorLogs.value.length) return [];
   
   return sensorLogs.value.filter(item => {
-    if (!item.timestamp) return false;
+    if (filters.categoryType === 'all') return true;
 
-    const itemDate = new Date(item.timestamp).getTime();
-    const start = filters.startDate ? new Date(filters.startDate).getTime() : -Infinity;
-    const end = filters.endDate ? new Date(filters.endDate).getTime() : Infinity;
-    
-    return itemDate >= start && itemDate <= (end + 86400000); // + 1 hari
+    if (filters.categoryType === 'sensor') {
+      return (
+        item.moisture1 !== null ||
+        item.moisture2 !== null ||
+        item.moisture3 !== null ||
+        item.moisture4 !== null ||
+        item.moisture5 !== null ||
+        item.moisture6 !== null ||
+        item.flowrate !== null ||
+        item.total_liters !== null ||
+        item.distance !== null
+      );
+    }
+
+    if (filters.categoryType === 'environment') {
+      return (
+        item.ph !== null ||
+        item.tds !== null ||
+        item.temperature_atas !== null ||
+        item.temperature_bawah !== null ||
+        item.humidity_atas !== null ||
+        item.humidity_bawah !== null
+      );
+    }
+
+    if (filters.categoryType === 'actuator') {
+      return true;
+    }
+
+    return true;
   });
+});
+
+const goToPage = (page: number, force = false) => {
+  const nextPage = Math.min(Math.max(page, 1), Math.max(totalPages.value, 1));
+
+  if (!force && nextPage === currentPage.value) {
+    return;
+  }
+
+  currentPage.value = nextPage;
+  void fetchDataFromAPI(nextPage);
+};
+
+const handlePageSizeChange = () => {
+  goToPage(1, true);
+};
+
+watch([() => filters.startDate, () => filters.endDate], () => {
+  goToPage(1, true);
 });
 
 // --- FUNGSI EXPORT CSV TERBARU ---
@@ -384,28 +432,13 @@ const exportData = () => {
   document.body.removeChild(link);
 };
 
-// --- Pagination Logic ---
-const totalPages = computed(() => {
-  const count = Math.ceil(filteredData.value.length / itemsPerPage.value);
-  return count > 0 ? count : 1;
-});
-
 const dataRange = computed(() => {
   if (filteredData.value.length === 0) return { start: 0, end: 0 };
   
   const start = (currentPage.value - 1) * itemsPerPage.value + 1;
-  const end = Math.min(currentPage.value * itemsPerPage.value, filteredData.value.length);
+  const end = start + filteredData.value.length - 1;
   
   return { start, end };
-});
-
-const paginatedData = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage.value;
-  return filteredData.value.slice(start, start + itemsPerPage.value);
-});
-
-watch([() => filters.categoryType, () => itemsPerPage.value, () => filters.startDate, () => filters.endDate], () => {
-  currentPage.value = 1;
 });
 
 const hasActiveFilters = computed(() => {
