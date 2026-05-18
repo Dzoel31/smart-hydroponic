@@ -3,7 +3,7 @@
     <Sidebar :logo="brandLogo" />
     <main class="main-content">
       
-      <Topbar :title="`Hello, ${firstName}!`" />
+      <Topbar :title="`Hello, ${firstName}!`" :subtitle="dashboardSubtitle" />
 
       <div class="dashboard-grid">
         <div class="metrics-row">
@@ -99,6 +99,7 @@ import { authState } from "../auth";
 import Sidebar from '@/components/Sidebar.vue';
 import Topbar from '@/components/Topbar.vue';
 import brandLogo from '@/assets/images/logo-hydroponic.png';
+import { PlantNutritionProfilesService, type PlantNutritionProfileOut } from '../api';
 
 // Mengambil model data dan service
 import { HydroponicsService, type HydroponicDataActuator, type HydroponicOut, type ResponseList_HydroponicOut_ } from "../api";
@@ -128,6 +129,16 @@ const firstName = computed(() => {
   const firstWord = fullName.split(' ')[0];
   
   return firstWord.charAt(0).toUpperCase() + firstWord.slice(1);
+});
+
+const activeNutritionProfile = ref<PlantNutritionProfileOut | null>(null);
+
+const dashboardSubtitle = computed(() => {
+  if (!activeNutritionProfile.value) {
+    return 'Belum ada profil nutrisi aktif untuk dashboard';
+  }
+
+  return `Profil aktif: ${activeNutritionProfile.value.plant_name}`;
 });
 
 const userRole = computed(() => {
@@ -247,6 +258,14 @@ const loadWeeklyChartData = async () => {
   }
 };
 
+const loadActiveNutritionProfile = async () => {
+  try {
+    activeNutritionProfile.value = await PlantNutritionProfilesService.getActiveNutritionProfile();
+  } catch {
+    activeNutritionProfile.value = null;
+  }
+};
+
 // --- LOGIKA KONTROL & METRIK ---
 const controls = reactive({
   automation: true,
@@ -338,7 +357,7 @@ const refreshLatestMetrics = async () => {
       setMetricValue(7, formatMetric(data.ph, 2));
     }
   } catch (error) {
-    const message = getApiErrorMessage(error, 'Gagal memuat metrik terbaru.');
+    getApiErrorMessage(error, 'Gagal memuat metrik terbaru.');
   }
 };
 
@@ -346,6 +365,7 @@ let metricsInterval: ReturnType<typeof setInterval> | null = null;
 let chartInterval: ReturnType<typeof setInterval> | null = null;
 
 onMounted(() => {
+  loadActiveNutritionProfile();
   loadWeeklyChartData();
   refreshLatestMetrics();
   

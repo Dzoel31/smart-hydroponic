@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from utils.deps import get_session
 from routes.user_routes import router as user_router
 from routes.hydroponic_routes import router as hydroponic_router
+from routes.nutrition_routes import router as nutrition_router
 
 import logging
 
@@ -42,6 +43,7 @@ app.add_middleware(
 
 app.include_router(user_router)
 app.include_router(hydroponic_router)
+app.include_router(nutrition_router)
 
 
 @app.get("/", response_class=HTMLResponse)

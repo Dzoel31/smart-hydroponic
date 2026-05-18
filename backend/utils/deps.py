@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 from authlib.jose.errors import JoseError
 
 bearer_scheme = HTTPBearer()
+optional_bearer_scheme = HTTPBearer(auto_error=False)
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
@@ -52,6 +53,36 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has been invalidated",
         )
+
+    return UserOut.model_validate(user)
+
+
+async def get_optional_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(optional_bearer_scheme),
+    session: AsyncSession = Depends(get_session),
+) -> UserOut | None:
+    if credentials is None:
+        return None
+
+    service = UserService(session)
+    try:
+        token = credentials.credentials
+        payload = service.verify_token(token)
+        payload = TokenPayload.model_validate(payload)
+
+        if payload.id is None:
+            return None
+
+    except JoseError:
+        return None
+
+    user = await service.get_user_by_id(payload.id)
+    if not user:
+        return None
+
+    user_token_version = int(user.get("token_version", 0))
+    if payload.tv != user_token_version:
+        return None
 
     return UserOut.model_validate(user)
 

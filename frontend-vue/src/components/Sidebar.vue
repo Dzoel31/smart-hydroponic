@@ -42,6 +42,14 @@
           </svg>
           <span class="nav-text">Hydroponic Data</span>
         </router-link>
+
+        <router-link to="/nutrition-profiles" class="nav-item" active-class="active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2C8 7 5 10.5 5 14a7 7 0 0 0 14 0c0-3.5-3-7-7-12Z"></path>
+            <path d="M9 15c1.2-1.4 2.6-2.2 4.8-2.2"></path>
+          </svg>
+          <span class="nav-text">Nutrition Profiles</span>
+        </router-link>
       </template>
 
       <router-link to="/analytics" class="nav-item" active-class="active">

@@ -12,6 +12,10 @@
             Last update:
             <span class="last-updated">{{ lastUpdatedLabel }}</span>
           </p>
+          <p class="toolbar-meta__profile">
+            Profil acuan:
+            <span class="last-updated">{{ activeNutritionProfileLabel }}</span>
+          </p>
         </div>
 
         <div class="toolbar-controls">
@@ -45,6 +49,15 @@
           <Line v-if="hasTimelineData" :data="moistureChartData" :options="moistureOptions" />
           <p v-else class="empty-state">No hydroponic data in the selected range.</p>
         </div>
+        <article class="metric-insight" :class="metricInsights.moisture.tone">
+          <div class="metric-insight__header">
+            <h4>Moisture Insight</h4>
+            <span class="metric-insight__badge">{{ metricInsights.moisture.badge }}</span>
+          </div>
+          <p class="metric-insight__value">{{ metricInsights.moisture.value }}</p>
+          <p class="metric-insight__range">Target: {{ metricInsights.moisture.target }}</p>
+          <p class="metric-insight__description">{{ metricInsights.moisture.description }}</p>
+        </article>
       </section>
 
       <section class="sub-charts-grid">
@@ -57,6 +70,15 @@
             <Line v-if="hasTimelineData" :data="temperatureChartData" :options="timelineOptions" />
             <p v-else class="empty-state">No data</p>
           </div>
+          <article class="metric-insight" :class="metricInsights.temperature.tone">
+            <div class="metric-insight__header">
+              <h4>Temperature Insight</h4>
+              <span class="metric-insight__badge">{{ metricInsights.temperature.badge }}</span>
+            </div>
+            <p class="metric-insight__value">{{ metricInsights.temperature.value }}</p>
+            <p class="metric-insight__range">Target: {{ metricInsights.temperature.target }}</p>
+            <p class="metric-insight__description">{{ metricInsights.temperature.description }}</p>
+          </article>
         </article>
 
         <article class="sub-chart-card">
@@ -68,6 +90,15 @@
             <Line v-if="hasTimelineData" :data="humidityChartData" :options="timelineOptions" />
             <p v-else class="empty-state">No data</p>
           </div>
+          <article class="metric-insight" :class="metricInsights.humidity.tone">
+            <div class="metric-insight__header">
+              <h4>Humidity Insight</h4>
+              <span class="metric-insight__badge">{{ metricInsights.humidity.badge }}</span>
+            </div>
+            <p class="metric-insight__value">{{ metricInsights.humidity.value }}</p>
+            <p class="metric-insight__range">Target: {{ metricInsights.humidity.target }}</p>
+            <p class="metric-insight__description">{{ metricInsights.humidity.description }}</p>
+          </article>
         </article>
 
         <article class="sub-chart-card">
@@ -78,6 +109,15 @@
             <Line v-if="hasTimelineData" :data="phChartData" :options="timelineOptions" />
             <p v-else class="empty-state">No data</p>
           </div>
+          <article class="metric-insight" :class="metricInsights.ph.tone">
+            <div class="metric-insight__header">
+              <h4>pH Insight</h4>
+              <span class="metric-insight__badge">{{ metricInsights.ph.badge }}</span>
+            </div>
+            <p class="metric-insight__value">{{ metricInsights.ph.value }}</p>
+            <p class="metric-insight__range">Target: {{ metricInsights.ph.target }}</p>
+            <p class="metric-insight__description">{{ metricInsights.ph.description }}</p>
+          </article>
         </article>
 
         <article class="sub-chart-card">
@@ -88,6 +128,15 @@
             <Line v-if="hasTimelineData" :data="tdsChartData" :options="timelineOptions" />
             <p v-else class="empty-state">No data</p>
           </div>
+          <article class="metric-insight" :class="metricInsights.tds.tone">
+            <div class="metric-insight__header">
+              <h4>TDS Insight</h4>
+              <span class="metric-insight__badge">{{ metricInsights.tds.badge }}</span>
+            </div>
+            <p class="metric-insight__value">{{ metricInsights.tds.value }}</p>
+            <p class="metric-insight__range">Target: {{ metricInsights.tds.target }}</p>
+            <p class="metric-insight__description">{{ metricInsights.tds.description }}</p>
+          </article>
         </article>
       </section>
     </main>
@@ -112,6 +161,7 @@ import Sidebar from '@/components/Sidebar.vue';
 import Topbar from '@/components/Topbar.vue';
 import brandLogo from '@/assets/images/logo-hydroponic.png';
 import { HydroponicsService, type HydroponicOut, type ResponseList_HydroponicOut_ } from '../api';
+import { PlantNutritionProfilesService, type PlantNutritionProfileOut } from '../api';
 import { getApiErrorMessage } from '../utils/apiError';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
@@ -148,6 +198,7 @@ const periodOptions: Array<{ value: PeriodKey; label: string }> = [
 
 const selectedPeriod = ref<PeriodKey>('24h');
 const timelineSeries = ref<Array<HydroponicOut>>([]);
+const activeNutritionProfile = ref<PlantNutritionProfileOut | null>(null);
 const isLoading = ref(false);
 const errorMessage = ref('');
 const lastUpdatedAt = ref<Date | null>(null);
@@ -207,6 +258,203 @@ const parseAndSortRows = (rows: Array<HydroponicOut>): Array<HydroponicOut> => {
     .filter((row) => Boolean(row.timestamp))
     .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 };
+
+const activeNutritionProfileLabel = computed(() => {
+  return activeNutritionProfile.value?.plant_name ?? 'Acuan umum sayuran daun';
+});
+
+const defaultTargets = {
+  moisture: { min: 60, max: 80 },
+  temperature: { min: 24, max: 28 },
+  ph: { min: 5.5, max: 6.5 },
+  tds: { min: 560, max: 840 },
+  humidity: { min: 60, max: 80 },
+};
+
+const currentTargets = computed(() => {
+  const profile = activeNutritionProfile.value;
+  if (!profile) {
+    return defaultTargets;
+  }
+
+  return {
+    moisture: { min: profile.moisture_min, max: profile.moisture_max },
+    temperature: { min: profile.temperature_min, max: profile.temperature_max },
+    ph: { min: profile.ph_min, max: profile.ph_max },
+    tds: { min: profile.tds_min, max: profile.tds_max },
+    humidity: { min: profile.humidity_min, max: profile.humidity_max },
+  };
+});
+
+type MetricStats = {
+  average: number;
+  minimum: number;
+  maximum: number;
+};
+
+const getStats = (values: Array<number | null | undefined>): MetricStats | null => {
+  const numericValues = values.filter((value): value is number => typeof value === 'number');
+  if (!numericValues.length) {
+    return null;
+  }
+
+  const sum = numericValues.reduce((accumulator, value) => accumulator + value, 0);
+  return {
+    average: sum / numericValues.length,
+    minimum: Math.min(...numericValues),
+    maximum: Math.max(...numericValues),
+  };
+};
+
+const formatNumber = (value: number, digits = 1): string => value.toFixed(digits);
+
+const formatPeriodLabel = (): string => {
+  const selected = periodOptions.find((option) => option.value === selectedPeriod.value);
+  return selected?.label.toLowerCase() ?? 'rentang ini';
+};
+
+const buildInsight = (
+  title: string,
+  unit: string,
+  stats: MetricStats | null,
+  target: { min: number; max: number },
+  type: 'moisture' | 'temperature' | 'humidity' | 'ph' | 'tds',
+): { title: string; value: string; target: string; description: string; badge: string; tone: 'good' | 'warn' | 'bad'; key: string } => {
+  const profileName = activeNutritionProfile.value?.plant_name ?? 'sayuran daun';
+  const periodLabel = formatPeriodLabel();
+
+  if (!stats) {
+    return {
+      key: title,
+      title,
+      value: '-',
+      target: `${formatNumber(target.min)} - ${formatNumber(target.max)}${unit}`,
+      description: `Belum ada data ${title.toLowerCase()} pada ${periodLabel}.`,
+      badge: 'No Data',
+      tone: 'warn',
+    };
+  }
+
+  const average = stats.average;
+  const maximum = stats.maximum;
+  const withinRange = average >= target.min && average <= target.max;
+  const belowRange = average < target.min;
+  const formattedAverage = formatNumber(average);
+  const formattedMax = formatNumber(maximum);
+  const targetText = `${formatNumber(target.min)} - ${formatNumber(target.max)}${unit}`;
+
+  if (type === 'moisture' || type === 'humidity') {
+    return {
+      key: title,
+      title,
+      value: `${formattedAverage}${unit}`,
+      target: targetText,
+      badge: withinRange ? 'Stable' : belowRange ? 'Dry' : 'Wet',
+      tone: withinRange ? 'good' : belowRange ? 'warn' : 'bad',
+      description: withinRange
+        ? `Rata-rata moisture pada ${periodLabel} berada di ${formattedAverage}${unit} dengan puncak ${formattedMax}${unit}. Kondisi ini masih selaras dengan kebutuhan ${profileName}, sehingga media tanam cenderung cukup lembap dan akar tetap dapat menyerap nutrisi dengan stabil.`
+        : belowRange
+          ? `Rata-rata moisture pada ${periodLabel} hanya ${formattedAverage}${unit}, di bawah target ${targetText}. Media mulai mengering dan irigasi perlu dievaluasi agar tanaman ${profileName} tidak mengalami penurunan penyerapan nutrisi.`
+          : `Rata-rata moisture pada ${periodLabel} berada di ${formattedAverage}${unit}, melampaui target ${targetText}. Media cenderung terlalu basah dan aerasi akar perlu diperiksa supaya tidak terjadi stres akibat kurang oksigen.`,
+    };
+  }
+
+  if (type === 'temperature') {
+    return {
+      key: title,
+      title,
+      value: `${formattedAverage}°C`,
+      target: targetText,
+      badge: withinRange ? 'Optimal' : belowRange ? 'Cold' : 'Hot',
+      tone: withinRange ? 'good' : belowRange ? 'warn' : 'bad',
+      description: withinRange
+        ? `Suhu rata-rata ${formattedAverage}°C pada ${periodLabel} berada di zona ideal ${targetText}. Kisaran ini mendukung kerja enzim, respirasi, dan penyerapan nutrisi pada ${profileName}.`
+        : belowRange
+          ? `Suhu rata-rata ${formattedAverage}°C berada di bawah kisaran ${targetText}. Pertumbuhan dapat melambat dan metabolisme tanaman ${profileName} cenderung kurang aktif.`
+          : `Suhu rata-rata ${formattedAverage}°C berada di atas kisaran ${targetText}. Risiko stres panas meningkat sehingga tanaman ${profileName} perlu pendinginan atau penyesuaian lingkungan.`,
+    };
+  }
+
+  if (type === 'ph') {
+    return {
+      key: title,
+      title,
+      value: formattedAverage,
+      target: targetText,
+      badge: withinRange ? 'Balanced' : belowRange ? 'Acidic' : 'Alkaline',
+      tone: withinRange ? 'good' : belowRange ? 'warn' : 'bad',
+      description: withinRange
+        ? `Nilai pH rata-rata ${formattedAverage} masih berada di rentang aman ${targetText}. Kondisi ini membantu menjaga ketersediaan unsur hara makro dan mikro untuk ${profileName}.`
+        : belowRange
+          ? `Nilai pH rata-rata ${formattedAverage} lebih asam dari target ${targetText}. Pada kondisi seperti ini beberapa unsur hara bisa menjadi terlalu mudah larut dan memicu ketidakseimbangan nutrisi.`
+          : `Nilai pH rata-rata ${formattedAverage} lebih basa dari target ${targetText}. Pada kondisi ini unsur mikro cenderung kurang tersedia, sehingga tanaman ${profileName} berisiko mengalami lockout nutrisi.`,
+    };
+  }
+
+  return {
+    key: title,
+    title,
+    value: `${formattedAverage} ppm`,
+    target: targetText,
+    badge: withinRange ? 'Ready' : belowRange ? 'Low' : 'High',
+    tone: withinRange ? 'good' : belowRange ? 'warn' : 'bad',
+    description: withinRange
+      ? `TDS rata-rata ${formattedAverage} ppm dengan puncak ${formattedMax} ppm masih cocok untuk ${profileName}. Konsentrasi larutan nutrisi cukup untuk mendukung pertumbuhan vegetatif pada ${periodLabel}.`
+      : belowRange
+        ? `TDS rata-rata ${formattedAverage} ppm masih di bawah target ${targetText}. Larutan nutrisi terlalu encer dan suplai unsur hara perlu ditambah agar kebutuhan ${profileName} tercukupi.`
+        : `TDS rata-rata ${formattedAverage} ppm melampaui target ${targetText}. Larutan nutrisi cenderung terlalu pekat dan bisa menimbulkan stres osmotik pada tanaman ${profileName}.`,
+  };
+};
+
+const metricInsights = computed(() => {
+  const moistureSeries = timelinePoints.value.map((point) => {
+    if (typeof point.moistureAvg === 'number') {
+      return point.moistureAvg;
+    }
+
+    const moistureValues = [
+      point.moisture1,
+      point.moisture2,
+      point.moisture3,
+      point.moisture4,
+      point.moisture5,
+      point.moisture6,
+    ].filter((value): value is number => typeof value === 'number');
+
+    if (!moistureValues.length) {
+      return null;
+    }
+
+    return moistureValues.reduce((sum, value) => sum + value, 0) / moistureValues.length;
+  });
+
+  const temperatureSeries = timelinePoints.value.map((point) => {
+    if (typeof point.temperatureAvg === 'number') {
+      return point.temperatureAvg;
+    }
+
+    const temperatureValues = [point.temperatureTop, point.temperatureBottom].filter((value): value is number => typeof value === 'number');
+    if (!temperatureValues.length) {
+      return null;
+    }
+
+    return temperatureValues.reduce((sum, value) => sum + value, 0) / temperatureValues.length;
+  });
+
+  const moistureStats = getStats(moistureSeries);
+  const temperatureStats = getStats(temperatureSeries);
+  const humidityStats = getStats(timelinePoints.value.map((point) => point.humidityAvg));
+  const phStats = getStats(timelinePoints.value.map((point) => point.ph));
+  const tdsStats = getStats(timelinePoints.value.map((point) => point.tds));
+
+  return {
+    moisture: buildInsight('Moisture', '%', moistureStats, currentTargets.value.moisture, 'moisture'),
+    temperature: buildInsight('Suhu', '°C', temperatureStats, currentTargets.value.temperature, 'temperature'),
+    humidity: buildInsight('Humidity', '%', humidityStats, currentTargets.value.humidity, 'humidity'),
+    ph: buildInsight('pH', '', phStats, currentTargets.value.ph, 'ph'),
+    tds: buildInsight('TDS', 'ppm', tdsStats, currentTargets.value.tds, 'tds'),
+  };
+});
 
 const hasTimelineData = computed(() => timelineSeries.value.length > 0);
 
@@ -406,6 +654,19 @@ const fetchHydroponicRows = async (period: PeriodKey): Promise<Array<HydroponicO
   return rows;
 };
 
+const loadActiveNutritionProfile = async (): Promise<void> => {
+  try {
+    activeNutritionProfile.value = await PlantNutritionProfilesService.getActiveNutritionProfile();
+  } catch (error) {
+    if (error instanceof Error && (error as { status?: number }).status === 404) {
+      activeNutritionProfile.value = null;
+      return;
+    }
+
+    activeNutritionProfile.value = null;
+  }
+};
+
 const resetRange = (): void => {
   selectedPeriod.value = '24h';
   void refreshData();
@@ -434,6 +695,7 @@ watch(selectedPeriod, () => {
 });
 
 onMounted(async () => {
+  await loadActiveNutritionProfile();
   await refreshData();
   refreshTimerId = window.setInterval(refreshData, 5 * 60 * 1000);
 });
@@ -468,6 +730,8 @@ onUnmounted(() => {
 }
 
 .toolbar-card,
+.profile-card,
+.insight-card,
 .main-chart-card,
 .sub-chart-card {
   background: #fff;
@@ -485,6 +749,124 @@ onUnmounted(() => {
   flex-wrap: wrap;
 }
 
+.profile-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 18px 20px;
+}
+
+.profile-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.profile-card__header h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.profile-card__header p {
+  margin: 0;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.profile-card__control {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: min(100%, 280px);
+}
+
+.profile-card__control label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.nutrition-profile-select {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.insight-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.insight-card {
+  padding: 18px 18px 16px;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+}
+
+.insight-card.good {
+  background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 100%);
+}
+
+.insight-card.warn {
+  background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%);
+}
+
+.insight-card.bad {
+  background: linear-gradient(180deg, #fef2f2 0%, #ffffff 100%);
+}
+
+.insight-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.insight-card__header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #0f172a;
+}
+
+.insight-card__badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.insight-card__value {
+  margin: 0;
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.insight-card__range {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.insight-card__description {
+  margin: 10px 0 0;
+  color: #334155;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
 .toolbar-meta h2 {
   margin: 0 0 8px;
   font-size: 18px;
@@ -495,6 +877,10 @@ onUnmounted(() => {
   margin: 0;
   color: #64748b;
   font-size: 14px;
+}
+
+.toolbar-meta__profile {
+  margin-top: 4px;
 }
 
 .last-updated {
@@ -559,6 +945,71 @@ onUnmounted(() => {
   color: #b91c1c;
   border-radius: 12px;
   padding: 12px 14px;
+}
+
+.metric-insight {
+  margin-top: 16px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+}
+
+.metric-insight.good {
+  background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 100%);
+}
+
+.metric-insight.warn {
+  background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%);
+}
+
+.metric-insight.bad {
+  background: linear-gradient(180deg, #fef2f2 0%, #ffffff 100%);
+}
+
+.metric-insight__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.metric-insight__header h4 {
+  margin: 0;
+  font-size: 15px;
+  color: #0f172a;
+}
+
+.metric-insight__badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.metric-insight__value {
+  margin: 0;
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.metric-insight__range {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.metric-insight__description {
+  margin: 10px 0 0;
+  color: #334155;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .card-header {

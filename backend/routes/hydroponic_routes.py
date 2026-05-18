@@ -8,7 +8,7 @@ from fastapi import (
     HTTPException,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
-from utils.deps import get_session, get_db_session, get_current_user
+from utils.deps import get_session, get_db_session, get_current_user, get_optional_current_user
 from services.hydroponic_service import HydroponicService
 from schemas.hydroponic import (
     HydroponicIn,
@@ -154,6 +154,7 @@ async def get_public_hydroponic_data(
     limit: int = 25,
     start_date: str | None = None,
     end_date: str | None = None,
+    current_user: UserOut | None = Depends(get_optional_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> ResponseList[HydroponicOut]:
     """Endpoint publik untuk mendapatkan data hidroponik terbaru tanpa autentikasi."""
@@ -165,7 +166,9 @@ async def get_public_hydroponic_data(
     if start_date and end_date:
         start_dt = _parse_datetime_input(start_date)[0]
         end_dt = _parse_datetime_input(end_date)[0]
-        if end_dt - start_dt > timedelta(days=7):
+        if end_dt - start_dt > timedelta(days=7) and (
+            current_user is None or current_user.role not in {"admin", "superadmin"}
+        ):
             raise HTTPException(
                 status_code=400,
                 detail="Date range cannot exceed 7 days for public endpoint",
