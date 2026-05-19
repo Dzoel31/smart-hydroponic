@@ -23,6 +23,24 @@ role `actuator`. Untuk CoAP, backend bertindak sebagai CoAP client yang mengirim
 | `backend/eval/esp/websocket/esp8266/esp8266.ino` | Firmware evaluasi WebSocket aktuator dengan format ACK yang sama. |
 | `backend/eval/esp/coap/esp8266/esp8266.ino` | Firmware evaluasi CoAP aktuator yang membuka endpoint `actuator/control`. |
 
+## Struktur Firmware Per Skenario
+
+Firmware eksperimen dipisahkan di `backend/eval/esp/scenario_*` agar setiap
+skenario memiliki definisi log dan latency yang jelas.
+
+```text
+backend/eval/esp/
+  scenario_1_node_to_server/
+  scenario_2_sensor_to_actuator/
+  scenario_3_dashboard_to_actuator/
+```
+
+Gunakan folder `scenario_1_node_to_server` untuk pengujian node-server,
+`scenario_2_sensor_to_actuator` untuk pengujian sensor-server-actuator, dan
+`scenario_3_dashboard_to_actuator` untuk pengujian command dashboard ke aktuator.
+Folder lama `websocket/`, `coap/`, dan `dummy/` tetap tersedia sebagai referensi
+awal.
+
 ## Konfigurasi CoAP Aktuator
 
 Backend mengirim request CoAP ke ESP8266 Actuator melalui helper

@@ -9,7 +9,17 @@ from queue import Queue, Empty
 import serial
 
 
-METRIC_PATTERN = re.compile(r"\[METRIC\]\s+Seq:\s*(\d+)\s+\|\s+Latency:\s*([0-9]+(?:\.[0-9]+)?)\s*ms")
+METRIC_PATTERNS = [
+    re.compile(
+        r"\[(?P<metric_type>S1_METRIC|METRIC)\]\s+Seq:\s*(?P<seq>\d+)\s+\|\s+Latency:\s*(?P<latency>[0-9]+(?:\.[0-9]+)?)\s*ms"
+    ),
+    re.compile(
+        r"\[(?P<metric_type>S2_METRIC)\]\s+Seq:\s*(?P<seq>\d+)\s+\|\s+EndToEndLatency:\s*(?P<latency>[0-9]+(?:\.[0-9]+)?)\s*ms"
+    ),
+    re.compile(
+        r"\[(?P<metric_type>S3_METRIC)\]\s+CommandId:\s*(?P<command_id>[^|]+)\|\s+AckTimeMs:\s*(?P<ack_time_ms>\d+)"
+    ),
+]
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -38,15 +48,37 @@ def ensure_header(path: str) -> None:
 
     with open(path, "w", newline="", encoding="utf-8") as csv_file:
         writer = csv.writer(csv_file)
-        writer.writerow(["logged_at", "source_port", "device_label", "seq", "latency_ms", "raw_line"])
+        writer.writerow(
+            [
+                "logged_at",
+                "source_port",
+                "device_label",
+                "metric_type",
+                "seq",
+                "command_id",
+                "latency_ms",
+                "ack_time_ms",
+                "raw_line",
+            ]
+        )
 
 
 def parse_metric_line(raw_line: str):
-    match = METRIC_PATTERN.search(raw_line)
-    if not match:
-        return None
+    for pattern in METRIC_PATTERNS:
+        match = pattern.search(raw_line)
+        if not match:
+            continue
 
-    return int(match.group(1)), float(match.group(2))
+        groups = match.groupdict()
+        return {
+            "metric_type": groups.get("metric_type"),
+            "seq": groups.get("seq", ""),
+            "command_id": (groups.get("command_id") or "").strip(),
+            "latency_ms": groups.get("latency", ""),
+            "ack_time_ms": groups.get("ack_time_ms", ""),
+        }
+
+    return None
 
 
 def serial_reader(port: str, baud: int, device_label: str, queue: Queue) -> None:
@@ -101,16 +133,27 @@ def main() -> None:
 
                 print(f"[{device_label}] {raw_line}")
 
-                if "[METRIC]" not in raw_line:
+                if "_METRIC]" not in raw_line and "[METRIC]" not in raw_line:
                     continue
 
                 parsed = parse_metric_line(raw_line)
                 if not parsed:
                     continue
 
-                seq, latency_ms = parsed
                 logged_at = datetime.now().isoformat(timespec="seconds")
-                writer.writerow([logged_at, source_port, device_label, seq, latency_ms, raw_line])
+                writer.writerow(
+                    [
+                        logged_at,
+                        source_port,
+                        device_label,
+                        parsed["metric_type"],
+                        parsed["seq"],
+                        parsed["command_id"],
+                        parsed["latency_ms"],
+                        parsed["ack_time_ms"],
+                        raw_line,
+                    ]
+                )
                 csv_file.flush()
 
     except KeyboardInterrupt:
