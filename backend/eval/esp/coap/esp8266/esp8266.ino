@@ -22,7 +22,9 @@ const float TEMPERATURE_THRESHOLD = 30.0;
 // CoAP Configuration
 IPAddress coapServerIp(172, 25, 21, 236);
 const uint16_t coapServerPort = 8683;
+const uint16_t localCoapPort = 5683;
 const char *coapPathStatus = "coap/hydroponics/actuator";
+const char *coapPathControl = "actuator/control";
 
 int seq = 1;
 unsigned long send_time = 0;
@@ -42,10 +44,12 @@ Coap coap(udp, 512);
 
 // Function prototypes
 void connectToWifi();
+void handleCoapControl(const char *payload);
 void updateRelays();
 void sendStatusUpdateCoap();
 void checkConnections();
 void callback_response(CoapPacket &packet, IPAddress ip, int port);
+void callback_control(CoapPacket &packet, IPAddress ip, int port);
 
 void setup() {
     Serial.begin(115200);
@@ -58,7 +62,8 @@ void setup() {
 
     connectToWifi();
     coap.response(callback_response);
-    coap.start();
+    coap.server(callback_control, coapPathControl);
+    coap.start(localCoapPort);
 }
 
 void loop() {
@@ -113,6 +118,85 @@ void callback_response(CoapPacket &packet, IPAddress ip, int port) {
         Serial.print("[CoAP] Payload: ");
         Serial.println(payload);
     }
+}
+
+void callback_control(CoapPacket &packet, IPAddress ip, int port) {
+    char payload[packet.payloadlen + 1];
+    memcpy(payload, packet.payload, packet.payloadlen);
+    payload[packet.payloadlen] = '\0';
+
+    Serial.print("[CoAP] Control received: ");
+    Serial.println(payload);
+
+    handleCoapControl(payload);
+
+    StaticJsonDocument<256> ackDoc;
+    ackDoc["type"] = "actuator_ack";
+    ackDoc["ack_type"] = "coap_control";
+    ackDoc["pump_status"] = state.pump_status;
+    ackDoc["light_status"] = state.light_status;
+    ackDoc["automation_status"] = state.automation_status;
+    ackDoc["device_id"] = DEVICE_ID;
+    ackDoc["ack_time_ms"] = millis();
+
+    StaticJsonDocument<256> requestDoc;
+    if (deserializeJson(requestDoc, payload) == DeserializationError::Ok) {
+        if (requestDoc.containsKey("command_id")) {
+            ackDoc["command_id"] = requestDoc["command_id"];
+        }
+        if (requestDoc.containsKey("correlation_id")) {
+            ackDoc["correlation_id"] = requestDoc["correlation_id"];
+        }
+    }
+
+    String ackPayload;
+    serializeJson(ackDoc, ackPayload);
+    coap.sendResponse(ip, port, packet.messageid, (char *)ackPayload.c_str());
+    Serial.println("[ACTUATOR_ACK] " + ackPayload);
+}
+
+void handleCoapControl(const char *payload) {
+    StaticJsonDocument<512> doc;
+    DeserializationError error = deserializeJson(doc, payload);
+    if (error) {
+        Serial.println("[CoAP] JSON parse error");
+        return;
+    }
+
+    JsonVariant data;
+    if (doc.containsKey("payload")) {
+        data = doc["payload"];
+    } else {
+        data = doc.as<JsonVariant>();
+    }
+
+    if (data.containsKey("automation_status")) {
+        state.automation_status = data["automation_status"].as<int>();
+    }
+    if (data.containsKey("moisture_avg")) {
+        state.moisture_avg = data["moisture_avg"].as<float>();
+    }
+    if (data.containsKey("temperature_avg")) {
+        state.temperature_avg = data["temperature_avg"].as<float>();
+    }
+
+    if (state.automation_status == 1) {
+        if (!isnan(state.moisture_avg)) {
+            state.pump_status = (state.moisture_avg < MOISTURE_THRESHOLD) ? 1 : 0;
+        }
+        if (!isnan(state.temperature_avg)) {
+            state.light_status = (state.temperature_avg < TEMPERATURE_THRESHOLD) ? 1 : 0;
+        }
+    } else {
+        if (data.containsKey("pump_status")) {
+            state.pump_status = data["pump_status"].as<int>();
+        }
+        if (data.containsKey("light_status")) {
+            state.light_status = data["light_status"].as<int>();
+        }
+    }
+
+    updateRelays();
 }
 
 void sendStatusUpdateCoap() {

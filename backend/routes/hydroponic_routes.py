@@ -26,6 +26,7 @@ import time
 from utils.manager import manager
 from utils.aggregator import aggregator
 from utils.evaluation_tracker import evaluation_tracker
+from utils.coap_actuator_client import send_actuator_command_coap
 from utils.deps import require_role
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -153,18 +154,44 @@ async def get_hydroponic_data(
 )
 async def control_hydroponic_actuators(
     command: HydroponicDataActuator,
+    transport: str = "websocket",
     current_user: UserOut = Depends(get_current_user),
 ) -> HydroponicControlResult:
     """Forward dashboard commands to the actuator and wait for device ACK.
 
     This supports Scenario 3 evaluation. The command is tagged with a
-    command_id, sent to connected actuator WebSocket clients, then the server
-    waits briefly for ESP8266 to echo an actuator_ack with the same id.
+    command_id, then sent to the actuator using WebSocket or CoAP. CoAP mode is
+    selected with `?transport=coap`.
     """
     require_role(current_user, {"admin", "superadmin"})
+    if transport not in {"websocket", "coap"}:
+        raise HTTPException(
+            status_code=400,
+            detail="transport must be either 'websocket' or 'coap'",
+        )
+
     command_id = f"dashboard-{uuid4()}"
     time_start = time.time()
     command_payload = command.model_dump()
+
+    if transport == "coap":
+        coap_payload = {
+            "type": "command",
+            "command_id": command_id,
+            "time_start": time_start,
+            "payload": command_payload,
+        }
+        coap_result = await send_actuator_command_coap(coap_payload)
+        return HydroponicControlResult(
+            **command_payload,
+            command_id=command_id,
+            confirmed=coap_result["confirmed"],
+            time_start=time_start,
+            time_end=coap_result["ended_at"],
+            latency_ms=coap_result["latency_ms"],
+            actuator_response=coap_result,
+        )
+
     pending = await evaluation_tracker.create(
         message_id=command_id,
         scenario="dashboard_control",
