@@ -2,6 +2,17 @@
 
 <!-- version list -->
 
+## v1.2.0 (2026-05-19)
+
+### Features
+
+- Add nutrition profile
+  ([`9fabd36`](https://github.com/IoT-Smart-Hydroponic/smart-hydroponic/commit/9fabd36b798f41d01ac44fdc5b354c293cd6955c))
+
+- **analytics**: Use public hydroponic data endpoint
+  ([`7075392`](https://github.com/IoT-Smart-Hydroponic/smart-hydroponic/commit/70753929d2fbea666ec86a5fa37dc20441495531))
+
+
 ## v1.1.0 (2026-04-17)
 
 ### Features
