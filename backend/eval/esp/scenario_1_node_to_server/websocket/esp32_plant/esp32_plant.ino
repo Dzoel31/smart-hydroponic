@@ -26,13 +26,13 @@
 // ============================ NETWORK ============================
 const char *WIFI_SSID = "FIK-Hotspot";                                                                    // <-- isi
 const char *WIFI_PASSWORD = "T4nahairku";                                                              // <-- isi
-const char *WS_SERVER_URL = "ws://103.147.92.179/smart-hydroponic/api/v2/hydroponics/ws/sensor-data"; // contoh: "ws://192.168.1.10:3000/ws"
+const char *WS_SERVER_URL = "ws://172.25.21.236:8000/smart-hydroponic/api/v2/hydroponics/ws/sensor-data"; // contoh: "ws://192.168.1.10:3000/ws"
 const char *DEVICE_ID = "esp32-plant-device";
 
 // ============================ INTERVALS ============================
 const unsigned long FLOW_INTERVAL = 1000;      // 1s
 const unsigned long ULTRASONIC_INTERVAL = 500; // 0.5s
-const unsigned long SEND_INTERVAL = 5000;      // 5s
+const unsigned long SEND_INTERVAL = 30000;      // 5s
 const unsigned long WIFI_TIMEOUT = 10000;      // 10s (hanya dipakai di setup awal)
 
 // Retry cooldowns (non-blocking)

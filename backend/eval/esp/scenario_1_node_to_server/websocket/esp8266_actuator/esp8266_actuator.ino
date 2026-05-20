@@ -16,9 +16,9 @@
 const char *WIFI_SSID = "FIK-Hotspot";
 const char *WIFI_PASSWORD = "T4nahairku";
 // const char *WEBSOCKET_URL = "ws://103.147.92.179";
-const char *WEBSOCKET_URL = "ws://103.147.92.179/smart-hydroponic/api/v2/hydroponics/ws/actuator-data";
+const char *WEBSOCKET_URL = "ws://172.25.21.236:8000/smart-hydroponic/api/v2/hydroponics/ws/actuator-data";
 const char *DEVICE_ID = "esp8266-actuator-device";
-const unsigned long DATA_SEND_INTERVAL = 5000;      // 5 seconds
+const unsigned long DATA_SEND_INTERVAL = 30000;      // 5 seconds
 const unsigned long WIFI_RECONNECT_TIMEOUT = 10000; // 10 seconds
 const float MOISTURE_THRESHOLD = 60;
 const float TEMPERATURE_THRESHOLD = 30.0;

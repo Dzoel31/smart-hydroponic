@@ -14,12 +14,12 @@
 // --- Jaringan ---
 const char *WIFI_SSID = "FIK-Hotspot";
 const char *WIFI_PASSWORD = "T4nahairku";
-const char *server_url = "ws://103.147.92.179/smart-hydroponic/api/v2/hydroponics/ws/environment-data"; // contoh: "ws://
+const char *server_url = "ws://172.25.21.236:8000/smart-hydroponic/api/v2/hydroponics/ws/environment-data";
 const char *DEVICE_ID = "esp32-environment-device";
 
 // --- Umum ---
 #define SCOUNT 30
-const unsigned long SEND_INTERVAL = 5000;     // 5s
+const unsigned long SEND_INTERVAL = 30000;     // 5s
 const unsigned long WIFI_TIMEOUT = 15000;     // buat attempt awal di setup
 const unsigned long TDS_SAMPLE_INTERVAL = 40; // 40 ms
 
