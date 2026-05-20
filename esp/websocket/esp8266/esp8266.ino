@@ -1,6 +1,7 @@
 #include <ESP8266WiFi.h>
 // #include <ESP8266HTTPClient.h>
 // #include <WiFi.h>
+#include <EEPROM.h>
 #include <ArduinoJson.h>
 #include <WiFiClientSecure.h>
 #include <Arduino.h>
@@ -23,15 +24,25 @@ const unsigned long WIFI_RECONNECT_TIMEOUT = 10000; // 10 seconds
 const float MOISTURE_THRESHOLD = 60;
 const float TEMPERATURE_THRESHOLD = 30.0;
 
+const uint32_t STATE_MAGIC = 0x48594C31;
+const int EEPROM_SIZE = 64;
+
+struct PersistedState
+{
+    uint32_t magic;
+    uint8_t automationStatus;
+    uint8_t pumpStatus;
+    uint8_t lightStatus;
+    float lastMoistureAvg;
+    float lastTemperatureAvg;
+};
+
 // State variables
 bool isActuatorConnected = false;
 int pumpStatus = 0;
 int lightStatus = 0;
 int automationStatus = 0;
 int moistureLevel = 0;
-int seq = 1;
-unsigned long send_time = 0;
-int last_seq_sent = 0;
 
 float lastMoistureAvg = 0;
 float lastTemperatureAvg = 0;
@@ -47,9 +58,10 @@ void registerDevice();
 void handleAutomaticMode(JsonVariant data);
 void handleManualMode(JsonVariant data);
 void updateOutputs();
+void loadPersistedState();
+void savePersistedState();
 void onMessageCallback(WebsocketsMessage message);
 void sendStatusUpdate();
-void sendActuatorAck(const char *messageType, const char *messageId);
 void checkConnections();
 
 void setup()
@@ -68,8 +80,55 @@ void setup()
     digitalWrite(RELAY_LIGHT_1, HIGH); // OFF initially
     digitalWrite(RELAY_LIGHT_2, HIGH); // OFF initially
 
+    EEPROM.begin(EEPROM_SIZE);
+    loadPersistedState();
+    updateOutputs();
+
     connectToWifi();
     setupWebSocket();
+}
+
+void loadPersistedState()
+{
+    PersistedState storedState;
+    EEPROM.get(0, storedState);
+
+    if (storedState.magic != STATE_MAGIC)
+    {
+        automationStatus = 0;
+        pumpStatus = 0;
+        lightStatus = 0;
+        lastMoistureAvg = 0;
+        lastTemperatureAvg = 0;
+        savePersistedState();
+        Serial.println("No persisted actuator state found, using safe defaults.");
+        return;
+    }
+
+    automationStatus = storedState.automationStatus;
+    pumpStatus = storedState.pumpStatus;
+    lightStatus = storedState.lightStatus;
+    lastMoistureAvg = storedState.lastMoistureAvg;
+    lastTemperatureAvg = storedState.lastTemperatureAvg;
+
+    Serial.println("Restored actuator state from EEPROM.");
+    Serial.println("Automation status: " + String(automationStatus));
+    Serial.println("Pump status: " + String(pumpStatus));
+    Serial.println("Light status: " + String(lightStatus));
+}
+
+void savePersistedState()
+{
+    PersistedState storedState;
+    storedState.magic = STATE_MAGIC;
+    storedState.automationStatus = automationStatus;
+    storedState.pumpStatus = pumpStatus;
+    storedState.lightStatus = lightStatus;
+    storedState.lastMoistureAvg = lastMoistureAvg;
+    storedState.lastTemperatureAvg = lastTemperatureAvg;
+
+    EEPROM.put(0, storedState);
+    EEPROM.commit();
 }
 
 void registerDevice()
@@ -152,14 +211,6 @@ void onMessageCallback(WebsocketsMessage message)
         return;
     }
 
-    if (doc.containsKey("status") && String(doc["status"].as<const char *>()) == "ack")
-    {
-        int ackSeq = doc.containsKey("seq") ? doc["seq"].as<int>() : last_seq_sent;
-        unsigned long latency = millis() - send_time;
-        Serial.printf("[METRIC] Seq: %d | Latency: %lu ms\n", ackSeq, latency);
-        return;
-    }
-
     if (doc.isNull())
     {
         Serial.println("No data field in message");
@@ -188,7 +239,12 @@ void onMessageCallback(WebsocketsMessage message)
         lastMoistureAvg = dataToProcess["moisture_avg"].as<float>();
         Serial.println("Moisture Avg: " + String(lastMoistureAvg));
     }
-    if (dataToProcess.containsKey("avg_temperature"))
+    if (dataToProcess.containsKey("temperature_avg"))
+    {
+        lastTemperatureAvg = dataToProcess["temperature_avg"].as<float>();
+        Serial.println("Temperature Avg: " + String(lastTemperatureAvg));
+    }
+    else if (dataToProcess.containsKey("avg_temperature"))
     {
         lastTemperatureAvg = dataToProcess["avg_temperature"].as<float>();
         Serial.println("Temperature Avg: " + String(lastTemperatureAvg));
@@ -206,14 +262,7 @@ void onMessageCallback(WebsocketsMessage message)
 
     updateOutputs();
 
-    if (doc.containsKey("command_id"))
-    {
-        sendActuatorAck("dashboard_control", doc["command_id"].as<const char *>());
-    }
-    else if (doc.containsKey("correlation_id"))
-    {
-        sendActuatorAck("inter_node_forward", doc["correlation_id"].as<const char *>());
-    }
+    savePersistedState();
 }
 
 void handleAutomaticMode(JsonVariant data)
@@ -222,7 +271,7 @@ void handleAutomaticMode(JsonVariant data)
 
     // Get moisture and temperature values
     float moistureAvg = data.containsKey("moisture_avg") ? data["moisture_avg"].as<float>() : lastMoistureAvg;
-    float temperatureAvg = data.containsKey("avg_temperature") ? data["avg_temperature"].as<float>() : lastTemperatureAvg;
+    float temperatureAvg = data.containsKey("temperature_avg") ? data["temperature_avg"].as<float>() : (data.containsKey("avg_temperature") ? data["avg_temperature"].as<float>() : lastTemperatureAvg);
 
     // Only update if values are valid
     if (!isnan(moistureAvg))
@@ -266,7 +315,6 @@ void sendStatusUpdate()
 {
     StaticJsonDocument<256> jsonDoc;
 
-    jsonDoc["seq"] = seq;
     jsonDoc["pump_status"] = pumpStatus;
     jsonDoc["light_status"] = lightStatus;
     jsonDoc["automation_status"] = automationStatus;
@@ -276,34 +324,8 @@ void sendStatusUpdate()
 
     if (clientActuator.available())
     {
-        last_seq_sent = seq;
-        send_time = millis();
         clientActuator.send(jsonString);
-        seq++;
         Serial.println("Status sent: " + jsonString);
-    }
-}
-
-void sendActuatorAck(const char *messageType, const char *messageId)
-{
-    StaticJsonDocument<256> ackDoc;
-    ackDoc["type"] = "actuator_ack";
-    ackDoc["ack_type"] = messageType;
-    ackDoc["command_id"] = messageId;
-    ackDoc["correlation_id"] = messageId;
-    ackDoc["pump_status"] = pumpStatus;
-    ackDoc["light_status"] = lightStatus;
-    ackDoc["automation_status"] = automationStatus;
-    ackDoc["device_id"] = DEVICE_ID;
-    ackDoc["ack_time_ms"] = millis();
-
-    String ackString;
-    serializeJson(ackDoc, ackString);
-
-    if (clientActuator.available())
-    {
-        clientActuator.send(ackString);
-        Serial.println("[ACTUATOR_ACK] " + ackString);
     }
 }
 

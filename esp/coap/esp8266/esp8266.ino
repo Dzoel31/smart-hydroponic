@@ -24,7 +24,7 @@ IPAddress coapServerIp(172, 25, 21, 236);
 const uint16_t coapServerPort = 8683;
 const uint16_t localCoapPort = 5683;
 const char *coapPathStatus = "coap/hydroponics/actuator";
-const char *coapPathControl = "actuator/control";
+const char *coapPathControl = "coap/hydroponics/actuator";
 
 int seq = 1;
 unsigned long send_time = 0;
