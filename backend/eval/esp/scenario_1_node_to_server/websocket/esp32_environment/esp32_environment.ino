@@ -89,13 +89,14 @@ int compareInt(const void *a, const void *b)
 }
 
 // Baca tegangan rata-rata (Volt) pakai ADC kalibrasi mV
-float readVoltage_V(int pin, int samples = 10)
+float readVoltage_V(int pin, int samples = 5)
 {
     long mv = 0;
     for (int i = 0; i < samples; i++)
     {
         mv += analogReadMilliVolts(pin); // sudah kalibrasi via eFuse
         delay(1);                        // beri waktu scheduler
+        yield();
     }
     return (mv / (float)samples) / 1000.0f; // mV -> V
 }
@@ -239,9 +240,13 @@ void loop()
 
         // 1) DHT
         temperature_atas = dht11Atas.readTemperature();
+        yield();
         humidity_atas = dht11Atas.readHumidity();
+        yield();
         temperature_bawah = dht11Bawah.readTemperature();
+        yield();
         humidity_bawah = dht11Bawah.readHumidity();
+        yield();
         if (isnan(temperature_atas))
             temperature_atas = 0;
         if (isnan(humidity_atas))
@@ -253,13 +258,19 @@ void loop()
         yield();
 
         // 2) pH (pakai ADC mV -> Volt)
-        float volt_pH = readVoltage_V(PH_SENSOR_PIN, 10);
+        float volt_pH = readVoltage_V(PH_SENSOR_PIN);
         phValue = slope * volt_pH + intercept;
+        yield();
 
         // 3) TDS (median filter)
         for (int i = 0; i < SCOUNT; i++)
+        {
             analogBufferTemp[i] = analogBuffer[i];
+            if ((i % 8) == 0)
+                yield();
+        }
         qsort(analogBufferTemp, SCOUNT, sizeof(int), compareInt);
+        yield();
         float medianRaw = (SCOUNT & 1)
                               ? analogBufferTemp[(SCOUNT - 1) / 2]
                               : (analogBufferTemp[SCOUNT / 2] + analogBufferTemp[SCOUNT / 2 - 1]) / 2.0f;
@@ -309,11 +320,18 @@ void loop()
         last_seq_sent = seq;
         send_time = millis();
 
-        if (isWebsocketConnected)
+        if (isWebsocketConnected && client.available())
         {
-            client.send(payload);
-            seq++;
-            Serial.println("Terkirim: " + payload);
+            if (client.send(payload))
+            {
+                seq++;
+                Serial.println("Terkirim: " + payload);
+            }
+            else
+            {
+                isWebsocketConnected = false;
+                Serial.println("[WS] Send failed, reconnect scheduled.");
+            }
         }
         else
         {
