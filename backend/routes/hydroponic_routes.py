@@ -210,8 +210,15 @@ async def hydroponic_data_websocket(device_type: str, websocket: WebSocket):
     try:
         register = await websocket.receive_json()
         physical_id = register.get("physical_id", "unknown_device")
-    except Exception:
-        await websocket.close(code=4001, reason="Invalid registration data")
+    except WebSocketDisconnect:
+        logger.info(f"Client {session_id} disconnected before registration")
+        return
+    except Exception as exc:
+        logger.warning(f"Invalid registration data from {session_id}: {exc}")
+        try:
+            await websocket.close(code=4001, reason="Invalid registration data")
+        except RuntimeError:
+            pass
         return
 
     role = config["role"]
@@ -280,7 +287,10 @@ async def hydroponic_data_websocket(device_type: str, websocket: WebSocket):
 
     except Exception as e:
         await manager.disconnect(room=room, role=role, client_id=session_id)
-        await websocket.close(code=1011)
+        try:
+            await websocket.close(code=1011)
+        except RuntimeError:
+            pass
         logger.error(f"Error: {e}")
 
 
