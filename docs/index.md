@@ -1,64 +1,108 @@
-# Smart Hydroponic - IoT System
+# Smart Hydroponic - Buku Panduan
 
-Sistem Otomasi Pengendalian dan Pemantauan Tanaman menggunakan teknologi IoT.
+Selamat datang di dokumentasi Smart Hydroponic. Dokumentasi ini dibuat untuk membantu pembaca memahami proyek secara bertahap, mulai dari konsep IoT sampai cara menjalankan backend, frontend, database, dan deployment.
 
-Dibangun menggunakan:
+Repository proyek: [IoT-Smart-Hydroponic/smart-hydroponic](https://github.com/IoT-Smart-Hydroponic/smart-hydroponic)
 
-1. ESP32 dan ESP8266 sebagai mikrokontroler utama.
-2. Berbagai sensor untuk mengumpulkan data tanaman dan lingkungan.
-3. PostgreSQL dengan ekstensi TimescaleDB sebagai database untuk menyimpan data time-series.
-4. Dashboard web untuk visualisasi data dan kontrol sistem.
-5. JavaScript (Node.js) dan Python sebagai bahasa pemrograman backend.
-6. NGINX sebagai web server dan reverse proxy.
-7. Docker untuk containerization aplikasi backend dan database.
+## Tujuan Proyek
 
-## Introduction
+Hidroponik adalah metode menanam tanpa tanah dengan memanfaatkan air bernutrisi. Metode ini cocok untuk kondisi lahan terbatas, tetapi tetap membutuhkan pemantauan yang rutin. Beberapa hal penting seperti suhu, kelembaban, pH, TDS, aliran air, dan tinggi air perlu diketahui agar tanaman tetap berada pada kondisi yang baik.
 
-Saat ini kondisi global dihadapi dengan ketersediaan lahan dan air yang telah mencapai batasnya, hanya terdapat sedikit ruang untuk meningkatkan jumlah lahan yang subur sedangkan lebih dari 95% makanan berasal dari pertanian. Krisis global ini juga terjadi dalam skala lokal, contohnya di Kota Depok yang mengalami penurunan jumlah ketersediaan pertanian lahan kering sebesar 122.67 Ha dan sawah sebesar 31.89 Ha. Kondisi ini menuntut adanya solusi baru dalam sistem produksi pangan yang tidak lagi bergantung pada perluasan lahan, melainkan pada peningkatan efisiensi. Salah satu solusi yang semakin relevan adalah sistem pertanian yang tidak berbasis tanah seperti hidroponik yang mampu menghasilkan pangan dengan penggunaan air yang lebih hemat dan tidak memerlukan lahan subur dalam skala luas. Untuk memaksimalkan potensinya, penerapan sistem ini perlu diintegrasikan dengan teknologi Internet of Things (IoT) untuk menciptakan sistem smart hydroponic yang presisi dan otomatis.
+Smart Hydroponic menggunakan teknologi IoT untuk membantu proses tersebut. Sensor membaca kondisi lingkungan dan tanaman, mikrokontroler mengirim data ke server, lalu dashboard web menampilkan data agar pengguna dapat memantau sistem dengan lebih mudah.
 
-## System Overview
+## Gambaran Sistem
 
-Sistem IoT Smart Hydroponic dirancang untuk mengotomatisasi proses pengendalian dan pemantauan tanaman hidroponik. Sistem ini menggunakan berbagai sensor seperti moisture sensor, water flow, dan water level untuk mengumpulkan data tanaman, kemudian sensor untuk mengambil data linkungan seperti suhu, kelembaban, ph dan TDS. Data yang diterima akan dikirim ke server untuk diproses dan disimpan. Sistem ini juga dilengkapi dengan aktuator seperti pompa air dan lampu yang dapat dikendalikan secara automatis maupun manual melalui dashboard web.
+Sistem ini terdiri dari lima bagian besar:
 
-## Hardware Components
+1. **Sensor** membaca kondisi tanaman dan lingkungan.
+2. **Mikrokontroler** seperti ESP32 atau ESP8266 mengirim data sensor ke backend.
+3. **Backend API** menerima data, memproses permintaan, dan menyediakan data untuk dashboard.
+4. **Database** menyimpan data sensor agar dapat dilihat kembali.
+5. **Dashboard Web** menampilkan data dan menyediakan kontrol untuk aktuator.
+
+Alur sederhananya:
+
+```mermaid
+flowchart LR
+    Sensor["Sensor<br/>suhu, pH, TDS, aliran air"] --> MCU["ESP32 / ESP8266<br/>membaca dan mengirim data"]
+    MCU --> API["Backend FastAPI<br/>menerima dan memproses data"]
+    API <--> DB["PostgreSQL + TimescaleDB<br/>menyimpan data berbasis waktu"]
+    UI["Dashboard Vue + TypeScript<br/>menampilkan data"] --> API
+    API --> UI
+    API <--> Actuator["Aktuator<br/>pompa, relay, lampu"]
+```
+
+## Istilah Penting
+
+- **IoT** adalah konsep menghubungkan perangkat fisik ke jaringan agar dapat mengirim atau menerima data.
+- **Sensor** adalah alat untuk membaca kondisi tertentu, misalnya suhu atau pH.
+- **Aktuator** adalah alat yang melakukan aksi, misalnya pompa air atau relay.
+- **REST API** adalah cara aplikasi saling bertukar data melalui endpoint HTTP.
+- **WebSocket** adalah koneksi dua arah yang cocok untuk data real-time.
+- **Database time-series** adalah database yang cocok untuk menyimpan data berdasarkan waktu, seperti data sensor setiap beberapa detik.
+
+Istilah lain dijelaskan di halaman [Glossary](glossary.md).
+
+## Komponen Hardware
+
+Komponen yang digunakan atau didukung dalam proyek ini:
 
 1. ESP32
 2. ESP8266
 3. DHT11
-4. Soil Moisture Sensor
-5. Water Pump
-6. Water Flow Sensor
-7. Ultrasonic Sensor
-8. pH Sensor
-9. TDS Sensor
-10. Motor DC
-11. Grow Light LED
-12. Relay Module
-13. Breadboard
-14. Jumper Wires
+4. Soil moisture sensor
+5. Water pump
+6. Water flow sensor
+7. Ultrasonic sensor
+8. pH sensor
+9. TDS sensor
+10. Grow light LED
+11. Relay module
+12. Breadboard
+13. Jumper wires
 
-## Software Components
+Penjelasan fungsi setiap komponen ada di [Hardware dan Sensor](hardware.md).
 
-Software yang digunakan dalam proyek ini untuk mendukung pengembangan sistem IoT Smart Hydroponic meliputi:
+## Komponen Software
 
-1. **Arduino IDE**: Digunakan untuk pemrograman mikrokontroler ESP32 dan ESP8266.
-2. **Visual Studio Code**: Digunakan sebagai lingkungan pengembangan utama untuk menulis kode dan mengelola proyek.
-3. **Backend Framework**: Node.js dengan Express.js untuk mengembangkan API backend.
-4. **Database**: Penyimpanan data menggunakan PostgreSQL dan ekstensi TimescaleDB untuk mengelola data time-series.
-5. **Dashboard**: Dashboard dikembangkan menggunakan HTML, CSS, dan JavaScript. (Sedang pengembangan menggunakan React.js)
-6. **Protokol Komunikasi**: Protokol komunikasi yang digunakan saat ini adalah WebSocket dan REST API untuk komunikasi antara perangkat IoT dan server.
+Software yang digunakan dalam proyek:
+
+1. **Arduino IDE** untuk memprogram ESP32 dan ESP8266.
+2. **Python/FastAPI** untuk backend utama.
+3. **Pydantic, SQLAlchemy, dan Alembic** untuk validasi data, akses database, dan migration.
+4. **Vue 3 + Vite + TypeScript** untuk dashboard web.
+5. **PostgreSQL + TimescaleDB** untuk menyimpan data sensor.
+6. **Docker Compose** untuk menjalankan beberapa service sekaligus.
+7. **NGINX** untuk reverse proxy ketika aplikasi dipasang di server.
+
+Penjelasan fungsi setiap teknologi ada di [Tech Stack](tech-stack.md).
+
+## Struktur Proyek Singkat
+
+Repository ini dibagi menjadi beberapa bagian:
+
+- `backend/` untuk API dan logika server.
+- `frontend-vue/` untuk dashboard web.
+- `esp/` untuk program ESP32 dan ESP8266.
+- `docs/` untuk dokumentasi pembelajaran.
+- `docker-compose.*.yml` untuk menjalankan service.
+
+Penjelasan folder yang lebih lengkap ada di [Struktur Proyek](project-structure.md).
+
+## Cara Membaca Dokumentasi
+
+Jika Anda baru pertama kali masuk ke proyek ini, gunakan urutan berikut:
+
+1. [Cara Membaca Dokumentasi Ini](how-to-read.md)
+2. [Memulai Sistem Smart Hydroponic](getting-started.md)
+3. [Arsitektur Sistem](architecture.md)
+4. [Tech Stack](tech-stack.md)
+5. [Struktur Proyek](project-structure.md)
+6. [Hardware dan Sensor](hardware.md)
+7. [Pengembangan Backend](backend/development.md)
+8. [Deploy Frontend](frontend/deploy.md)
+9. [Troubleshooting](troubleshooting.md)
 
 ## Architecture Diagram
 
-![Arsitektur IoT Smart Hydroponic FIK UPNVJ](./assets/architecture_system.png)
-
-## Contributors
-
-| Name                                | Role/ID                      |
-|-------------------------------------|------------------------------|
-| Rido Zulfahmi, S.Kom., M.T.         | Ketua                        |
-| Nurhuda Maulana, S.T., M.T.         | Anggota                      |
-| 2210511044 - Rahman Ilyas Al-Kahfi  | Anggota                      |
-| 2210511056 - Adinda Rizki Sya'bana Diva | Anggota                  |
-| 2210511084 - Dzulfikri Adjmal       | Anggota                      |
-| 2210511122 - Sudarma Yudho Prayitno | Anggota                      |
+![Arsitektur IoT Smart Hydroponic FIK UPNVJ](./assets/hydroponic_architecture.svg)
