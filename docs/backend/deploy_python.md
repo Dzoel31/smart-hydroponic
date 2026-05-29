@@ -1,78 +1,108 @@
-# Cara Deploy Backend (Python)
+# Deploy Backend Python
 
-Untuk Backend yang menggunakan Python dapat dideploy menggunakan Docker. Berikut adalah langkah-langkah untuk melakukan deploy:
+## Tujuan Bagian Ini
 
-1. **Clone Repository**
+Bagian ini menjelaskan cara menjalankan backend Python/FastAPI menggunakan Docker. Cara ini cocok untuk server karena dependency aplikasi dan environment lebih mudah dikontrol.
 
-    Gunakan perintah berikut untuk meng-clone repository:
+## Yang Perlu Disiapkan
 
-     ```bash
-     git clone https://github.com/IoT-Smart-Hydroponic/smart-hydroponic.git -b dev-python
-     ```
+1. Server Linux atau komputer yang sudah memiliki Docker.
+2. File `.env` yang sudah diisi.
+3. Akses ke repository proyek.
+4. Port backend yang dapat diakses, misalnya `8000`.
 
-    !!! note "Catatan"
-        Pastikan Anda meng-clone repository dengan branch `dev-python`. Branch ini khusus untuk backend yang menggunakan Python. Dapat berubah sewaktu-waktu ketika versi stabil sudah siap.
+Jika deployment dilakukan di VPS atau server jarak jauh, pastikan Anda sudah bisa masuk ke server melalui [SSH](deploy_ssh.md) terlebih dahulu.
 
-2. **Masuk ke Direktori Backend**
+## Langkah-Langkah
 
-    Setelah repository berhasil di-clone, masuk ke direktori backend dengan perintah berikut:
+Jalankan dari root repository.
 
-    ```bash
-    cd smart-hydroponic/backend
-    ```
+1. Clone repository.
 
-3. **Build Docker Image**
+   ```bash
+   git clone https://github.com/IoT-Smart-Hydroponic/smart-hydroponic.git
+   ```
 
-    Gunakan perintah berikut untuk membuild Docker image:
+2. Masuk ke folder proyek.
 
-    ```bash
-    docker compose up -d
-    ```
+   ```bash
+   cd smart-hydroponic
+   ```
 
-    Perintah ini akan membaca file `docker-compose.yml` yang ada di direktori backend dan membuild image TimeScaleDB + PostgreSQL serta image untuk aplikasi backend Python.
+3. Siapkan file `.env`.
 
-4. **Cek Status Container**
-    Setelah build selesai, cek status container dengan perintah berikut:
+   ```bash
+   cp .env.example .env
+   ```
 
-    ```bash
-    docker ps
-    ```
+   Isi nilai database, secret JWT, dan konfigurasi lain sesuai server.
 
-    Pastikan container untuk backend berjalan dengan baik.
+4. Jalankan service development atau produksi.
 
-5. **Cek Log Aplikasi**
-    Untuk memastikan aplikasi berjalan dengan baik, cek log aplikasi dengan perintah berikut:
+   Untuk development:
 
-    ```bash
-    docker logs <container_id>
-    ```
+   ```bash
+   docker compose -f docker-compose.dev.yml up -d
+   ```
 
-    Gantilah `<container_id>` dengan ID container backend yang didapat dari perintah `docker ps`.
+   Untuk produksi:
 
-    atau bisa menggunakan:
+   ```bash
+   docker compose -f docker-compose.prod.yml up -d
+   ```
 
-    ```bash
-    docker compose logs -f
-    ```
+5. Cek status container.
 
-    Perintah ini akan menampilkan log secara real-time.
+   ```bash
+   docker compose -f docker-compose.prod.yml ps
+   ```
 
-6. **Akses Aplikasi**
-    Akses aplikasi dengan membuka browser dan mengunjungi `http://your_domain_or_ip`.
+6. Cek log aplikasi.
 
-    Gantilah `your_domain_or_ip` dengan domain atau alamat IP server tempat backend di-deploy.
+   ```bash
+   docker compose -f docker-compose.prod.yml logs -f api
+   ```
 
-7. **Menghentikan Aplikasi**
-    Jika Anda perlu menghentikan aplikasi, gunakan perintah berikut:
+7. Buka health check.
 
-    ```bash
-    docker compose down
-    ```
+   ```text
+   http://alamat-server:8000/health
+   ```
 
-    Perintah ini akan menghentikan dan menghapus container yang berjalan.
+   Ganti `alamat-server` dengan domain atau IP server, misalnya `192.168.1.10` atau `hydroponic.example.com`.
 
-    dan untuk menjalankan kembali:
+   Jika server memakai NGINX dengan prefix `/smart-hydroponic/api/v2`, URL publik dapat menjadi:
 
-    ```bash
-    docker compose up -d
-    ```
+   ```text
+   http://alamat-server/smart-hydroponic/api/v2/health
+   ```
+
+## Cara Mengecek Berhasil
+
+Backend dianggap berhasil dideploy jika:
+
+1. Container `hydroponic-backend` berjalan.
+2. Health check mengembalikan status sehat.
+3. Backend dapat mengakses database.
+4. Dashboard dapat mengirim request ke backend.
+
+## Menghentikan Aplikasi
+
+Untuk menghentikan service produksi:
+
+```bash
+docker compose -f docker-compose.prod.yml down
+```
+
+Untuk menjalankan kembali:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
+
+## Jika Terjadi Error
+
+- Jika container `api` berhenti, cek log `api`.
+- Jika database belum sehat, cek log `db`.
+- Jika backend tidak bisa diakses dari luar server, cek firewall, security group, dan konfigurasi NGINX.
+- Jika URL memakai domain, pastikan DNS sudah mengarah ke IP server.
