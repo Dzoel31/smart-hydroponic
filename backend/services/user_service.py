@@ -183,38 +183,58 @@ class UserService:
         await self.session.commit()
         return result.scalar_one_or_none() is not None
 
-    async def change_password(
-        self, user_id: str, current_password: str, new_password: str
+    async def change_password(self, user_id: str, current_password: str, new_password: str,
     ) -> bool:
+
         user = await self.get_user_by_id(user_id)
+
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise HTTPException(
+                status_code=404,
+                detail="User not found"
+            )
 
         stored_password = user["password"]
-        if not bcrypt.checkpw(
-            current_password.encode("utf-8"), stored_password.encode("utf-8")
-        ):
-            raise HTTPException(status_code=400, detail="Current password is invalid")
 
-        if bcrypt.checkpw(
-            new_password.encode("utf-8"), stored_password.encode("utf-8")
+        if not bcrypt.checkpw(
+            current_password.encode("utf-8"),
+            stored_password.encode("utf-8"),
         ):
             raise HTTPException(
                 status_code=400,
-                detail="New password must be different from current password",
+                detail="Current password is invalid",
             )
 
-        hashed = bcrypt.hashpw(new_password.encode("utf-8"), bcrypt.gensalt()).decode(
-            "utf-8"
+        hashed = bcrypt.hashpw(
+            new_password.encode("utf-8"),
+            bcrypt.gensalt(),
+        ).decode("utf-8")
+
+        await self.session.execute(
+            text(
+                """
+                UPDATE user_data
+                SET password = :password
+                WHERE userid = :user_id
+                """
+            ),
+            {
+                "password": hashed,
+                "user_id": user_id,
+            },
         )
-        stmt = text(
-            """
-            UPDATE user_data
-            SET password = :password,
-                token_version = token_version + 1
-            WHERE userid = :user_id
-            """
+
+        await self.session.execute(
+            text(
+                """
+                DELETE FROM user_sessions
+                WHERE userid = :userid
+                """
+            ),
+            {
+                "userid": user_id,
+            },
         )
-        await self.session.execute(stmt, {"password": hashed, "user_id": user_id})
+
         await self.session.commit()
         return True

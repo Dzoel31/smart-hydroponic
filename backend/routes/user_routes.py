@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response, Cookie
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from schemas.user import (
@@ -11,11 +11,10 @@ from schemas.user import (
     PasswordChange,
 )
 from services.user_service import UserService
-from utils.deps import (
-    get_current_user,
-    get_session,
-    require_role,
-)
+from services.session_service import SessionService
+from utils.deps import get_current_user, get_session, require_role
+from utils.session_deps import get_current_user_session
+
 from schemas.responses import (
     MessageResponse,
     responses_400,
@@ -94,34 +93,60 @@ async def register_user(
     },
 )
 async def login_user(
-    user_credentials: UserLogin, session: AsyncSession = Depends(get_session)
+    user_credentials: UserLogin, response: Response, session: AsyncSession = Depends(get_session)
 ):
     service = UserService(session)
     try:
         user = await service.authenticate_user(user_credentials)
-        db_user = await service.get_user_by_id(str(user.userid))
-        token_version = int(db_user.get("token_version", 0)) if db_user else 0
-        access_token = service.create_access_token(
-            data={
-                "sub": user.username,
-                "id": str(user.userid),
+        session_service = SessionService(session)
+        session_id = await session_service.create_session(
+            str(user.userid)
+        )
+        
+        response.set_cookie(
+            key="session_id",
+            value=session_id,
+            httponly=True,
+            secure=False,
+            samesite="lax",
+            max_age=3600,
+        )
+
+        return {
+            "detail": "Login successful",
+            "user": {
+                "userid": str(user.userid),
+                "username": user.username,
+                "email": user.email,
+                "fullname": user.fullname,
                 "role": user.role,
-                "tv": token_version,
-            }
-        )
-        return LoginResponse(
-            access_token=access_token,
-            user=AccountSummary(
-                userid=user.userid,
-                username=user.username,
-                email=user.email,
-                fullname=user.fullname,
-                role=user.role,
-            ),
-        )
+            },
+        }
+
     except SQLAlchemyError:
         raise HTTPException(status_code=500, detail="Database error")
 
+@router.post(
+    "/logout",
+    operation_id="logoutUser",
+)
+async def logout_user(
+    response: Response,
+    session_id: str | None = Cookie(default=None),
+    session: AsyncSession = Depends(get_session),
+):
+    if session_id:
+        session_service = SessionService(session)
+
+        await session_service.delete_session(
+            session_id
+        )
+
+    response.delete_cookie("session_id")
+
+    return {
+        "detail": "Logout successful"
+    }
 
 @router.get(
     "/me",
@@ -134,7 +159,7 @@ async def login_user(
     },
 )
 async def read_current_user(
-    current_user: UserOut = Depends(get_current_user),
+    current_user: UserOut = Depends(get_current_user_session),
 ):
     try:
         return current_user
@@ -153,7 +178,7 @@ async def read_current_user(
     },
 )
 async def read_users(
-    current_user: UserOut = Depends(get_current_user),
+    current_user: UserOut = Depends(get_current_user_session),
     session: AsyncSession = Depends(get_session),
 ):
     require_role(current_user, {"admin", "superadmin"})
@@ -180,7 +205,7 @@ async def read_users(
 async def update_user(
     user_id: str,
     user_update: UserUpdate,
-    current_user: UserOut = Depends(get_current_user),
+    current_user: UserOut = Depends(get_current_user_session),
     session: AsyncSession = Depends(get_session),
 ):
     require_role(current_user, {"user", "admin", "superadmin"})
@@ -220,7 +245,7 @@ async def update_user(
 )
 async def delete_user(
     user_id: str,
-    current_user: UserOut = Depends(get_current_user),
+    current_user: UserOut = Depends(get_current_user_session),
     session: AsyncSession = Depends(get_session),
 ):
     require_role(current_user, {"admin", "superadmin"})
@@ -250,7 +275,7 @@ async def delete_user(
 )
 async def change_password(
     payload: PasswordChange,
-    current_user: UserOut = Depends(get_current_user),
+    current_user: UserOut = Depends(get_current_user_session),
     session: AsyncSession = Depends(get_session),
 ):
     service = UserService(session)
