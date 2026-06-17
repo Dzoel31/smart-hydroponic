@@ -5,16 +5,17 @@ from schemas.user import (
     UserCreate,
     UserOut,
     UserLogin,
-    LoginResponse,
     AccountSummary,
     UserUpdate,
     PasswordChange,
 )
 from services.user_service import UserService
 from services.session_service import SessionService
-from utils.deps import get_current_user, get_session, require_role
-from utils.session_deps import get_current_user_session
-
+from utils.session_deps import (
+    get_current_user_session,
+    get_session,
+    require_role,
+)
 from schemas.responses import (
     MessageResponse,
     responses_400,
@@ -23,6 +24,7 @@ from schemas.responses import (
     responses_404,
     responses_500,
 )
+from pydantic import BaseModel
 import bcrypt
 import logging
 
@@ -35,6 +37,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
+class SessionLoginResponse(BaseModel):
+    message: str
+    user: AccountSummary
+
 def _integrity_error_detail(error: IntegrityError) -> str:
     lowered = str(error).lower()
     if "username" in lowered:
@@ -42,7 +48,6 @@ def _integrity_error_detail(error: IntegrityError) -> str:
     if "email" in lowered:
         return "Email already registered"
     return "Data integrity violation"
-
 
 @router.post(
     "/register",
@@ -56,7 +61,7 @@ def _integrity_error_detail(error: IntegrityError) -> str:
 )
 async def register_user(
     user: UserCreate,
-    current_user: UserOut = Depends(get_current_user),
+    current_user: UserOut = Depends(get_current_user_session),
     session: AsyncSession = Depends(get_session),
 ):
     require_role(current_user, {"superadmin"})
@@ -81,10 +86,9 @@ async def register_user(
         await session.rollback()
         raise HTTPException(status_code=500, detail="Database error")
 
-
 @router.post(
     "/login",
-    response_model=LoginResponse,
+    response_model=SessionLoginResponse,
     operation_id="loginUser",
     responses={
         **responses_400,
@@ -93,42 +97,50 @@ async def register_user(
     },
 )
 async def login_user(
-    user_credentials: UserLogin, response: Response, session: AsyncSession = Depends(get_session)
+    user_credentials: UserLogin,
+    response: Response,                       
+    session: AsyncSession = Depends(get_session),
 ):
     service = UserService(session)
+    session_service = SessionService(session)
     try:
         user = await service.authenticate_user(user_credentials)
-        session_service = SessionService(session)
-        session_id = await session_service.create_session(
-            str(user.userid)
-        )
-        
+        db_user = await service.get_user_by_id(str(user.userid))
+
+        session_id = await session_service.create_session(dict(db_user))
+
         response.set_cookie(
             key="session_id",
             value=session_id,
-            httponly=True,
-            secure=False,
-            samesite="lax",
-            max_age=3600,
+            httponly=True,      
+            max_age=30 * 60,
         )
 
-        return {
-            "detail": "Login successful",
-            "user": {
-                "userid": str(user.userid),
-                "username": user.username,
-                "email": user.email,
-                "fullname": user.fullname,
-                "role": user.role,
-            },
-        }
+        logger.info("User '%s' login via session", user.username)
 
+        return SessionLoginResponse(
+            message="Login berhasil",
+            user=AccountSummary(
+                userid=user.userid,
+                username=user.username,
+                email=user.email,
+                fullname=user.fullname,
+                role=user.role,
+            ),
+        )
+    except HTTPException:
+        raise
     except SQLAlchemyError:
         raise HTTPException(status_code=500, detail="Database error")
 
 @router.post(
     "/logout",
+    response_model=MessageResponse,
     operation_id="logoutUser",
+    responses={
+        **responses_401,
+        **responses_500,
+    },
 )
 async def logout_user(
     response: Response,
@@ -137,16 +149,11 @@ async def logout_user(
 ):
     if session_id:
         session_service = SessionService(session)
+        await session_service.invalidate_session(session_id)
+        logger.info("Session diinvalidasi: %s...", session_id[:12])
 
-        await session_service.delete_session(
-            session_id
-        )
-
-    response.delete_cookie("session_id")
-
-    return {
-        "detail": "Logout successful"
-    }
+    response.delete_cookie(key="session_id")
+    return MessageResponse(detail="Logout berhasil. Session telah dinonaktifkan.")
 
 @router.get(
     "/me",
@@ -165,7 +172,6 @@ async def read_current_user(
         return current_user
     except SQLAlchemyError as e:
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
-
 
 @router.get(
     "",
@@ -188,7 +194,6 @@ async def read_users(
         return [UserOut.model_validate(user) for user in users]
     except SQLAlchemyError:
         raise HTTPException(status_code=500, detail="Database error")
-
 
 @router.patch(
     "/{user_id}",
@@ -222,15 +227,12 @@ async def update_user(
         updated_user = await service.update_user(user_id, user_update)
         if not updated_user:
             raise HTTPException(status_code=404, detail="User not found")
-
         return UserOut.model_validate(updated_user)
-
     except IntegrityError as e:
         raise HTTPException(status_code=400, detail=_integrity_error_detail(e))
     except SQLAlchemyError as e:
         logger.error("Database error: %s", e)
         raise HTTPException(status_code=500, detail="Database error")
-
 
 @router.delete(
     "/{user_id}",
@@ -260,7 +262,6 @@ async def delete_user(
         await session.rollback()
         logger.error("Database error: %s", e)
         raise HTTPException(status_code=500, detail="Database error")
-
 
 @router.post(
     "/change-password",
