@@ -190,6 +190,7 @@ celerybeat.pid
 =======
 # Environments
 .env
+.env.session
 >>>>>>> dev-python
 .venv
 env/
