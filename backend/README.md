@@ -1,89 +1,92 @@
-# Backend Service untuk Aplikasi Smart Hydroponic
+# Backend Smart Hydroponic
 
-## Steps to Run the Backend Service
+Backend adalah bagian aplikasi yang berjalan di server. Tugasnya menerima data dari perangkat IoT, menyediakan API untuk dashboard, mengatur autentikasi, dan menyimpan data ke PostgreSQL/TimescaleDB.
 
-1. **Clone the Repository**
-2. **Navigate to the Backend Directory**
+Backend utama saat ini menggunakan **Python**, **FastAPI**, **SQLAlchemy**, dan **Alembic**.
+
+## Tujuan Bagian Ini
+
+README ini membantu Anda menjalankan backend dari folder `backend`. Jika Anda baru pertama kali menjalankan seluruh sistem, baca dulu [panduan mulai dari nol](../docs/getting-started.md).
+
+## Yang Perlu Disiapkan
+
+1. Python sesuai versi pada `pyproject.toml`.
+2. `uv` untuk mengelola dependency Python.
+3. PostgreSQL dengan TimescaleDB.
+4. File `.env` yang berisi konfigurasi database dan secret aplikasi.
+
+## Struktur Penting
+
+- `main.py`: entrypoint FastAPI.
+- `routes/`: kumpulan endpoint API.
+- `models/`: model database.
+- `schemas/`: bentuk data request dan response.
+- `migrations/`: migration Alembic untuk perubahan struktur database.
+- `test/`: script test dan simulasi perangkat.
+
+## Menjalankan Backend Lokal
+
+Jalankan command berikut dari folder `backend`.
+
+1. Install dependency.
 
    ```bash
-    cd smart-hydroponic/backend
+   uv sync
    ```
 
-3. **Install Dependencies**
+   Tujuan command ini adalah menyiapkan virtual environment dan dependency Python.
 
-    ```bash
-    npm install
-    ```
+2. Siapkan file environment.
 
-4. **Set Up Environment Variables**
+   Jika Anda menjalankan backend dari root repository dengan Docker, gunakan `.env` di root. Jika menjalankan backend langsung dari folder `backend`, pastikan file `backend/.env` tersedia dan nilainya sesuai database lokal.
 
-   Create a `.env` file in the `backend` directory and add the necessary environment variables. You can use the `.env.example` file as a reference.
+3. Jalankan migration database.
 
    ```bash
-    cp .env.example .env
+   uv run alembic upgrade head
    ```
 
-   Then, edit the `.env` file to configure your environment variables.
+   Migration membuat atau memperbarui tabel database agar sesuai dengan kode backend.
 
-5. **Create pgpass File**
-
-   Create a `pgpass` file in your home directory to store your PostgreSQL credentials securely. The format is:
+4. Jalankan server.
 
    ```bash
-    hostname:port:database:username:password
+   uv run fastapi dev main.py
    ```
 
-   For example:
+5. Buka health check.
 
-   ```bash
-   localhost:5432:iot_hydroponik:admin_iot_db:your_password
+   ```text
+   http://localhost:8000/health
    ```
 
-   Make sure to set the correct permissions for the `pgpass` file:
+## Cara Mengecek Berhasil
 
-   ```bash
-    chmod 600 ~/.pgpass
-   ```
+Backend dianggap berjalan jika:
 
-   for windows users, you can create a file named `pgpass.conf` in the `%APPDATA%\postgresql\` directory with the same content. Reference: [Neon PostgreSQL Password](https://neon.com/postgresql/postgresql-administration/postgresql-password-file-pgpass/)
+1. Terminal menampilkan server FastAPI aktif.
+2. Endpoint `/health` mengembalikan status sehat.
+3. Endpoint `/db-test` dapat mengembalikan hasil query sederhana jika database sudah benar.
 
-6. **Install TimescaleDB for PostgreSQL**
+## Simulasi Perangkat
 
-   This project uses TimescaleDB for time-series data. Follow the installation instructions for your operating system from the [TimescaleDB documentation](https://docs.tigerdata.com/self-hosted/latest/install/).
+Folder `test` berisi beberapa script simulasi, misalnya:
 
-7. **Run Database Migrations**
+- `test_esp32.py`
+- `test_esp32_environment.py`
+- `test_esp8266_environment.py`
 
-   ```bash
-    npm run migrate up
-   ```
+Contoh menjalankan simulasi dari folder `backend`:
 
-   or
+```bash
+uv run python test/test_esp32.py
+```
 
-    ```bash
-    npm run migrate:latest
-    ```
+Gunakan simulasi setelah backend dan database berjalan.
 
-8. **Start the Backend Service**
+## Jika Terjadi Error
 
-   ```bash
-    npm run start
-   ```
-
-## For Simulation
-
-1. **Change to test directory**
-
-   ```bash
-    cd smart-hydroponic/backend/test
-   ```
-
-2. **Run the Simulation**
-
-   ```bash
-    py <nama_file_simulasi>.py
-    ```
-
-    File:
-    - test_esp32.py
-    - test_esp32_environment.py
-    - test_esp8266_environment.py
+- Jika dependency gagal dipasang, cek versi Python dan instalasi `uv`.
+- Jika backend tidak bisa connect database, cek `DATABASE_URL`, `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, dan `PGDATABASE`.
+- Jika migration gagal, pastikan database sudah hidup dan user database punya hak akses.
+- Jika endpoint tidak bisa dibuka, pastikan server berjalan di port yang benar.

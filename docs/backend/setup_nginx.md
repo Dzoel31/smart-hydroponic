@@ -1,93 +1,106 @@
-# Setup NGINX (Linux)
+# Setup NGINX
 
-NGINX dapat digunakan sebagai web server dan reverse proxy untuk aplikasi web. NGINX bekerja sebagai proxy yaitu dengan menerima permintaan dari klien kemudian meneruskannya ke server aplikasi yang sesuai. Misalkan, aplikasi berjalan di ip 123.123.123.123, sedangkan aplikasi yang berjalan di server pada localhost:15000, maka NGINX akan meneruskan permintaan dari klien ke localhost:15000.
+## Tujuan Bagian Ini
 
-Untuk mengatur NGINX, dapat mengikuti langkah-langkah berikut:
+NGINX digunakan sebagai reverse proxy. Artinya, pengguna mengakses domain atau IP server melalui NGINX, lalu NGINX meneruskan request ke backend atau frontend yang berjalan di port internal.
+
+Contoh:
+
+```text
+Browser -> NGINX port 80 -> Backend port 8000
+```
+
+## Yang Perlu Disiapkan
+
+1. Server Linux.
+2. NGINX.
+3. Backend atau frontend yang sudah berjalan.
+4. Domain atau IP server. Contoh: `192.168.1.10` atau `hydroponic.example.com`.
+
+Jika server diakses dari laptop, login terlebih dahulu melalui [SSH](deploy_ssh.md), lalu jalankan command NGINX di dalam server.
 
 ## Instalasi NGINX
 
-Untuk menginstal NGINX, gunakan perintah berikut:
+Jalankan di server:
 
 ```bash
 sudo apt update
 sudo apt-get install nginx
 ```
 
-## Konfigurasi NGINX
+## Membuat Konfigurasi Situs
 
-Setelah NGINX terinstal, konfigurasi dapat dilakukan dengan mengedit file konfigurasi utama yang biasanya terletak di `/etc/nginx/nginx.conf`. Namun untuk konfigurasi situs tertentu, Anda dapat membuat file baru di direktori `/etc/nginx/sites-available/` dan membuat symlink ke direktori `/etc/nginx/sites-enabled/`.
-
-## Konfigurasi untuk proyek Smart Hydroponic
-
-File konfigurasi untuk proyek Smart Hydroponic berada di path `/etc/nginx/sites-available/iot-hidroponik` dan dapat dibuat dengan perintah berikut:
+Buat file konfigurasi:
 
 ```bash
 sudo nano /etc/nginx/sites-available/iot-hidroponik
 ```
 
-Isi file konfigurasi tersebut dengan konten berikut:
+Contoh konfigurasi untuk meneruskan request ke backend pada port `8000`:
 
-```bash
+```nginx
 server {
-    listen 80; # Port default yang digunakan untuk HTTP
-    server_name your_domain_or_ip; # Ganti dengan domain atau IP Anda. IP bisa cek dengan `ip a`
+    listen 80;
+    server_name hydroponic.example.com;
 
     location / {
-        proxy_pass http://localhost:15000;  # Ganti dengan port aplikasi Anda
+        proxy_pass http://localhost:8000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
     }
 }
 ```
 
-Penjelasan konfigurasi:
+Ganti `hydroponic.example.com` dengan domain atau IP server Anda.
 
-- `listen 80;` - NGINX akan mendengarkan pada port 80.
-- `server_name your_domain_or_ip;` - Ganti dengan domain atau alamat IP server.
-- `location /` - Mengatur lokasi root untuk server.
-- `proxy_pass http://localhost:15000;` - Mengarahkan permintaan ke aplikasi yang berjalan pada port 15000 (ganti sesuai dengan port aplikasi Anda).
-- `proxy_set_header` - Mengatur header yang diperlukan untuk koneksi proxy.
-- `proxy_set_header Upgrade $http_upgrade;` - Memungkinkan WebSocket untuk berfungsi dengan baik.
-- `proxy_set_header Connection 'upgrade';` - Menangani koneksi upgrade. Biasanya diperlukan untuk WebSocket.
-- `proxy_set_header Host $host;` - Mengatur header Host.
-- `proxy_cache_bypass $http_upgrade;` - Melewati cache jika ada upgrade.
+## Penjelasan Singkat
 
-## Aktifkan Konfigurasi
+- `listen 80` berarti NGINX menerima request HTTP pada port 80.
+- `server_name` berisi domain atau IP yang digunakan pengguna.
+- `proxy_pass` adalah alamat aplikasi tujuan di dalam server.
+- Header `Upgrade` dan `Connection` membantu komunikasi WebSocket.
+- Header `X-Forwarded-*` meneruskan informasi request asli ke aplikasi.
 
-Setelah file konfigurasi dibuat, aktifkan dengan membuat symlink ke direktori `sites-enabled`:
+## Mengaktifkan Konfigurasi
+
+Buat symlink ke `sites-enabled`:
 
 ```bash
 sudo ln -s /etc/nginx/sites-available/iot-hidroponik /etc/nginx/sites-enabled/
 ```
 
-## Uji Konfigurasi NGINX
-
-Setelah konfigurasi selesai, uji konfigurasi NGINX untuk memastikan tidak ada kesalahan:
+Uji konfigurasi:
 
 ```bash
 sudo nginx -t
 ```
 
-Jika tidak ada kesalahan, Anda akan melihat pesan yang menyatakan bahwa konfigurasi NGINX `ok` atau `successful`. Setelah itu, restart NGINX untuk menerapkan perubahan:
+Jika hasilnya `ok` atau `successful`, restart NGINX:
 
 ```bash
 sudo systemctl restart nginx
 ```
 
-## Cek Status NGINX
+## Cara Mengecek Berhasil
 
-Untuk memastikan NGINX berjalan dengan baik dapat memeriksa statusnya dengan perintah berikut:
+1. Cek status NGINX.
 
-```bash
-sudo systemctl status nginx
-```
+   ```bash
+   sudo systemctl status nginx
+   ```
 
-Jika NGINX berjalan dengan baik, Anda akan melihat status `active (running)`.
+2. Buka domain atau IP server dari browser.
+3. Jika memakai backend, buka endpoint health check melalui domain.
 
-## Akses Aplikasi
+## Jika Terjadi Error
 
-Akses aplikasi dengan membuka browser dan mengunjungi `http://your_domain_or_ip`.
-Jika semuanya berjalan dengan benar, maka akan muncul halaman aplikasi Smart Hydroponic.
+- `502 Bad Gateway`: aplikasi tujuan belum berjalan atau `proxy_pass` salah.
+- `nginx -t` gagal: ada kesalahan sintaks konfigurasi.
+- Domain tidak terbuka: cek DNS, firewall, dan apakah port 80 dibuka.
+- WebSocket gagal: pastikan header `Upgrade` dan `Connection` ada.
