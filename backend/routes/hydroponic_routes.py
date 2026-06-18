@@ -8,7 +8,7 @@ from fastapi import (
     HTTPException,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
-from utils.deps import get_session, get_db_session, get_current_user, get_optional_current_user
+from utils.session_deps import get_session, get_db_session, get_current_user_session, get_optional_current_user
 from services.hydroponic_service import HydroponicService
 from schemas.hydroponic import (
     HydroponicIn,
@@ -96,7 +96,7 @@ async def get_specific_hydroponic_data(
     start_date: str | None = None,
     end_date: str | None = None,
     session: AsyncSession = Depends(get_session),
-    current_user: UserOut = Depends(get_current_user),
+    current_user: UserOut = Depends(get_current_user_session),
 ) -> ResponseList[HydroponicOut]:
     require_role(current_user, {"admin", "superadmin"})
     service = HydroponicService(session)
@@ -117,7 +117,7 @@ async def get_specific_hydroponic_data(
 async def add_hydroponic_data(
     hydroponic_data: HydroponicIn,
     session: AsyncSession = Depends(get_session),
-    current_user: UserOut = Depends(get_current_user),
+    current_user: UserOut = Depends(get_current_user_session),
 ) -> HydroponicOut:
     """Endpoint untuk menambahkan data hidroponik baru."""
     require_role(current_user, {"admin", "superadmin"})
@@ -136,7 +136,7 @@ async def get_hydroponic_data(
     limit: int = 25,
     start_date: str | None = None,
     end_date: str | None = None,
-    current_user: UserOut = Depends(get_current_user),
+    current_user: UserOut = Depends(get_current_user_session),
     session: AsyncSession = Depends(get_session),
 ) -> ResponseList[HydroponicOut]:
     require_role(current_user, {"user", "admin", "superadmin"})
@@ -184,7 +184,7 @@ async def get_public_hydroponic_data(
 )
 async def control_hydroponic_actuators(
     command: HydroponicDataActuator,
-    current_user: UserOut = Depends(get_current_user),
+    current_user: UserOut = Depends(get_current_user_session),
 ) -> HydroponicDataActuator:
     """Endpoint untuk mengontrol aktuator hidroponik (pump, light, automation)."""
     require_role(current_user, {"admin", "superadmin"})

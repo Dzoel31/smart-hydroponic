@@ -40,6 +40,7 @@
 import { ref, onMounted, onUnmounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { authState } from "../auth";
+import { UsersService } from "../api";
 
 defineProps({
   title: {
@@ -73,12 +74,16 @@ const toggleDropdown = () => {
   isDropdownOpen.value = !isDropdownOpen.value;
 };
 
-const handleLogout = () => {
-  if (authState && typeof authState.logout === 'function') {
-      authState.logout();
+const handleLogout = async () => {
+  try {
+    await UsersService.logoutUser();
+  } catch (error) {
+    console.error("Logout failed:", error);
+  } finally {
+    authState.logout();
+    isDropdownOpen.value = false;
+    router.push('/login');
   }
-  isDropdownOpen.value = false;
-  router.push('/login');
 };
 
 const closeDropdown = (e: MouseEvent) => {

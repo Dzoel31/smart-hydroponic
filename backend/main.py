@@ -4,7 +4,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
-from utils.session_deps import get_current_user_session
+from utils.session_deps import get_session
 from routes.user_routes import router as user_router
 from routes.hydroponic_routes import router as hydroponic_router
 from routes.nutrition_routes import router as nutrition_router
@@ -35,7 +35,10 @@ templates = Jinja2Templates(directory="templates")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:8080",
+        "http://localhost:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -57,6 +60,6 @@ async def health():
 
 
 @app.get("/db-test")
-async def db_test(session: AsyncSession = Depends(get_current_user_session)):
+async def db_test(session: AsyncSession = Depends(get_session)):
     result = await session.execute(text("SELECT 1"))
     return {"result": result.scalar()}

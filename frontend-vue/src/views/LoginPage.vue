@@ -110,12 +110,12 @@ const handleLogin = async (): Promise<void> => {
     const inputPassword = password.value;
     
     try {
-        const token = await UsersService.loginUser({
+        const response = await UsersService.loginUser({
             username: inputUsername,
             password: inputPassword
         });
 
-        authState.setSession(token.access_token, token.user);
+        authState.setSession(response.user);
         router.push('/dashboard');
 
     } catch (error) {

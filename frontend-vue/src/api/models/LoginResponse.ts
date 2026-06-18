@@ -4,8 +4,7 @@
 /* eslint-disable */
 import type { AccountSummary } from './AccountSummary';
 export type LoginResponse = {
-    access_token: string;
-    token_type?: string;
+    message: string;
     user: AccountSummary;
 };
 

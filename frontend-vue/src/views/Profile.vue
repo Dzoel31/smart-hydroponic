@@ -342,11 +342,8 @@ const syncProfile = (user: UserOut) => {
   const normalized = normalizeUser(user);
   Object.assign(userProfile, normalized);
   Object.assign(editForm, normalized);
-
-  const token = localStorage.getItem('token');
-  if (token) {
-    authState.setSession(token, user);
-  }
+    
+  authState.setSession(user);
 };
 
 const loadCurrentUser = async () => {

@@ -57,6 +57,21 @@ export class UsersService {
         });
     }
     /**
+     * Logout User
+     * @returns MessageResponse Successful Response
+     * @throws ApiError
+     */
+    public static logoutUser(): CancelablePromise<MessageResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/users/logout',
+            errors: {
+                401: `Unauthorized`,
+                500: `Internal Server Error`,
+            },
+        });
+    }
+    /**
      * Read Current User
      * @returns UserOut Successful Response
      * @throws ApiError

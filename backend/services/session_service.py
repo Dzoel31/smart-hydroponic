@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
-SESSION_EXPIRE_MINUTES = 30  # ubah ke 1 saat testing skenario timeout
+SESSION_EXPIRE_MINUTES = 1
 
 
 class SessionService:
@@ -14,11 +14,6 @@ class SessionService:
         self.session = session
 
     async def create_session(self, user: dict) -> str:
-        """
-        Terima dict user (hasil get_user_by_id),
-        buat session baru dan simpan ke DB.
-        """
-        # Nonaktifkan session lama milik user ini
         await self.session.execute(
             text("""
                 UPDATE user_sessions

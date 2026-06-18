@@ -145,8 +145,7 @@ export const resolve = async <T>(options: ApiRequestOptions, resolver?: T | Reso
 };
 
 export const getHeaders = async (config: OpenAPIConfig, options: ApiRequestOptions, formData?: FormData): Promise<Record<string, string>> => {
-    const [token, username, password, additionalHeaders] = await Promise.all([
-        resolve(options, config.TOKEN),
+    const [username, password, additionalHeaders] = await Promise.all([
         resolve(options, config.USERNAME),
         resolve(options, config.PASSWORD),
         resolve(options, config.HEADERS),
@@ -165,10 +164,6 @@ export const getHeaders = async (config: OpenAPIConfig, options: ApiRequestOptio
         ...headers,
         [key]: String(value),
     }), {} as Record<string, string>);
-
-    if (isStringWithValue(token)) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
 
     if (isStringWithValue(username) && isStringWithValue(password)) {
         const credentials = base64(`${username}:${password}`);
@@ -215,7 +210,7 @@ export const sendRequest = async <T>(
         data: body ?? formData,
         method: options.method,
         withCredentials: config.WITH_CREDENTIALS,
-        withXSRFToken: config.CREDENTIALS === 'include' ? config.WITH_CREDENTIALS : false,
+        withXSRFToken: config.CREDENTIALS === 'include' ? config.WITH_CREDENTIALS : true,
         cancelToken: source.token,
     };
 

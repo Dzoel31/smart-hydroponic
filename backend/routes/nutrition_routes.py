@@ -18,7 +18,7 @@ from schemas.responses import (
 )
 from schemas.user import UserOut
 from services.nutrition_service import NutritionService
-from utils.deps import get_current_user, get_session, require_role
+from utils.session_deps import get_current_user_session, get_session, require_role
 
 router = APIRouter(prefix="/nutrition", tags=["Nutrition"])
 
@@ -90,7 +90,7 @@ async def get_nutrition_profile_by_id(
 )
 async def create_nutrition_profile(
     profile_data: PlantNutritionProfileCreate,
-    current_user: UserOut = Depends(get_current_user),
+    current_user: UserOut = Depends(get_current_user_session),
     session: AsyncSession = Depends(get_session),
 ) -> PlantNutritionProfileOut:
     require_role(current_user, {"admin", "superadmin"})
@@ -120,7 +120,7 @@ async def create_nutrition_profile(
 async def update_nutrition_profile(
     nutrition_id: UUID,
     profile_update: PlantNutritionProfileUpdate,
-    current_user: UserOut = Depends(get_current_user),
+    current_user: UserOut = Depends(get_current_user_session),
     session: AsyncSession = Depends(get_session),
 ) -> PlantNutritionProfileOut:
     require_role(current_user, {"admin", "superadmin"})
@@ -151,7 +151,7 @@ async def update_nutrition_profile(
 )
 async def activate_nutrition_profile(
     nutrition_id: UUID,
-    current_user: UserOut = Depends(get_current_user),
+    current_user: UserOut = Depends(get_current_user_session),
     session: AsyncSession = Depends(get_session),
 ) -> PlantNutritionProfileOut:
     require_role(current_user, {"admin", "superadmin"})
@@ -179,7 +179,7 @@ async def activate_nutrition_profile(
 )
 async def delete_nutrition_profile(
     nutrition_id: UUID,
-    current_user: UserOut = Depends(get_current_user),
+    current_user: UserOut = Depends(get_current_user_session),
     session: AsyncSession = Depends(get_session),
 ):
     require_role(current_user, {"admin", "superadmin"})

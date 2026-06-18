@@ -1,5 +1,4 @@
 import { reactive } from "vue";
-import { OpenAPI } from "./api";
 
 const getStoredUser = () => {
     const storedUser = localStorage.getItem('user');
@@ -13,28 +12,21 @@ const getStoredUser = () => {
     }
 };
 
-const storedToken = localStorage.getItem('token');
-if (storedToken) {
-    OpenAPI.TOKEN = storedToken;
-}
+const storedUser = getStoredUser();
 
 export const authState = reactive({
-    isLoggedIn: !!storedToken,
-    user: getStoredUser(),
+    isLoggedIn: !!storedUser,
+    user: storedUser,
 
-    setSession(token: string, user: unknown) {
-        localStorage.setItem('token', token);
+    setSession(user: unknown) {
         localStorage.setItem('user', JSON.stringify(user));
-        OpenAPI.TOKEN = token;
 
         this.isLoggedIn = true;
         this.user = user;
     },
 
     logout() {
-        localStorage.removeItem('token');
         localStorage.removeItem('user');
-        OpenAPI.TOKEN = undefined;
 
         this.isLoggedIn = false;
         this.user = null;
