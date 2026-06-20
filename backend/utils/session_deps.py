@@ -1,12 +1,14 @@
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession
 from config.db import Session
-from fastapi import Cookie, Depends, HTTPException, status
+from fastapi import Cookie, Depends, HTTPException
+from fastapi.security import APIKeyCookie
 from schemas.user import UserOut
 from services.user_service import UserService
 from services.session_service import SessionService
 from contextlib import asynccontextmanager
 
+cookie_schema = APIKeyCookie(name="session_id", auto_error=False)
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """Provide a SQLAlchemy async session (expire_on_commit=False)"""
@@ -14,7 +16,7 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 async def get_current_user_session(
-    session_id: str | None = Cookie(default=None),
+    session_id: str | None = Depends(cookie_schema),
     session: AsyncSession = Depends(get_session)
 ) -> UserOut:
 
