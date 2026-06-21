@@ -27,14 +27,29 @@ router = APIRouter(prefix="/nutrition", tags=["Nutrition"])
     "/profiles",
     response_model=ResponseList[PlantNutritionProfileOut],
     operation_id="getNutritionProfiles",
+    responses={
+        **responses_400,
+        **responses_401,
+        **responses_403,
+        **responses_500,
+    },
 )
 async def get_nutrition_profiles(
     page: int = 1,
     limit: int = 25,
+    current_user: UserOut = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 )-> ResponseList[PlantNutritionProfileOut]:
+    require_role(current_user, {"admin", "superadmin"})
     service = NutritionService(session)
-    return await service.get_profiles(page=page, limit=limit)
+    try:
+        profile = await service.get_profiles(page=page, limit=limit)
+        if profile is None:
+            raise HTTPException(status_code=404, detail="Nutrition profile not found")
+        return profile
+    except SQLAlchemyError:
+        await session.rollback()
+        raise HTTPException(status_code=500, detail="Database error")
 
 
 @router.get(
@@ -61,19 +76,27 @@ async def get_active_nutrition_profile(
     response_model=PlantNutritionProfileOut,
     operation_id="getNutritionProfileById",
     responses={
+        **responses_401,
+        **responses_403,
         **responses_404,
         **responses_500,
     },
 )
 async def get_nutrition_profile_by_id(
     nutrition_id: UUID,
+    current_user: UserOut = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> PlantNutritionProfileOut:
+    require_role(current_user, {"admin", "superadmin"})
     service = NutritionService(session)
-    profile = await service.get_profile_by_id(nutrition_id)
-    if profile is None:
-        raise HTTPException(status_code=404, detail="Nutrition profile not found")
-    return PlantNutritionProfileOut.model_validate(profile)
+    try: 
+        profile = await service.get_profile_by_id(nutrition_id)
+        if profile is None:
+            raise HTTPException(status_code=404, detail="Nutrition profile not found")
+        return profile
+    except SQLAlchemyError:
+        await session.rollback()
+        raise HTTPException(status_code=500, detail="Database error")
 
 
 @router.post(
