@@ -1,23 +1,85 @@
-# Backend Development Guide
+# Pengembangan Backend
 
-Panduan ini ditujukan untuk pengembang yang ingin berkontribusi pada pengembangan backend dari proyek Smart Hydroponic. Backend ini dibangun menggunakan JavaScript (Node.js) dan Python, serta menggunakan PostgreSQL dengan ekstensi TimescaleDB sebagai database.
+## Tujuan Bagian Ini
 
-!!! note "Catatan"
-    Rencana kedepan adalah Backend menggunakan 1 Bahasa pemrograman saja, yaitu Python. Untuk JavaScript untuk pengembangan Dashboard. (Semoga Python-nya gak ngebug 🏃‍♂️💨)
+Bagian ini menjelaskan cara memahami dan mengembangkan backend Smart Hydroponic. Backend utama saat ini menggunakan Python dan FastAPI.
 
-## Prerequisites
+## Status Backend Saat Ini
 
-Hal-hal yang perlu dipersiapkan sebelum memulai pengembangan backend:
+Backend aktif berada di folder `backend` dan menggunakan:
 
-1. Pengetahuan dasar tentang JavaScript ([Node.js](https://nodejs.org)) dan/atau [Python](https://www.python.org).
-2. Pengetahuan dasar tentang [PostgreSQL](https://www.postgresql.org) dan [TimescaleDB](https://docs.timescale.com).
-!!! note "Catatan"
-    PostgreSQL wajib dipelajari (mirip SQL pada umumnya), sedangkan TimescaleDB adalah ekstensi untuk mengelola data time-series. Lihat dokumentasi resmi: [PostgreSQL Docs](https://www.postgresql.org/docs/) dan [TimescaleDB Docs](https://docs.timescale.com).
-3. Dependency management tool seperti [npm](https://docs.npmjs.com/) (untuk JavaScript) atau [pip](https://pip.pypa.io/en/stable/) (untuk Python).
-!!! info "Info"
-    Untuk Python, disarankan menggunakan [`uv`](https://docs.astral.sh/uv/) dari Astral sebagai dependency management tool dan menggunakan virtual environment ([venv](https://docs.python.org/3/library/venv.html)).
-4. Sintaks Linux dasar untuk menjalankan perintah di terminal (contoh: [Command-line basics](https://ubuntu.com/tutorials/command-line-for-beginners)).
-5. [Docker](https://www.docker.com) (opsional, tapi disarankan) untuk menjalankan database dan backend dalam container. Lihat juga [Docker Desktop](https://www.docker.com/products/docker-desktop) dan [Dokumentasi Docker](https://docs.docker.com).
+- FastAPI sebagai framework API.
+- SQLAlchemy sebagai penghubung ke database.
+- Alembic sebagai alat migration.
+- PostgreSQL + TimescaleDB sebagai database.
+- `uv` sebagai dependency manager Python.
 
-!!! info "Info"
-    Semua akan dijelaskan dan dipelajari secara terpisah.
+## Yang Perlu Dipahami
+
+Sebelum mengubah backend, sebaiknya pahami konsep berikut:
+
+1. **HTTP dan REST API**: cara frontend atau perangkat mengirim request ke server.
+2. **FastAPI**: framework Python untuk membuat endpoint API.
+3. **PostgreSQL**: database relasional untuk menyimpan data.
+4. **TimescaleDB**: ekstensi PostgreSQL untuk data berbasis waktu.
+5. **Migration**: cara mengubah struktur database secara terkontrol.
+6. **Environment variable**: konfigurasi yang tidak ditulis langsung di kode.
+
+Penjelasan istilah singkat tersedia di [Glossary](../glossary.md).
+
+## Struktur Folder Backend
+
+- `main.py`: titik masuk aplikasi FastAPI.
+- `routes/`: endpoint API.
+- `models/`: definisi tabel database.
+- `schemas/`: bentuk data request dan response.
+- `services/`: logika aplikasi.
+- `config/`: konfigurasi aplikasi dan database.
+- `migrations/`: file migration Alembic.
+- `test/`: test dan simulasi perangkat.
+
+## Menjalankan Untuk Development
+
+Jalankan dari folder `backend`.
+
+1. Install dependency.
+
+   ```bash
+   uv sync
+   ```
+
+2. Pastikan database sudah berjalan dan file `.env` sudah benar.
+
+3. Jalankan migration.
+
+   ```bash
+   uv run alembic upgrade head
+   ```
+
+4. Jalankan server development.
+
+   ```bash
+   uv run fastapi dev main.py
+   ```
+
+5. Cek health check.
+
+   ```text
+   http://localhost:8000/health
+   ```
+
+## Cara Mengecek Berhasil
+
+Backend berjalan dengan benar jika:
+
+1. Server FastAPI aktif tanpa error.
+2. Endpoint `/health` mengembalikan status sehat.
+3. Endpoint `/db-test` berhasil melakukan query sederhana ke database.
+4. Frontend dapat mengambil data dari backend.
+
+## Jika Terjadi Error
+
+- Error dependency biasanya terkait versi Python atau `uv`.
+- Error database biasanya terkait `.env`, `DATABASE_URL`, atau database yang belum berjalan.
+- Error migration biasanya terjadi jika database belum siap atau struktur migration tidak cocok.
+- Error CORS biasanya muncul saat frontend dan backend berjalan pada alamat berbeda.

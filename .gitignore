@@ -1,2 +1,5 @@
 .env
 *.csv
+*.pcap
+*.txt
+site

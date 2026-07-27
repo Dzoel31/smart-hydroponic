@@ -106,6 +106,36 @@ export class HydroponicsService {
         });
     }
     /**
+     * Get Public Hydroponic Data
+     * Endpoint publik untuk mendapatkan data hidroponik terbaru tanpa autentikasi.
+     * @param page
+     * @param limit
+     * @param startDate
+     * @param endDate
+     * @returns ResponseList_HydroponicOut_ Successful Response
+     * @throws ApiError
+     */
+    public static getPublicHydroponicData(
+        page: number = 1,
+        limit: number = 25,
+        startDate?: (string | null),
+        endDate?: (string | null),
+    ): CancelablePromise<ResponseList_HydroponicOut_> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/hydroponics/public',
+            query: {
+                'page': page,
+                'limit': limit,
+                'start_date': startDate,
+                'end_date': endDate,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
      * Control Hydroponic Actuators
      * Endpoint untuk mengontrol aktuator hidroponik (pump, light, automation).
      * @param requestBody

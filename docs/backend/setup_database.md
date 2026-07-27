@@ -1,47 +1,118 @@
-# Konfigurasi Database Backend
+# Setup Database Backend
 
-Database yang digunakan dalam proyek ini adalah PostgreSQL dengan ekstensi TimescaleDB. Berikut adalah langkah-langkah untuk mengatur database backend:
+## Tujuan Bagian Ini
 
-**Catatan**: Guide ini ditujukan untuk pengaturan database dilakukan sekali saja, sebelum melakukan deploy backend. Jika terdapat masalah dengan database, Anda dapat mengulangi langkah-langkah ini.
+Bagian ini menjelaskan cara menyiapkan database untuk backend Smart Hydroponic. Database menyimpan data pengguna, data hidroponik, data sensor, dan data lain yang dibutuhkan aplikasi.
 
-1. **Install PostgreSQL dan TimescaleDB**
+Database yang digunakan adalah **PostgreSQL** dengan ekstensi **TimescaleDB**. TimescaleDB dipakai karena data sensor bersifat time-series, yaitu data yang dicatat berdasarkan waktu.
 
-    Pastikan Anda telah menginstall PostgreSQL dan TimescaleDB di sistem Anda. Anda dapat mengikuti petunjuk instalasi resmi dari [PostgreSQL](https://www.postgresql.org/download/) dan [TimescaleDB](https://docs.tigerdata.com/self-hosted/latest/install/). Instal sesuai dengan sistem operasi yang Anda gunakan. Khusus untuk server gunakan versi Linux.
+## Yang Perlu Disiapkan
 
-    - Saat menjalankan Timescaledb tune, cermati output rekomendasi yang diberikan. Sesuaikan jangan terlalu tinggi atau terlalu rendah.
+1. PostgreSQL.
+2. TimescaleDB yang kompatibel dengan versi PostgreSQL.
+3. User database untuk aplikasi.
+4. File `.env` yang berisi konfigurasi koneksi database.
 
-    !!! info "Versi yang Direkomendasikan"
-        Gunakan versi PostgreSQL terbaru yang kompatibel dengan TimescaleDB dengan dukungan UUIDv7. Untuk saat ini, versi terbaru adalah Postgrsql 18.x dan TimeScaleDB 2.24
+Untuk Docker, service database sudah disiapkan di `docker-compose.dev.yml` dan `docker-compose.prod.yml` dengan image:
 
-2. **Buat Database**
+```text
+timescale/timescaledb:2.24.0-pg18
+```
 
-    - Setelah PostgreSQL terinstal, buat database dan user yang diperlukan. Gunakan perintah berikut untuk masuk ke PostgreSQL:
+## Opsi 1: Menggunakan Docker Compose
 
-        ```bash
-        psql -U postgres
-        ```
+Cara ini paling disarankan untuk belajar dan development lokal.
 
-    - Setelah masuk, buat database dengan nama `smart_hydroponic`:
+Jalankan dari root repository:
 
-        ```psql
-        CREATE DATABASE iot_hydroponik;
-        ```
+```bash
+docker compose -f docker-compose.dev.yml up -d db
+```
 
-    - Membuat user baru dengan nama sesuai keingingan anda bila dijalankan di lokal, sedangkan di server gunakan user `admin_iot_db`:
+Command ini hanya menjalankan service database.
 
-        ```psql
-        CREATE USER admin_iot_db WITH PASSWORD 'your_password';
-        ```
+### Cara Mengecek Berhasil
 
-        Catatan: Gantilah `your_password` dengan password yang Anda inginkan. Untuk server, gunakan password yang sudah disepakati bersama.
+```bash
+docker compose -f docker-compose.dev.yml ps
+```
 
-    - Berikan hak akses kepada user tersebut untuk database yang telah dibuat:
+Tanda berhasil: service `db` berjalan dan health check sehat.
 
-        ```psql
-        GRANT ALL PRIVILEGES ON DATABASE iot_hydroponik TO admin_iot_db;
-        ```
+## Opsi 2: Install Manual PostgreSQL dan TimescaleDB
 
-3. Lakukan deployment pada server sesuai dengan [panduan deploy backend](deploy.md).
+Gunakan cara ini jika Anda menyiapkan database langsung di server.
 
-!!! warning "Penting"
-    Pastikan tidak ada kesalahan saat melakukan konfigrasi, terutama pada ekstensi TimescaleDB.
+1. Install PostgreSQL sesuai sistem operasi.
+2. Install TimescaleDB dari dokumentasi resmi.
+3. Jalankan konfigurasi TimescaleDB sesuai rekomendasi installer.
+
+Saat menjalankan `timescaledb-tune`, baca rekomendasi yang muncul. Jangan langsung memakai nilai yang terlalu besar jika server memiliki RAM kecil.
+
+## Membuat Database dan User
+
+Masuk ke PostgreSQL:
+
+```bash
+psql -U postgres
+```
+
+Buat database:
+
+```psql
+CREATE DATABASE iot_hydroponik;
+```
+
+Buat user:
+
+```psql
+CREATE USER admin_iot_db WITH PASSWORD 'password_yang_aman';
+```
+
+Berikan hak akses:
+
+```psql
+GRANT ALL PRIVILEGES ON DATABASE iot_hydroponik TO admin_iot_db;
+```
+
+Ganti `password_yang_aman` dengan password yang kuat. Jangan memakai password contoh untuk server produksi.
+
+## Konfigurasi Environment
+
+Isi file `.env` dengan nilai database.
+
+Contoh:
+
+```env
+PGHOST=localhost
+PGUSER=nama_user_lokal
+PGDATABASE=nama_database_lokal
+PGPORT=port_database_lokal_anda
+PGPASSWORD=password_lokal_anda
+DATABASE_URL=postgresql+asyncpg://nama_user_lokal:password_lokal_anda@localhost:port_database_lokal_anda/nama_database_lokal
+```
+
+Jika backend berjalan di Docker Compose, `PGHOST` untuk backend biasanya `db` karena `db` adalah nama service database di Compose.
+
+## Menjalankan Migration
+
+Jalankan dari folder `backend`:
+
+```bash
+uv run alembic upgrade head
+```
+
+Migration membuat struktur tabel sesuai kebutuhan aplikasi.
+
+## Cara Mengecek Berhasil
+
+1. Backend dapat menjalankan endpoint `/db-test`.
+2. Migration selesai tanpa error.
+3. Database berisi tabel yang dibuat oleh migration.
+
+## Jika Terjadi Error
+
+- Jika `psql` tidak dikenali, PostgreSQL belum masuk ke PATH atau belum terinstall.
+- Jika password ditolak, cek kembali `PGUSER` dan `PGPASSWORD`.
+- Jika database tidak ditemukan, pastikan `PGDATABASE` sama dengan nama database yang dibuat.
+- Jika backend memakai Docker, pastikan host database memakai `db`, bukan `localhost`.

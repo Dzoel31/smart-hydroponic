@@ -8,7 +8,7 @@ from fastapi import (
     HTTPException,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
-from utils.deps import get_session, get_db_session, get_current_user
+from utils.deps import get_session, get_db_session, get_current_user, get_optional_current_user
 from services.hydroponic_service import HydroponicService
 from schemas.hydroponic import (
     HydroponicIn,
@@ -28,8 +28,10 @@ from utils.aggregator import aggregator
 from utils.evaluation_tracker import evaluation_tracker
 from utils.coap_actuator_client import send_actuator_command_coap
 from utils.deps import require_role
+from utils.converter import _parse_datetime_input
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from datetime import timedelta
 import logging
 
 logging.basicConfig(
@@ -145,6 +147,38 @@ async def get_hydroponic_data(
     service = HydroponicService(session)
     return await service.get_all_data(page, limit, start_date, end_date)
 
+@router.get(
+    "/public",
+    response_model=ResponseList[HydroponicOut],
+    status_code=200,
+    operation_id="getPublicHydroponicData",
+)
+async def get_public_hydroponic_data(
+    page: int = 1,
+    limit: int = 25,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    current_user: UserOut | None = Depends(get_optional_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> ResponseList[HydroponicOut]:
+    """Endpoint publik untuk mendapatkan data hidroponik terbaru tanpa autentikasi."""
+    service = HydroponicService(session)
+
+    # Maksimum 500 data untuk endpoint publik
+    limit = min(limit, 500)
+    # Maksimum 7 hari data untuk endpoint publik
+    if start_date and end_date:
+        start_dt = _parse_datetime_input(start_date)[0]
+        end_dt = _parse_datetime_input(end_date)[0]
+        if end_dt - start_dt > timedelta(days=7) and (
+            current_user is None or current_user.role not in {"admin", "superadmin"}
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Date range cannot exceed 7 days for public endpoint",
+            )
+
+    return await service.get_all_data(page, limit, start_date, end_date)
 
 @router.post(
     "/control",

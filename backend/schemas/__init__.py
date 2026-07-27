@@ -6,6 +6,12 @@ from schemas.hydroponic import (
     HydroponicIn,
     HydroponicOut,
 )
+from schemas.nutrition import (
+    PlantNutritionProfileBase,
+    PlantNutritionProfileCreate,
+    PlantNutritionProfileOut,
+    PlantNutritionProfileUpdate,
+)
 from schemas.user import UserBase, UserCreate, UserOut, UserRole
 from schemas.responses import (
     MessageResponse,
@@ -23,6 +29,10 @@ __all__ = [
     "HydroponicAggregate",
     "HydroponicIn",
     "HydroponicOut",
+    "PlantNutritionProfileBase",
+    "PlantNutritionProfileCreate",
+    "PlantNutritionProfileOut",
+    "PlantNutritionProfileUpdate",
     "UserBase",
     "UserCreate",
     "UserOut",

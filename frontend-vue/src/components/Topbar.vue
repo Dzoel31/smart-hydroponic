@@ -2,6 +2,7 @@
   <header class="topbar">
     <div class="greeting">
       <h1>{{ title }}</h1>
+      <p v-if="subtitle" class="greeting-subtitle">{{ subtitle }}</p>
     </div>
 
     <div class="user-actions">
@@ -45,6 +46,11 @@ defineProps({
     type: String,
     required: true,
     default: "Dashboard"
+  },
+  subtitle: {
+    type: String,
+    required: false,
+    default: ""
   }
 });
 
@@ -99,6 +105,13 @@ onUnmounted(() => window.removeEventListener('click', closeDropdown));
   font-weight: 700;
   margin: 0;
   color: #000000;
+}
+
+.greeting-subtitle {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .user-actions {

@@ -13,7 +13,9 @@ from main import app
 from schemas.user import UserOut
 from services.hydroponic_service import HydroponicService
 from services.user_service import UserService
-from utils.deps import get_current_user, get_session
+from utils.deps import get_current_user, get_optional_current_user, get_session
+from schemas.hydroponic import HydroponicOut, MetaData, ResponseList
+from uuid import uuid7
 
 
 class _DummySession:
@@ -192,3 +194,81 @@ def test_hydroponic_specific_invalid_parameter(
 
     assert response.status_code == 400
     assert response.json()["detail"] == "Invalid parameter: invalid_field"
+
+
+def test_public_hydroponic_data_rejects_range_over_7_days_for_anonymous(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+):
+    start_date = "2026-05-01T00:00:00Z"
+    end_date = "2026-05-10T00:00:00Z"
+
+    async def override_optional_current_user():
+        return None
+
+    app.dependency_overrides[get_optional_current_user] = override_optional_current_user
+
+    response = client.get(
+        "/hydroponics/public",
+        params={"start_date": start_date, "end_date": end_date},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Date range cannot exceed 7 days for public endpoint"
+
+
+def test_public_hydroponic_data_allows_range_over_7_days_for_admin(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+):
+    start_date = "2026-05-01T00:00:00Z"
+    end_date = "2026-05-10T00:00:00Z"
+
+    async def override_optional_current_user():
+        return UserOut(
+            userid=uuid4(),
+            username="admin-user",
+            email="admin@example.com",
+            fullname="Admin User",
+            role="admin",
+            created_at=datetime.now(timezone.utc),
+        )
+
+    async def fake_get_all_data(_self, _page=1, _limit=25, _start_date=None, _end_date=None):
+        sample = HydroponicOut(
+            dataid=uuid7(),
+            moisture1=1,
+            moisture2=2,
+            moisture3=3,
+            moisture4=4,
+            moisture5=5,
+            moisture6=6,
+            flowrate=1.0,
+            total_litres=1.0,
+            distance_cm=1.0,
+            ph=6.0,
+            tds=500.0,
+            temperature_atas=25.0,
+            temperature_bawah=24.0,
+            humidity_atas=50.0,
+            humidity_bawah=49.0,
+            pump_status=True,
+            light_status=True,
+            automation_status=False,
+        )
+
+        return ResponseList(
+            meta=MetaData(total_rows=1, limit=_limit, offset=0),
+            data=[sample],
+        )
+
+    app.dependency_overrides[get_optional_current_user] = override_optional_current_user
+    monkeypatch.setattr(HydroponicService, "get_all_data", fake_get_all_data)
+
+    response = client.get(
+        "/hydroponics/public",
+        params={"start_date": start_date, "end_date": end_date},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["meta"]["total_rows"] == 1
+    assert len(body["data"]) == 1

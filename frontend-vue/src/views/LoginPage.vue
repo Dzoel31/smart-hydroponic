@@ -1,5 +1,10 @@
 <template>
     <div class="login-container" :style="{ '--bg-image': `url(${loginImg})` }">
+        <ErrorModal
+            v-model="showErrorModal"
+            :title="errorTitle"
+            :message="errorMessage"
+        />
         
         <div class="login-card">
             <div class="logo-header">
@@ -85,6 +90,7 @@ import { useRouter } from "vue-router";
 import { authState } from "../auth";
 import { UsersService, ApiError } from "../api";
 import { getApiErrorMessage } from "../utils/apiError";
+import ErrorModal from "@/components/ErrorModal.vue";
 
 import loginImg from "@/assets/images/bg2.jpeg";
 import logoUPN from "@/assets/images/logo-upn.png";
@@ -93,6 +99,9 @@ import logoHydroponic from "@/assets/images/logo-hydroponic.png";
 const username = ref<string>("");
 const password = ref<string>("");
 const showPassword = ref<boolean>(false);
+const showErrorModal = ref<boolean>(false);
+const errorTitle = ref<string>('Login Gagal');
+const errorMessage = ref<string>('Username atau password tidak valid.');
 
 const router = useRouter();
 
@@ -111,10 +120,13 @@ const handleLogin = async (): Promise<void> => {
 
     } catch (error) {
         if (error instanceof ApiError) {
-            const message = getApiErrorMessage(error, 'Gagal login.');
-            console.error('Error logging in:', message);
+            errorTitle.value = 'Login Gagal';
+            errorMessage.value = getApiErrorMessage(error, 'Gagal login.');
+            showErrorModal.value = true;
         } else {
-            console.error('Unexpected error:', error);
+            errorTitle.value = 'Gangguan Sistem';
+            errorMessage.value = 'Terjadi gangguan saat login. Silakan coba lagi.';
+            showErrorModal.value = true;
         }
     }
 };

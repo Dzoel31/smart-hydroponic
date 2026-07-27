@@ -30,6 +30,12 @@ const routes = [
     component: () => import('@/views/Analytics.vue'),
   },
   {
+    path: '/nutrition-profiles',
+    name: 'NutritionProfiles',
+    component: () => import('@/views/NutritionProfiles.vue'),
+    meta: { requiresAuth: true, allowedRoles: ['admin', 'superadmin'] },
+  },
+  {
     path: '/manage-admin',
     name: 'ManageAdmin',
     component: () => import('@/views/ManajemenAkses.vue'),

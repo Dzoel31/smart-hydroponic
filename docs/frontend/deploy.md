@@ -1,57 +1,90 @@
-# Deploy Frontend-vue dengan Docker dan NGINX (Linux)
+# Deploy Frontend Vue Dengan Docker dan NGINX
 
-Dokumentasi ini menjelaskan cara membangun dan menjalankan frontend-vue sebagai aplikasi statis. Hasil build disajikan oleh NGINX di dalam container, lalu bisa juga diproxy oleh NGINX host jika diperlukan.
+## Tujuan Bagian Ini
+
+Bagian ini menjelaskan cara membangun dan menjalankan dashboard Vue sebagai aplikasi statis. Hasil build frontend akan disajikan oleh NGINX di dalam container.
+
+## Yang Perlu Disiapkan
+
+1. Docker.
+2. Folder `frontend-vue`.
+3. Backend yang dapat diakses dari frontend.
+4. Domain atau IP server jika deployment dilakukan di server.
 
 ## Build Docker Image
 
-Pastikan Anda berada di root repository, lalu build image dari folder `frontend-vue`:
+Jalankan dari root repository:
 
 ```bash
 docker build -t smart-hydroponic-frontend ./frontend-vue
 ```
 
-## Jalankan Container
+Command ini membuat image Docker berisi hasil build frontend dan NGINX.
 
-Setelah image selesai dibangun, jalankan container pada port 80:
+## Menjalankan Container
+
+Jalankan:
 
 ```bash
 docker run -d --name smart-hydroponic-frontend -p 8080:80 smart-hydroponic-frontend
 ```
 
-Akses aplikasi melalui `http://localhost:8080` atau melalui domain server Anda jika sudah dipasang reverse proxy.
+Artinya, port `8080` di komputer atau server akan meneruskan request ke port `80` di dalam container.
+
+## Cara Mengecek Berhasil
+
+Buka:
+
+```text
+http://localhost:8080
+```
+
+Jika di server, ganti `localhost` dengan IP atau domain server.
 
 ## Konfigurasi NGINX Host
 
-Jika ingin menempatkan frontend di belakang NGINX host, gunakan proxy pass ke container atau ke service yang menayangkan file statis.
+Jika frontend ingin diakses melalui domain, NGINX host dapat meneruskan request ke container frontend.
 
-Contoh proxy ke container Docker:
+Contoh:
 
 ```nginx
 server {
-        listen 80;
-        server_name dashboard.example.com;
+    listen 80;
+    server_name dashboard.hydroponic.example.com;
 
-        location / {
-                proxy_pass http://127.0.0.1:8080;
-                proxy_http_version 1.1;
-                proxy_set_header Host $host;
-                proxy_set_header X-Real-IP $remote_addr;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                proxy_set_header X-Forwarded-Proto $scheme;
-        }
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
 }
 ```
 
-## Catatan Penting
+Ganti `dashboard.hydroponic.example.com` dengan domain atau IP yang digunakan.
 
-- Build frontend berasal dari folder `frontend-vue`.
-- Dockerfile frontend-vue sudah menyalin hasil build ke NGINX image.
-- Jika aplikasi dipasang pada subpath, sesuaikan `base` di `vite.config.ts` sebelum build.
-
-Jika Anda tetap memakai NGINX host, restart service setelah menyimpan konfigurasi:
+Setelah menyimpan konfigurasi, uji dan restart NGINX:
 
 ```bash
+sudo nginx -t
 sudo systemctl restart nginx
 ```
 
-Contoh akses aplikasi setelah deploy: [http://123.123.123.123/dashboard-hidroponik](http://123.123.123.123/dashboard-hidroponik)
+## Jika Aplikasi Dipasang Pada Subpath
+
+Jika dashboard dipasang pada subpath seperti:
+
+```text
+http://server/dashboard-hidroponik
+```
+
+sesuaikan konfigurasi `base` di `vite.config.ts` sebelum build.
+
+## Jika Terjadi Error
+
+- Jika halaman putih, buka Developer Tools dan cek error JavaScript.
+- Jika data tidak muncul, pastikan URL backend dapat diakses dari browser.
+- Jika NGINX menampilkan 502, cek apakah container frontend berjalan.
+- Jika aset tidak ditemukan pada subpath, cek konfigurasi `base` Vite.
