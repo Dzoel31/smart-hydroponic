@@ -39,7 +39,7 @@ class HydroponicInternalResult(BaseModel):
     total: int | None
 
 
-class HydroponicDataSensor(BaseModel):
+class HydroponicDataPlant(BaseModel):
     moisture1: int = Field(0, ge=0)
     moisture2: int = Field(0, ge=0)
     moisture3: int = Field(0, ge=0)
@@ -69,14 +69,10 @@ class HydroponicDataActuator(BaseModel):
 class HydroponicControlResult(HydroponicDataActuator):
     command_id: str
     confirmed: bool = False
-    time_start: float
-    time_end: float | None = None
-    latency_ms: float | None = None
-    actuator_response: dict | None = None
 
 
 class HydroponicAggregate(
-    HydroponicDataActuator, HydroponicDataEnvironment, HydroponicDataSensor
+    HydroponicDataActuator, HydroponicDataEnvironment, HydroponicDataPlant
 ):
     dataid: UUID = Field(default_factory=uuid7)
 

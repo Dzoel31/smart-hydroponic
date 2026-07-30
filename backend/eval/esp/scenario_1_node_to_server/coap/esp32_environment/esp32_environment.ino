@@ -19,7 +19,7 @@ const char *device_id = "esp32-environment-device";
 
 // --- Umum ---
 #define SCOUNT 30
-const unsigned long SEND_INTERVAL = 30000;     // 5s
+const unsigned long SEND_INTERVAL = 30000;     // 30s
 const unsigned long WIFI_TIMEOUT = 15000;     // buat attempt awal di setup
 const unsigned long TDS_SAMPLE_INTERVAL = 40; // 40 ms
 
@@ -53,15 +53,21 @@ DHT dht11Bawah(DHT11_PIN_BAWAH, DHT11_TYPE);
 
 WiFiUDP udp;
 Coap coap(udp, 512);
-IPAddress coapServerIp(172, 25, 21, 236);
+IPAddress coapServerIp(172, 25, 21, 231);
 const uint16_t coapServerPort = 8683;
+const uint16_t localCoapPort = 5684;
 const char *coapPath = "coap/hydroponics/environment";
 
-// Retry cooldown (non-blocking reconnect)
+const unsigned long WIFI_RETRY_INTERVAL = 5000;
+
 unsigned long lastWifiAttempt = 0;
-unsigned long lastWsAttempt = 0;
-const unsigned long WIFI_RETRY_INTERVAL = 5000; // 5s
-const unsigned long WS_RETRY_INTERVAL = 5000;   // 5s
+bool wifiConnected = false;
+bool coapStarted = false;
+
+void connectWifi();
+void checkWiFi();
+void startCoap();
+void stopCoap();
 
 void callback_response(CoapPacket &packet, IPAddress ip, int port)
 {
@@ -101,25 +107,6 @@ float readVoltage_V(int pin, int samples = 10)
     return (mv / (float)samples) / 1000.0f; // mV -> V
 }
 
-// Reconnect non-blocking (cooldown)
-void reconnectServicesNonBlocking()
-{
-    unsigned long now = millis();
-
-    // WiFi
-    if (WiFi.status() != WL_CONNECTED)
-    {
-        if (now - lastWifiAttempt >= WIFI_RETRY_INTERVAL)
-        {
-            lastWifiAttempt = now;
-            Serial.println("[reconnect] WiFi retry...");
-            WiFi.reconnect(); // non-blocking
-            yield();
-        }
-        return;
-    }
-}
-
 void setup()
 {
     Serial.begin(115200);
@@ -145,39 +132,24 @@ void setup()
     Serial.print("  intercept = ");
     Serial.println(intercept, 6);
 
-    // WiFi awal (boleh blocking sebentar saat boot)
-    Serial.print("Menghubungkan ke WiFi ..");
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    unsigned long startAttemptTime = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < WIFI_TIMEOUT)
-    {
-        delay(250);
-        Serial.print('.');
-    }
+    coap.response(callback_response);
+    connectWifi();
     if (WiFi.status() == WL_CONNECTED)
     {
-        Serial.println("\nTerhubung ke WiFi!");
-        Serial.print("IP: ");
-        Serial.println(WiFi.localIP());
+        startCoap();
     }
-    else
-    {
-        Serial.println("\nGagal WiFi awal. Lanjut retry non-blocking di loop.");
-    }
-
-    coap.response(callback_response);
-    coap.start();
 }
 
 
 void loop()
 {
     unsigned long now = millis();
-    reconnectServicesNonBlocking();
-    yield();
+    checkWiFi();
 
-    coap.loop();
+    if (wifiConnected && coapStarted)
+    {
+        coap.loop();
+    }
 
     // --- Sampling TDS (non-blocking) ---
     if (now - lastAnalogSampleTime > TDS_SAMPLE_INTERVAL)
@@ -264,11 +236,104 @@ void loop()
         last_seq_sent = seq;
         send_time = millis();
 
-        // Kirim CoAP
-        coap.put(coapServerIp, coapServerPort, coapPath, payload.c_str(), payload.length());
-
-        seq++;
-
-        Serial.println("Terkirim: " + payload);
+        if (wifiConnected && coapStarted)
+        {
+            uint16_t messageId = coap.put(coapServerIp, coapServerPort, coapPath, payload.c_str(), payload.length());
+            if (messageId > 0)
+            {
+                Serial.printf("[TX] Seq: %d\n", seq);
+                seq++;
+                Serial.printf("[CoAP] Sent OK (MID=%u)\n", messageId);
+                Serial.println("Terkirim: " + payload);
+            }
+            else
+            {
+                Serial.println("[CoAP] Send failed");
+            }
+        }
+        else
+        {
+            Serial.println("[CoAP] Skip send");
+        }
     }
+
+    delay(1);
+}
+
+void connectWifi()
+{
+    Serial.print("Menghubungkan ke WiFi ..");
+    WiFi.mode(WIFI_STA);
+    WiFi.setAutoReconnect(true);
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+    unsigned long startAttemptTime = millis();
+    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < WIFI_TIMEOUT)
+    {
+        delay(250);
+        Serial.print('.');
+    }
+
+    if (WiFi.status() == WL_CONNECTED)
+    {
+        wifiConnected = true;
+        Serial.println("\nTerhubung ke WiFi!");
+        Serial.print("IP: ");
+        Serial.println(WiFi.localIP());
+    }
+    else
+    {
+        wifiConnected = false;
+        Serial.println("\nGagal WiFi awal. Lanjut retry non-blocking di loop.");
+    }
+}
+
+void checkWiFi()
+{
+    unsigned long now = millis();
+
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        if (wifiConnected)
+        {
+            Serial.println("[WiFi] Lost connection");
+            wifiConnected = false;
+            stopCoap();
+        }
+
+        if (now - lastWifiAttempt >= WIFI_RETRY_INTERVAL)
+        {
+            lastWifiAttempt = now;
+            Serial.println("[WiFi] Reconnecting...");
+            WiFi.disconnect();
+            delay(100);
+            WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+        }
+    }
+    else if (!wifiConnected)
+    {
+        wifiConnected = true;
+        Serial.println("[WiFi] Reconnected!");
+        startCoap();
+    }
+}
+
+void startCoap()
+{
+    if (coapStarted)
+        return;
+
+    coap.start(localCoapPort);
+    coapStarted = true;
+    Serial.printf("[CoAP] Started on local port %u\n", localCoapPort);
+}
+
+void stopCoap()
+{
+    if (!coapStarted)
+        return;
+
+    udp.stop();
+    coapStarted = false;
+    Serial.println("[CoAP] Stopped");
 }

@@ -33,8 +33,21 @@ Tujuan:
 Log utama:
 
 ```text
+[TX] Seq: <nomor sequence yang benar-benar berhasil dikirim>
 [METRIC] atau [S1_METRIC]
 ```
+
+Untuk eksperimen satu jam, jalankan serial logger dengan batas durasi agar window
+observasi konsisten tanpa perlu merestart perangkat:
+
+```text
+python backend/tools/qos/serial_metric_logger.py --ports COM4 COM7 COM11 --labels plant environment actuator --duration 3600 --output scenario_1.csv
+```
+
+Sequence number boleh melanjutkan nilai sebelumnya. Jika perangkat restart saat
+eksperimen, nilai sequence akan kembali ke awal dan analyzer harus memisahkannya
+sebagai sesi baru. Gunakan jumlah log `[TX]` unik sebagai penyebut packet loss
+aplikasi dan jumlah ACK `[METRIC]` unik sebagai pembilang pesan yang diterima.
 
 ## Skenario 2
 

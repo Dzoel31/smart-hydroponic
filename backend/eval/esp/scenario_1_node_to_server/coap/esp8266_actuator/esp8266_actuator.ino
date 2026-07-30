@@ -14,13 +14,13 @@
 const char *WIFI_SSID = "FIK-Hotspot";
 const char *WIFI_PASSWORD = "T4nahairku";
 const char *DEVICE_ID = "esp8266-actuator-device";
-const unsigned long DATA_SEND_INTERVAL = 30000;
+const unsigned long DATA_SEND_INTERVAL = 5000;
 const unsigned long WIFI_RECONNECT_TIMEOUT = 10000;
 const float MOISTURE_THRESHOLD = 60;
 const float TEMPERATURE_THRESHOLD = 30.0;
 
 // CoAP Configuration
-IPAddress coapServerIp(172, 25, 21, 236);
+IPAddress coapServerIp(172, 25, 21, 232);
 const uint16_t coapServerPort = 8683;
 const uint16_t localCoapPort = 5683;
 const char *coapPathStatus = "coap/hydroponics/actuator";
@@ -180,20 +180,11 @@ void handleCoapControl(const char *payload) {
         state.temperature_avg = data["temperature_avg"].as<float>();
     }
 
-    if (state.automation_status == 1) {
-        if (!isnan(state.moisture_avg)) {
-            state.pump_status = (state.moisture_avg < MOISTURE_THRESHOLD) ? 1 : 0;
-        }
-        if (!isnan(state.temperature_avg)) {
-            state.light_status = (state.temperature_avg < TEMPERATURE_THRESHOLD) ? 1 : 0;
-        }
-    } else {
-        if (data.containsKey("pump_status")) {
-            state.pump_status = data["pump_status"].as<int>();
-        }
-        if (data.containsKey("light_status")) {
-            state.light_status = data["light_status"].as<int>();
-        }
+    if (data.containsKey("pump_status")) {
+        state.pump_status = data["pump_status"].as<int>();
+    }
+    if (data.containsKey("light_status")) {
+        state.light_status = data["light_status"].as<int>();
     }
 
     updateRelays();
@@ -202,6 +193,7 @@ void handleCoapControl(const char *payload) {
 void sendStatusUpdateCoap() {
     StaticJsonDocument<256> doc;
     doc["seq"] = seq;
+    doc["qos"] = "s1";
     doc["pump_status"] = state.pump_status;
     doc["light_status"] = state.light_status;
     doc["automation_status"] = state.automation_status;
@@ -213,9 +205,13 @@ void sendStatusUpdateCoap() {
     last_seq_sent = seq;
     send_time = millis();
 
-    coap.put(coapServerIp, coapServerPort, coapPathStatus, (char *)payload.c_str());
-
-    seq++;
+    uint16_t messageId = coap.put(coapServerIp, coapServerPort, coapPathStatus, (char *)payload.c_str());
+    if (messageId > 0) {
+        Serial.printf("[TX] Seq: %d\n", seq);
+        seq++;
+    } else {
+        Serial.println("[CoAP] Send failed");
+    }
 }
 
 void checkConnections() {

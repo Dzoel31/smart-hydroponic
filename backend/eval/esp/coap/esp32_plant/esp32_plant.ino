@@ -30,6 +30,7 @@ const char *DEVICE_ID = "esp32-plant-device";
 
 IPAddress coapServerIp(172, 25, 21, 236);
 const uint16_t coapServerPort = 8683;
+const uint16_t localCoapPort = 5683;
 const char *coapPath = "coap/hydroponics/plant";
 
 // ============================ INTERVALS ============================
@@ -281,13 +282,11 @@ void startCoap()
     if (coapStarted)
         return;
 
-    udp.begin(5683);
-
-    coap.start();
+    coap.start(localCoapPort);
 
     coapStarted = true;
 
-    Serial.println("[CoAP] Started");
+    Serial.printf("[CoAP] Started on local port %u\n", localCoapPort);
 }
 
 void stopCoap()

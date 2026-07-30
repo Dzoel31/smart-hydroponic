@@ -20,7 +20,7 @@ const float MOISTURE_THRESHOLD = 60;
 const float TEMPERATURE_THRESHOLD = 30.0;
 
 // CoAP Configuration
-IPAddress coapServerIp(172, 25, 21, 236);
+IPAddress coapServerIp(172, 25, 21, 234);
 const uint16_t coapServerPort = 8683;
 const uint16_t localCoapPort = 5683;
 const char *coapPathStatus = "coap/hydroponics/actuator";
@@ -140,12 +140,18 @@ void callback_control(CoapPacket &packet, IPAddress ip, int port) {
     ackDoc["ack_time_ms"] = millis();
 
     StaticJsonDocument<256> requestDoc;
+    int sourceSeq = -1;
+    const char *correlationId = "";
     if (deserializeJson(requestDoc, payload) == DeserializationError::Ok) {
         if (requestDoc.containsKey("command_id")) {
             ackDoc["command_id"] = requestDoc["command_id"];
         }
         if (requestDoc.containsKey("correlation_id")) {
             ackDoc["correlation_id"] = requestDoc["correlation_id"];
+            correlationId = requestDoc["correlation_id"].as<const char *>();
+        }
+        if (requestDoc.containsKey("source_seq")) {
+            sourceSeq = requestDoc["source_seq"].as<int>();
         }
     }
 
@@ -153,6 +159,13 @@ void callback_control(CoapPacket &packet, IPAddress ip, int port) {
     serializeJson(ackDoc, ackPayload);
     coap.sendResponse(ip, port, packet.messageid, (char *)ackPayload.c_str());
     Serial.println("[ACTUATOR_ACK] " + ackPayload);
+    if (sourceSeq >= 0 && strlen(correlationId) > 0) {
+        Serial.printf(
+            "[S2_AGG_METRIC] SourceSeq: %d | AckTimeMs: %lu | Correlation: %s\n",
+            sourceSeq,
+            millis(),
+            correlationId);
+    }
 }
 
 void handleCoapControl(const char *payload) {
@@ -180,20 +193,11 @@ void handleCoapControl(const char *payload) {
         state.temperature_avg = data["temperature_avg"].as<float>();
     }
 
-    if (state.automation_status == 1) {
-        if (!isnan(state.moisture_avg)) {
-            state.pump_status = (state.moisture_avg < MOISTURE_THRESHOLD) ? 1 : 0;
-        }
-        if (!isnan(state.temperature_avg)) {
-            state.light_status = (state.temperature_avg < TEMPERATURE_THRESHOLD) ? 1 : 0;
-        }
-    } else {
-        if (data.containsKey("pump_status")) {
-            state.pump_status = data["pump_status"].as<int>();
-        }
-        if (data.containsKey("light_status")) {
-            state.light_status = data["light_status"].as<int>();
-        }
+    if (data.containsKey("pump_status")) {
+        state.pump_status = data["pump_status"].as<int>();
+    }
+    if (data.containsKey("light_status")) {
+        state.light_status = data["light_status"].as<int>();
     }
 
     updateRelays();

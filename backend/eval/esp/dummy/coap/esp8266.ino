@@ -92,11 +92,6 @@ void generateDummyInputs()
     if (state.temperature_avg > 40.0f)
         state.temperature_avg = 40.0f;
 
-    if (state.automation_status == 1)
-    {
-        handleAutomaticMode();
-        updateRelays();
-    }
 }
 
 void connectToWifi()
@@ -163,15 +158,7 @@ void handleCoapMessage(const char *payload)
         state.temperature_avg = doc["avg_temperature"];
     }
 
-    // Process based on mode
-    if (state.automation_status == 1)
-    {
-        handleAutomaticMode();
-    }
-    else
-    {
-        handleManualMode(doc);
-    }
+    handleManualMode(doc);
 
     updateRelays();
 }

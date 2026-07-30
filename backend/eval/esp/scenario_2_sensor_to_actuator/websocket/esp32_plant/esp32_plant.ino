@@ -26,13 +26,13 @@
 // ============================ NETWORK ============================
 const char *WIFI_SSID = "FIK-Hotspot";                                                                    // <-- isi
 const char *WIFI_PASSWORD = "T4nahairku";                                                              // <-- isi
-const char *WS_SERVER_URL = "ws://103.147.92.179/smart-hydroponic/api/v2/hydroponics/ws/sensor-data"; // contoh: "ws://192.168.1.10:3000/ws"
+const char *WS_SERVER_URL = "ws://172.25.21.234:8000/smart-hydroponic/api/v2/hydroponics/ws/sensor-data"; // contoh: "ws://192.168.1.10:3000/ws"
 const char *DEVICE_ID = "esp32-plant-device";
 
 // ============================ INTERVALS ============================
 const unsigned long FLOW_INTERVAL = 1000;      // 1s
 const unsigned long ULTRASONIC_INTERVAL = 500; // 0.5s
-const unsigned long SEND_INTERVAL = 5000;      // 5s
+const unsigned long SEND_INTERVAL = 30000;      // 5s
 const unsigned long WIFI_TIMEOUT = 10000;      // 10s (hanya dipakai di setup awal)
 
 // Retry cooldowns (non-blocking)
@@ -350,9 +350,8 @@ void onWebsocketMessage(WebsocketsMessage message)
     if (doc.containsKey("status") && String(doc["status"].as<const char *>()) == "inter_node_ack")
     {
         int ackSeq = doc.containsKey("seq") ? doc["seq"].as<int>() : last_seq_sent;
-        unsigned long latency = millis() - send_time;
         const char *correlationId = doc.containsKey("correlation_id") ? doc["correlation_id"].as<const char *>() : "";
-        Serial.printf("[S2_METRIC] Seq: %d | EndToEndLatency: %lu ms | Correlation: %s\n", ackSeq, latency, correlationId);
+        Serial.printf("[S2_INFO] Aggregation ACK received | Seq: %d | Correlation: %s\n", ackSeq, correlationId);
         return;
     }
 

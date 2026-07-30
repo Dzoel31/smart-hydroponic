@@ -28,8 +28,9 @@ const char *WIFI_PASSWORD = "T4nahairku";
 
 const char *DEVICE_ID = "esp32-plant-device";
 
-IPAddress coapServerIp(172, 25, 21, 236);
+IPAddress coapServerIp(172, 25, 21, 234);
 const uint16_t coapServerPort = 8683;
+const uint16_t localCoapPort = 5683;
 const char *coapPath = "coap/hydroponics/plant";
 
 // ============================ INTERVALS ============================
@@ -281,13 +282,11 @@ void startCoap()
     if (coapStarted)
         return;
 
-    udp.begin(5683);
-
-    coap.start();
+    coap.start(localCoapPort);
 
     coapStarted = true;
 
-    Serial.println("[CoAP] Started");
+    Serial.printf("[CoAP] Started on local port %u\n", localCoapPort);
 }
 
 void stopCoap()
@@ -475,10 +474,8 @@ void callback_response(
             if (!doc["coap_forward_ack"].isNull() && doc["coap_forward_ack"]["confirmed"].as<bool>())
             {
                 float forwardLatency = doc["coap_forward_ack"]["latency_ms"] | 0.0;
-                unsigned long endToEndLatency = millis() - send_time;
-                Serial.printf("[S2_METRIC] Seq: %d | EndToEndLatency: %lu ms | ForwardLatency: %.3f ms\n",
+                Serial.printf("[S2_INFO] Aggregation ACK received | Seq: %d | ForwardLatency: %.3f ms\n",
                               last_seq_sent,
-                              endToEndLatency,
                               forwardLatency);
             }
         }

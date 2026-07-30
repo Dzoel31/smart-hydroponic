@@ -16,9 +16,9 @@
 const char *WIFI_SSID = "FIK-Hotspot";
 const char *WIFI_PASSWORD = "T4nahairku";
 // const char *WEBSOCKET_URL = "ws://103.147.92.179";
-const char *WEBSOCKET_URL = "ws://103.147.92.179/smart-hydroponic/api/v2/hydroponics/ws/actuator-data";
+const char *WEBSOCKET_URL = "ws://172.25.21.234:8000/smart-hydroponic/api/v2/hydroponics/ws/actuator-data";
 const char *DEVICE_ID = "esp8266-actuator-device";
-const unsigned long DATA_SEND_INTERVAL = 5000;      // 5 seconds
+const unsigned long DATA_SEND_INTERVAL = 30000;      // 5 seconds
 const unsigned long WIFI_RECONNECT_TIMEOUT = 10000; // 10 seconds
 const float MOISTURE_THRESHOLD = 60;
 const float TEMPERATURE_THRESHOLD = 30.0;
@@ -49,7 +49,7 @@ void handleManualMode(JsonVariant data);
 void updateOutputs();
 void onMessageCallback(WebsocketsMessage message);
 void sendStatusUpdate();
-void sendActuatorAck(const char *messageType, const char *messageId);
+void sendActuatorAck(const char *messageType, const char *messageId, int sourceSeq = -1);
 void checkConnections();
 
 void setup()
@@ -212,7 +212,8 @@ void onMessageCallback(WebsocketsMessage message)
     }
     else if (doc.containsKey("correlation_id"))
     {
-        sendActuatorAck("inter_node_forward", doc["correlation_id"].as<const char *>());
+        int sourceSeq = doc.containsKey("source_seq") ? doc["source_seq"].as<int>() : -1;
+        sendActuatorAck("inter_node_forward", doc["correlation_id"].as<const char *>(), sourceSeq);
     }
 }
 
@@ -284,7 +285,7 @@ void sendStatusUpdate()
     }
 }
 
-void sendActuatorAck(const char *messageType, const char *messageId)
+void sendActuatorAck(const char *messageType, const char *messageId, int sourceSeq)
 {
     StaticJsonDocument<256> ackDoc;
     ackDoc["type"] = "actuator_ack";
@@ -304,6 +305,14 @@ void sendActuatorAck(const char *messageType, const char *messageId)
     {
         clientActuator.send(ackString);
         Serial.println("[ACTUATOR_ACK] " + ackString);
+        if (String(messageType) == "inter_node_forward")
+        {
+            Serial.printf(
+                "[S2_AGG_METRIC] SourceSeq: %d | AckTimeMs: %lu | Correlation: %s\n",
+                sourceSeq,
+                millis(),
+                messageId);
+        }
     }
 }
 

@@ -13,7 +13,7 @@
 #define MOISTURE_PIN6 39 // input-only (SM) // COKELAT 6
 
 // Water flow and ultrasonic sensor
-#define WATERFLOW_PIN 16 // OREN
+#define WATERFLOW_PIN 15 // OREN
 #define TRIGGER_PIN 18   // BIRU
 #define ECHO_PIN 19
 
@@ -26,13 +26,13 @@
 // ============================ NETWORK ============================
 const char *WIFI_SSID = "FIK-Hotspot";                                                                    // <-- isi
 const char *WIFI_PASSWORD = "T4nahairku";                                                              // <-- isi
-const char *WS_SERVER_URL = "ws://172.25.21.236:8000/smart-hydroponic/api/v2/hydroponics/ws/sensor-data"; // contoh: "ws://192.168.1.10:3000/ws"
+const char *WS_SERVER_URL = "ws://172.25.21.231:8000/smart-hydroponic/api/v2/hydroponics/ws/sensor-data"; // contoh: "ws://192.168.1.10:3000/ws"
 const char *DEVICE_ID = "esp32-plant-device";
 
 // ============================ INTERVALS ============================
 const unsigned long FLOW_INTERVAL = 1000;      // 1s
 const unsigned long ULTRASONIC_INTERVAL = 500; // 0.5s
-const unsigned long SEND_INTERVAL = 30000;      // 5s
+const unsigned long SEND_INTERVAL = 30000;      // 30s
 const unsigned long WIFI_TIMEOUT = 10000;      // 10s (hanya dipakai di setup awal)
 
 // Retry cooldowns (non-blocking)
@@ -323,9 +323,16 @@ void sendSensorData()
 
     last_seq_sent = seq;
     send_time = millis();
-    client.send(s);
-    seq++;
-    Serial.println(String("[SEND] ") + s);
+    if (client.send(s))
+    {
+        Serial.printf("[TX] Seq: %d\n", seq);
+        seq++;
+        Serial.println(String("[SEND] ") + s);
+    }
+    else
+    {
+        Serial.println("[WS] Send failed");
+    }
 }
 
 void onWebsocketMessage(WebsocketsMessage message)

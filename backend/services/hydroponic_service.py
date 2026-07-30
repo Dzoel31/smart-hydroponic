@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from typing import Any
 from schemas.hydroponic import (
-    HydroponicDataSensor,
+    HydroponicDataPlant,
     HydroponicDataEnvironment,
     HydroponicDataActuator,
     HydroponicIn,
@@ -13,7 +13,7 @@ from schemas.hydroponic import (
 from models.hydroponic import HydroponicData
 from utils.converter import get_uuidv7_from_timestamp
 
-SENSOR_FIELDS = set(HydroponicDataSensor.model_fields.keys())
+SENSOR_FIELDS = set(HydroponicDataPlant.model_fields.keys())
 ENVIRONMENT_FIELDS = set(HydroponicDataEnvironment.model_fields.keys())
 ACTUATOR_FIELDS = set(HydroponicDataActuator.model_fields.keys())
 

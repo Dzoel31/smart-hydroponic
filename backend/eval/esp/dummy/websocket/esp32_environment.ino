@@ -14,6 +14,8 @@ const unsigned long SEND_INTERVAL = 5000;
 const unsigned long WIFI_TIMEOUT = 15000;
 const unsigned long WIFI_RETRY_INTERVAL = 5000;
 const unsigned long WS_RETRY_INTERVAL = 5000;
+const uint16_t WS_DEFAULT_PORT = 80;
+const int32_t WS_TCP_PROBE_TIMEOUT = 750; // ms, batasi blocking sebelum websocket handshake
 
 float temperature_atas = 27.0f;
 float humidity_atas = 62.0f;
@@ -32,6 +34,8 @@ bool isWebsocketConnected = false;
 void connectWifiInitial();
 void reconnectServicesNonBlocking();
 void onWebsocketEvent(WebsocketsEvent event, String data);
+bool parseWsHostPort(const char *url, String &host, uint16_t &port);
+bool canReachWebsocketServer();
 void generateDummyEnvironment();
 void sendSensorData();
 
@@ -117,6 +121,61 @@ void onWebsocketEvent(WebsocketsEvent event, String)
     }
 }
 
+bool parseWsHostPort(const char *url, String &host, uint16_t &port)
+{
+    String parsed = String(url);
+    if (parsed.startsWith("ws://"))
+    {
+        parsed.remove(0, 5);
+        port = WS_DEFAULT_PORT;
+    }
+    else if (parsed.startsWith("wss://"))
+    {
+        parsed.remove(0, 6);
+        port = 443;
+    }
+    else
+    {
+        return false;
+    }
+
+    int pathIndex = parsed.indexOf('/');
+    String authority = pathIndex >= 0 ? parsed.substring(0, pathIndex) : parsed;
+    int portIndex = authority.lastIndexOf(':');
+    if (portIndex >= 0)
+    {
+        host = authority.substring(0, portIndex);
+        port = (uint16_t)authority.substring(portIndex + 1).toInt();
+    }
+    else
+    {
+        host = authority;
+    }
+
+    return host.length() > 0 && port > 0;
+}
+
+bool canReachWebsocketServer()
+{
+    String host;
+    uint16_t port;
+    if (!parseWsHostPort(WS_SERVER_URL, host, port))
+    {
+        Serial.println("[WS] URL invalid");
+        return false;
+    }
+
+    WiFiClient probe;
+    probe.setTimeout(WS_TCP_PROBE_TIMEOUT);
+    bool ok = probe.connect(host.c_str(), port, WS_TCP_PROBE_TIMEOUT);
+    probe.stop();
+    if (!ok)
+    {
+        Serial.printf("[WS] TCP probe failed: %s:%u\n", host.c_str(), port);
+    }
+    return ok;
+}
+
 void reconnectServicesNonBlocking()
 {
     unsigned long now = millis();
@@ -136,6 +195,13 @@ void reconnectServicesNonBlocking()
     {
         lastWsAttempt = now;
         Serial.println("[WS] Retry connect...");
+        if (!canReachWebsocketServer())
+        {
+            return;
+        }
+
+        client.close();
+        yield();
         bool ok = client.connect(WS_SERVER_URL);
         if (!ok)
         {

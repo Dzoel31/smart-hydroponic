@@ -12,7 +12,7 @@
 #define MOISTURE_PIN5 36
 #define MOISTURE_PIN6 39
 
-#define WATERFLOW_PIN 16
+#define WATERFLOW_PIN 15
 #define TRIGGER_PIN 18
 #define ECHO_PIN 19
 
@@ -28,8 +28,9 @@ const char *WIFI_PASSWORD = "T4nahairku";
 
 const char *DEVICE_ID = "esp32-plant-device";
 
-IPAddress coapServerIp(172, 25, 21, 236);
+IPAddress coapServerIp(172, 25, 21, 231);
 const uint16_t coapServerPort = 8683;
+const uint16_t localCoapPort = 5683;
 const char *coapPath = "coap/hydroponics/plant";
 
 // ============================ INTERVALS ============================
@@ -281,13 +282,11 @@ void startCoap()
     if (coapStarted)
         return;
 
-    udp.begin(5683);
-
-    coap.start();
+    coap.start(localCoapPort);
 
     coapStarted = true;
 
-    Serial.println("[CoAP] Started");
+    Serial.printf("[CoAP] Started on local port %u\n", localCoapPort);
 }
 
 void stopCoap()
@@ -393,6 +392,7 @@ void sendSensorData()
     StaticJsonDocument<512> json;
 
     json["seq"] = seq;
+    json["qos"] = "s1";
     json["device_id"] = DEVICE_ID;
 
     json["moisture1"] = moisture[0];
@@ -429,6 +429,7 @@ void sendSensorData()
 
     if (messageId > 0)
     {
+        Serial.printf("[TX] Seq: %d\n", seq);
         Serial.printf(
             "[CoAP] Sent OK (MID=%u)\n",
             messageId);

@@ -14,12 +14,12 @@
 // --- Jaringan ---
 const char *WIFI_SSID = "FIK-Hotspot";
 const char *WIFI_PASSWORD = "T4nahairku";
-const char *server_url = "ws://103.147.92.179/smart-hydroponic/api/v2/hydroponics/ws/environment-data"; // contoh: "ws://
+const char *server_url = "ws://172.25.21.234:8000/smart-hydroponic/api/v2/hydroponics/ws/environment-data"; // contoh: "ws://
 const char *DEVICE_ID = "esp32-environment-device";
 
 // --- Umum ---
 #define SCOUNT 30
-const unsigned long SEND_INTERVAL = 5000;     // 5s
+const unsigned long SEND_INTERVAL = 30000;     // 5s
 const unsigned long WIFI_TIMEOUT = 15000;     // buat attempt awal di setup
 const unsigned long TDS_SAMPLE_INTERVAL = 40; // 40 ms
 
@@ -60,6 +60,8 @@ unsigned long lastWifiAttempt = 0;
 unsigned long lastWsAttempt = 0;
 const unsigned long WIFI_RETRY_INTERVAL = 5000; // 5s
 const unsigned long WS_RETRY_INTERVAL = 5000;   // 5s
+const uint16_t WS_DEFAULT_PORT = 80;
+const int32_t WS_TCP_PROBE_TIMEOUT = 750; // ms, batasi blocking sebelum websocket handshake
 
 void onWebsocketMessage(WebsocketsMessage message)
 {
@@ -83,9 +85,8 @@ void onWebsocketMessage(WebsocketsMessage message)
     if (doc.containsKey("status") && String(doc["status"].as<const char *>()) == "inter_node_ack")
     {
         int ackSeq = doc.containsKey("seq") ? doc["seq"].as<int>() : last_seq_sent;
-        unsigned long latency = millis() - send_time;
         const char *correlationId = doc.containsKey("correlation_id") ? doc["correlation_id"].as<const char *>() : "";
-        Serial.printf("[S2_METRIC] Seq: %d | EndToEndLatency: %lu ms | Correlation: %s\n", ackSeq, latency, correlationId);
+        Serial.printf("[S2_INFO] Aggregation ACK received | Seq: %d | Correlation: %s\n", ackSeq, correlationId);
         return;
     }
 
@@ -95,6 +96,61 @@ void onWebsocketMessage(WebsocketsMessage message)
 int compareInt(const void *a, const void *b)
 {
     return (*(int *)a - *(int *)b);
+}
+
+bool parseWsHostPort(const char *url, String &host, uint16_t &port)
+{
+    String parsed = String(url);
+    if (parsed.startsWith("ws://"))
+    {
+        parsed.remove(0, 5);
+        port = WS_DEFAULT_PORT;
+    }
+    else if (parsed.startsWith("wss://"))
+    {
+        parsed.remove(0, 6);
+        port = 443;
+    }
+    else
+    {
+        return false;
+    }
+
+    int pathIndex = parsed.indexOf('/');
+    String authority = pathIndex >= 0 ? parsed.substring(0, pathIndex) : parsed;
+    int portIndex = authority.lastIndexOf(':');
+    if (portIndex >= 0)
+    {
+        host = authority.substring(0, portIndex);
+        port = (uint16_t)authority.substring(portIndex + 1).toInt();
+    }
+    else
+    {
+        host = authority;
+    }
+
+    return host.length() > 0 && port > 0;
+}
+
+bool canReachWebsocketServer()
+{
+    String host;
+    uint16_t port;
+    if (!parseWsHostPort(server_url, host, port))
+    {
+        Serial.println("[reconnect] WS URL invalid");
+        return false;
+    }
+
+    WiFiClient probe;
+    probe.setTimeout(WS_TCP_PROBE_TIMEOUT);
+    bool ok = probe.connect(host.c_str(), port, WS_TCP_PROBE_TIMEOUT);
+    probe.stop();
+    if (!ok)
+    {
+        Serial.printf("[reconnect] TCP probe failed: %s:%u\n", host.c_str(), port);
+    }
+    return ok;
 }
 
 // Baca tegangan rata-rata (Volt) pakai ADC kalibrasi mV
@@ -164,7 +220,14 @@ void reconnectServicesNonBlocking()
         {
             lastWsAttempt = now;
             Serial.println("[reconnect] WS retry...");
-            bool ok = client.connect(server_url); // sync, tapi cepat kalau server responsif
+            if (!canReachWebsocketServer())
+            {
+                return;
+            }
+
+            client.close();
+            yield();
+            bool ok = client.connect(server_url);
             yield();
             if (!ok)
             {

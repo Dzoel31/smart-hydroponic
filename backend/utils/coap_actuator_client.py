@@ -1,9 +1,12 @@
+import asyncio
 import json
 import os
-import time
 from typing import Any
 
 import aiocoap
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def get_actuator_control_uri() -> str:
@@ -20,19 +23,19 @@ def get_actuator_control_uri() -> str:
     return f"coap://{host}:{port}/{path}"
 
 
+def get_actuator_timeout_seconds() -> float:
+    return float(os.getenv("COAP_ACTUATOR_TIMEOUT_SECONDS", "5"))
+
+
 async def send_actuator_command_coap(
     payload: dict[str, Any],
     uri: str | None = None,
 ) -> dict[str, Any]:
-    """Send a command/forwarded snapshot to ESP8266 Actuator via CoAP.
-
-    Returns timing metadata measured at the backend application level. The
-    actuator response payload is decoded as JSON when possible so it can be
-    stored together with the QoS result.
-    """
+    """Send a command/forwarded snapshot to ESP8266 Actuator via CoAP."""
 
     target_uri = uri or get_actuator_control_uri()
-    started_at = time.time()
+    timeout_seconds = get_actuator_timeout_seconds()
+
     context = await aiocoap.Context.create_client_context()
     request = aiocoap.Message(
         code=aiocoap.PUT,
@@ -41,8 +44,15 @@ async def send_actuator_command_coap(
     )
 
     try:
-        response = await context.request(request).response
-        ended_at = time.time()
+        logger.info(
+            "[COAP_FORWARD] Sending actuator command | "
+            f"URI: {target_uri} | Timeout: {timeout_seconds}s"
+        )
+        response = await asyncio.wait_for(
+            context.request(request).response,
+            timeout=timeout_seconds,
+        )
+
         raw_payload = response.payload.decode("utf-8", errors="ignore")
         try:
             response_payload: dict[str, Any] = json.loads(raw_payload)
@@ -51,23 +61,18 @@ async def send_actuator_command_coap(
 
         return {
             "confirmed": True,
-            "uri": target_uri,
-            "started_at": started_at,
-            "ended_at": ended_at,
-            "latency_ms": round((ended_at - started_at) * 1000, 3),
             "response_code": str(response.code),
             "actuator_payload": response_payload,
         }
-    except Exception as exc:
-        ended_at = time.time()
+    except TimeoutError:
         return {
             "confirmed": False,
-            "uri": target_uri,
-            "started_at": started_at,
-            "ended_at": ended_at,
-            "latency_ms": round((ended_at - started_at) * 1000, 3),
+            "error": f"CoAP actuator request timed out after {timeout_seconds}s",
+        }
+    except Exception as exc:
+        return {
+            "confirmed": False,
             "error": str(exc),
-            "actuator_payload": None,
         }
     finally:
         await context.shutdown()

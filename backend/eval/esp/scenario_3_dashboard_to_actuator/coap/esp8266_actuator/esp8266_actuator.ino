@@ -189,20 +189,11 @@ void handleCoapControl(const char *payload) {
         state.temperature_avg = data["temperature_avg"].as<float>();
     }
 
-    if (state.automation_status == 1) {
-        if (!isnan(state.moisture_avg)) {
-            state.pump_status = (state.moisture_avg < MOISTURE_THRESHOLD) ? 1 : 0;
-        }
-        if (!isnan(state.temperature_avg)) {
-            state.light_status = (state.temperature_avg < TEMPERATURE_THRESHOLD) ? 1 : 0;
-        }
-    } else {
-        if (data.containsKey("pump_status")) {
-            state.pump_status = data["pump_status"].as<int>();
-        }
-        if (data.containsKey("light_status")) {
-            state.light_status = data["light_status"].as<int>();
-        }
+    if (data.containsKey("pump_status")) {
+        state.pump_status = data["pump_status"].as<int>();
+    }
+    if (data.containsKey("light_status")) {
+        state.light_status = data["light_status"].as<int>();
     }
 
     updateRelays();

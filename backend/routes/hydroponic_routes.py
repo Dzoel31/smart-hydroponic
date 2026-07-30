@@ -27,12 +27,14 @@ from utils.manager import manager
 from utils.aggregator import aggregator
 from utils.evaluation_tracker import evaluation_tracker
 from utils.coap_actuator_client import send_actuator_command_coap
+from utils.actuator_control import build_actuator_control_payload
 from utils.deps import require_role
 from utils.converter import _parse_datetime_input
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from datetime import timedelta
 import logging
+import json
 
 logging.basicConfig(
     level=logging.INFO,
@@ -46,7 +48,7 @@ templates = Jinja2Templates(directory="./templates")
 
 DEVICE_CONFIG = {
     "sensor-data": {
-        "role": "sensor",
+        "role": "plant",
         "room": "hydroponics",
         "model": HydroponicDataSensor,
     },
@@ -306,32 +308,15 @@ async def hydroponic_data_websocket(device_type: str, websocket: WebSocket):
             data = await websocket.receive_json()
             seq = data.get("seq", -1)
             arrival_timestamp = time.time()
+            payload_bytes = len(
+                json.dumps(data, separators=(",", ":")).encode("utf-8")
+            )
+            is_payload_test = "padding" in data
 
             print(
-                f"[SERVER_METRIC] Node: {device_type} | Seq: {seq} | Arrival_Timestamp: {arrival_timestamp}"
+                f"[SERVER_METRIC] Node: {device_type} | Seq: {seq} | "
+                f"Arrival_Timestamp: {arrival_timestamp} | PayloadBytes: {payload_bytes}"
             )
-
-            if role == "actuator" and data.get("type") == "actuator_ack":
-                message_id = data.get("correlation_id") or data.get("command_id")
-                if message_id:
-                    pending = await evaluation_tracker.acknowledge(message_id, data)
-                    if pending and pending.scenario == "inter_node_forward":
-                        ack_result = pending.future.result() if pending.future else {}
-                        await manager.send_to_client(
-                            room=room,
-                            role=pending.source_role,
-                            client_id=pending.source_client_id,
-                            message={
-                                "status": "inter_node_ack",
-                                "correlation_id": message_id,
-                                "seq": pending.source_seq,
-                                "started_at": pending.started_at,
-                                "ended_at": ack_result.get("ended_at"),
-                                "latency_ms": ack_result.get("latency_ms"),
-                                "actuator_response": data,
-                            },
-                        )
-                continue
 
             await websocket.send_json(
                 {
@@ -339,8 +324,13 @@ async def hydroponic_data_websocket(device_type: str, websocket: WebSocket):
                     "seq": seq,
                     "device_type": device_type,
                     "arrival_timestamp": arrival_timestamp,
+                    "payload_bytes": payload_bytes,
+                    "scenario": "payload_size" if is_payload_test else "default",
                 }
             )
+
+            if is_payload_test:
+                continue
 
             if validator_model:
                 validated_data = validator_model.model_validate(data)
@@ -354,43 +344,23 @@ async def hydroponic_data_websocket(device_type: str, websocket: WebSocket):
                     snapshot_payload = snapshot.model_dump()
                     snapshot_payload["seq"] = seq
                     snapshot_payload["arrival_timestamp"] = arrival_timestamp
+                    actuator_message = build_actuator_control_payload(snapshot_payload)
+                    snapshot_payload.update(
+                        {
+                            "pump_status": actuator_message["pump_status"],
+                            "light_status": actuator_message["light_status"],
+                            "automation_status": actuator_message[
+                                "automation_status"
+                            ],
+                        }
+                    )
 
                     async with get_db_session() as session:
                         service = HydroponicService(session)
-                        saved_data = HydroponicIn.model_validate(snapshot)
+                        saved_data = HydroponicIn.model_validate(snapshot_payload)
                         new_data = await service.add_data(saved_data)
 
                     logger.info(f"Snapshot created: {new_data.model_dump()}")
-
-                    actuator_fields = {
-                        "moisture_avg",
-                        "temperature_avg",
-                        "pump_status",
-                        "light_status",
-                        "automation_status",
-                    }
-
-                    actuator_message = new_data.model_dump(include=actuator_fields)
-                    actuator_message["seq"] = seq
-                    actuator_message["arrival_timestamp"] = arrival_timestamp
-
-                    correlation_id = f"sensor-{role}-{seq}-{uuid4()}"
-                    await evaluation_tracker.create(
-                        message_id=correlation_id,
-                        scenario="inter_node_forward",
-                        source_role=role,
-                        source_client_id=session_id,
-                        source_seq=seq,
-                    )
-                    actuator_message = {
-                        "type": "sensor_forward",
-                        "correlation_id": correlation_id,
-                        "source_role": role,
-                        "source_seq": seq,
-                        "forward_timestamp": time.time(),
-                        "payload": actuator_message,
-                    }
-
                     await manager.send_to_room(
                         room=room, role="web-client", message=snapshot_payload
                     )

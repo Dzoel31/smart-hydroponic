@@ -1,5 +1,5 @@
 from schemas.hydroponic import (
-    HydroponicDataSensor,
+    HydroponicDataPlant,
     HydroponicDataEnvironment,
     HydroponicDataActuator,
     HydroponicAggregate,
@@ -23,7 +23,7 @@ from schemas.responses import (
 )
 
 __all__ = [
-    "HydroponicDataSensor",
+    "HydroponicDataPlant",
     "HydroponicDataEnvironment",
     "HydroponicDataActuator",
     "HydroponicAggregate",
