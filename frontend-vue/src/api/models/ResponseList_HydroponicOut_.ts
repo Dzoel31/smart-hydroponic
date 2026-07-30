@@ -2,10 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { HydroponicOut } from './HydroponicOut';
-import type { MetaData } from './MetaData';
+import type { HydroponicOut } from "./HydroponicOut";
+import type { MetaData } from "./MetaData";
 export type ResponseList_HydroponicOut_ = {
-    meta: MetaData;
-    data: Array<HydroponicOut>;
+  meta: MetaData;
+  data: Array<HydroponicOut>;
 };
-

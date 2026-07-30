@@ -2,8 +2,10 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type HydroponicDataActuator = {
+export type HydroponicControlResult = {
   pump_status?: boolean;
   light_status?: boolean;
   automation_status?: boolean;
+  command_id: string;
+  confirmed?: boolean;
 };

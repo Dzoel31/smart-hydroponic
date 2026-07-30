@@ -2,14 +2,13 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { UserRole } from './UserRole';
+import type { UserRole } from "./UserRole";
 export type UserOut = {
-    username: string;
-    email?: (string | null);
-    userid: string;
-    fullname?: (string | null);
-    phone_number?: (string | null);
-    role: UserRole;
-    created_at: string;
+  username: string;
+  email?: string | null;
+  userid: string;
+  fullname?: string | null;
+  phone_number?: string | null;
+  role: UserRole;
+  created_at: string;
 };
-

@@ -3,8 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 export type UserLogin = {
-    username?: (string | null);
-    email?: (string | null);
-    password: string;
+  username?: string | null;
+  email?: string | null;
+  password: string;
 };
-

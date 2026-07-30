@@ -20,19 +20,28 @@
 
         <div class="toolbar-controls">
           <label class="period-label" for="period-select">Range</label>
-          <select id="period-select" v-model="selectedPeriod" class="period-select" :disabled="isLoading">
-            <option v-for="option in periodOptions" :key="option.value" :value="option.value">
+          <select
+            id="period-select"
+            v-model="selectedPeriod"
+            class="period-select"
+            :disabled="isLoading"
+          >
+            <option
+              v-for="option in periodOptions"
+              :key="option.value"
+              :value="option.value"
+            >
               {{ option.label }}
             </option>
           </select>
         </div>
 
         <button class="refresh-btn" :disabled="isLoading" @click="refreshData">
-          {{ isLoading ? 'Refreshing...' : 'Refresh' }}
+          {{ isLoading ? "Refreshing..." : "Refresh" }}
         </button>
 
         <button class="reset-btn" @click="resetRange" :disabled="isLoading">
-          {{ isLoading ? 'Resetting...' : 'Reset Range' }}
+          {{ isLoading ? "Resetting..." : "Reset Range" }}
         </button>
       </section>
 
@@ -46,17 +55,31 @@
           <span class="badge-text">%</span>
         </div>
         <div class="chart-container chart-main">
-          <Line v-if="hasTimelineData" :data="moistureChartData" :options="moistureOptions" />
-          <p v-else class="empty-state">No hydroponic data in the selected range.</p>
+          <Line
+            v-if="hasTimelineData"
+            :data="moistureChartData"
+            :options="moistureOptions"
+          />
+          <p v-else class="empty-state">
+            No hydroponic data in the selected range.
+          </p>
         </div>
         <article class="metric-insight" :class="metricInsights.moisture.tone">
           <div class="metric-insight__header">
             <h4>Moisture Insight</h4>
-            <span class="metric-insight__badge">{{ metricInsights.moisture.badge }}</span>
+            <span class="metric-insight__badge">{{
+              metricInsights.moisture.badge
+            }}</span>
           </div>
-          <p class="metric-insight__value">{{ metricInsights.moisture.value }}</p>
-          <p class="metric-insight__range">Target: {{ metricInsights.moisture.target }}</p>
-          <p class="metric-insight__description">{{ metricInsights.moisture.description }}</p>
+          <p class="metric-insight__value">
+            {{ metricInsights.moisture.value }}
+          </p>
+          <p class="metric-insight__range">
+            Target: {{ metricInsights.moisture.target }}
+          </p>
+          <p class="metric-insight__description">
+            {{ metricInsights.moisture.description }}
+          </p>
         </article>
       </section>
 
@@ -67,17 +90,32 @@
             <span class="badge-text">°C</span>
           </div>
           <div class="chart-container">
-            <Line v-if="hasTimelineData" :data="temperatureChartData" :options="timelineOptions" />
+            <Line
+              v-if="hasTimelineData"
+              :data="temperatureChartData"
+              :options="timelineOptions"
+            />
             <p v-else class="empty-state">No data</p>
           </div>
-          <article class="metric-insight" :class="metricInsights.temperature.tone">
+          <article
+            class="metric-insight"
+            :class="metricInsights.temperature.tone"
+          >
             <div class="metric-insight__header">
               <h4>Temperature Insight</h4>
-              <span class="metric-insight__badge">{{ metricInsights.temperature.badge }}</span>
+              <span class="metric-insight__badge">{{
+                metricInsights.temperature.badge
+              }}</span>
             </div>
-            <p class="metric-insight__value">{{ metricInsights.temperature.value }}</p>
-            <p class="metric-insight__range">Target: {{ metricInsights.temperature.target }}</p>
-            <p class="metric-insight__description">{{ metricInsights.temperature.description }}</p>
+            <p class="metric-insight__value">
+              {{ metricInsights.temperature.value }}
+            </p>
+            <p class="metric-insight__range">
+              Target: {{ metricInsights.temperature.target }}
+            </p>
+            <p class="metric-insight__description">
+              {{ metricInsights.temperature.description }}
+            </p>
           </article>
         </article>
 
@@ -87,17 +125,29 @@
             <span class="badge-text">%</span>
           </div>
           <div class="chart-container">
-            <Line v-if="hasTimelineData" :data="humidityChartData" :options="timelineOptions" />
+            <Line
+              v-if="hasTimelineData"
+              :data="humidityChartData"
+              :options="timelineOptions"
+            />
             <p v-else class="empty-state">No data</p>
           </div>
           <article class="metric-insight" :class="metricInsights.humidity.tone">
             <div class="metric-insight__header">
               <h4>Humidity Insight</h4>
-              <span class="metric-insight__badge">{{ metricInsights.humidity.badge }}</span>
+              <span class="metric-insight__badge">{{
+                metricInsights.humidity.badge
+              }}</span>
             </div>
-            <p class="metric-insight__value">{{ metricInsights.humidity.value }}</p>
-            <p class="metric-insight__range">Target: {{ metricInsights.humidity.target }}</p>
-            <p class="metric-insight__description">{{ metricInsights.humidity.description }}</p>
+            <p class="metric-insight__value">
+              {{ metricInsights.humidity.value }}
+            </p>
+            <p class="metric-insight__range">
+              Target: {{ metricInsights.humidity.target }}
+            </p>
+            <p class="metric-insight__description">
+              {{ metricInsights.humidity.description }}
+            </p>
           </article>
         </article>
 
@@ -106,17 +156,27 @@
             <h3>pH Trends</h3>
           </div>
           <div class="chart-container">
-            <Line v-if="hasTimelineData" :data="phChartData" :options="timelineOptions" />
+            <Line
+              v-if="hasTimelineData"
+              :data="phChartData"
+              :options="timelineOptions"
+            />
             <p v-else class="empty-state">No data</p>
           </div>
           <article class="metric-insight" :class="metricInsights.ph.tone">
             <div class="metric-insight__header">
               <h4>pH Insight</h4>
-              <span class="metric-insight__badge">{{ metricInsights.ph.badge }}</span>
+              <span class="metric-insight__badge">{{
+                metricInsights.ph.badge
+              }}</span>
             </div>
             <p class="metric-insight__value">{{ metricInsights.ph.value }}</p>
-            <p class="metric-insight__range">Target: {{ metricInsights.ph.target }}</p>
-            <p class="metric-insight__description">{{ metricInsights.ph.description }}</p>
+            <p class="metric-insight__range">
+              Target: {{ metricInsights.ph.target }}
+            </p>
+            <p class="metric-insight__description">
+              {{ metricInsights.ph.description }}
+            </p>
           </article>
         </article>
 
@@ -125,17 +185,27 @@
             <h3>TDS Trends</h3>
           </div>
           <div class="chart-container">
-            <Line v-if="hasTimelineData" :data="tdsChartData" :options="timelineOptions" />
+            <Line
+              v-if="hasTimelineData"
+              :data="tdsChartData"
+              :options="timelineOptions"
+            />
             <p v-else class="empty-state">No data</p>
           </div>
           <article class="metric-insight" :class="metricInsights.tds.tone">
             <div class="metric-insight__header">
               <h4>TDS Insight</h4>
-              <span class="metric-insight__badge">{{ metricInsights.tds.badge }}</span>
+              <span class="metric-insight__badge">{{
+                metricInsights.tds.badge
+              }}</span>
             </div>
             <p class="metric-insight__value">{{ metricInsights.tds.value }}</p>
-            <p class="metric-insight__range">Target: {{ metricInsights.tds.target }}</p>
-            <p class="metric-insight__description">{{ metricInsights.tds.description }}</p>
+            <p class="metric-insight__range">
+              Target: {{ metricInsights.tds.target }}
+            </p>
+            <p class="metric-insight__description">
+              {{ metricInsights.tds.description }}
+            </p>
           </article>
         </article>
       </section>
@@ -144,8 +214,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
-import { Line } from 'vue-chartjs';
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { Line } from "vue-chartjs";
 import {
   CategoryScale,
   Chart as ChartJS,
@@ -156,17 +226,28 @@ import {
   Tooltip,
   type ChartData,
   type ChartOptions,
-} from 'chart.js';
-import Sidebar from '@/components/Sidebar.vue';
-import Topbar from '@/components/Topbar.vue';
-import brandLogo from '@/assets/images/logo-hydroponic.png';
-import { HydroponicsService, type HydroponicOut, type ResponseList_HydroponicOut_ } from '../api';
-import { PlantNutritionProfilesService, type PlantNutritionProfileOut } from '../api';
-import { getApiErrorMessage } from '../utils/apiError';
+} from "chart.js";
+import Sidebar from "@/components/Sidebar.vue";
+import Topbar from "@/components/Topbar.vue";
+import brandLogo from "@/assets/images/logo-hydroponic.png";
+import {
+  HydroponicsService,
+  type HydroponicOut,
+  type ResponseList_HydroponicOut_,
+} from "../api";
+import { NutritionService, type PlantNutritionProfileOut } from "../api";
+import { getApiErrorMessage } from "../utils/apiError";
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend,
+);
 
-type PeriodKey = '24h' | '3d' | '7d' | '1m' | '3m' | '6m';
+type PeriodKey = "24h" | "3d" | "7d" | "1m" | "3m" | "6m";
 
 type TimelinePoint = {
   timestamp: string;
@@ -188,46 +269,48 @@ type TimelinePoint = {
 };
 
 const periodOptions: Array<{ value: PeriodKey; label: string }> = [
-  { value: '24h', label: 'Last 24 Hours' },
-  { value: '3d', label: 'Last 3 Days' },
-  { value: '7d', label: 'Last 7 Days' },
-  { value: '1m', label: 'Last 1 Month' },
-  { value: '3m', label: 'Last 3 Months' },
-  { value: '6m', label: 'Last 6 Months' },
+  { value: "24h", label: "Last 24 Hours" },
+  { value: "3d", label: "Last 3 Days" },
+  { value: "7d", label: "Last 7 Days" },
+  { value: "1m", label: "Last 1 Month" },
+  { value: "3m", label: "Last 3 Months" },
+  { value: "6m", label: "Last 6 Months" },
 ];
 
-const selectedPeriod = ref<PeriodKey>('24h');
+const selectedPeriod = ref<PeriodKey>("24h");
 const timelineSeries = ref<Array<HydroponicOut>>([]);
 const activeNutritionProfile = ref<PlantNutritionProfileOut | null>(null);
 const isLoading = ref(false);
-const errorMessage = ref('');
+const errorMessage = ref("");
 const lastUpdatedAt = ref<Date | null>(null);
 let refreshTimerId: number | null = null;
 
 const toSeriesNumber = (value: number | null | undefined): number | null => {
-  return typeof value === 'number' ? Number(value.toFixed(2)) : null;
+  return typeof value === "number" ? Number(value.toFixed(2)) : null;
 };
 
 const periodConfig = (period: PeriodKey): { days: number; limit: number } => {
   switch (period) {
-    case '24h':
+    case "24h":
       return { days: 1, limit: 300 };
-    case '3d':
+    case "3d":
       return { days: 3, limit: 500 };
-    case '7d':
+    case "7d":
       return { days: 7, limit: 700 };
-    case '1m':
+    case "1m":
       return { days: 30, limit: 1000 };
-    case '3m':
+    case "3m":
       return { days: 90, limit: 1500 };
-    case '6m':
+    case "6m":
       return { days: 180, limit: 2000 };
     default:
       return { days: 1, limit: 300 };
   }
 };
 
-const getPeriodRange = (period: PeriodKey): { startIso: string; endIso: string } => {
+const getPeriodRange = (
+  period: PeriodKey,
+): { startIso: string; endIso: string } => {
   const now = new Date();
   const { days } = periodConfig(period);
   const start = new Date(now);
@@ -239,7 +322,10 @@ const getPeriodRange = (period: PeriodKey): { startIso: string; endIso: string }
   };
 };
 
-const downsampleSeries = (rows: Array<HydroponicOut>, maxPoints = 180): Array<HydroponicOut> => {
+const downsampleSeries = (
+  rows: Array<HydroponicOut>,
+  maxPoints = 180,
+): Array<HydroponicOut> => {
   if (rows.length <= maxPoints) {
     return rows;
   }
@@ -256,11 +342,14 @@ const downsampleSeries = (rows: Array<HydroponicOut>, maxPoints = 180): Array<Hy
 const parseAndSortRows = (rows: Array<HydroponicOut>): Array<HydroponicOut> => {
   return rows
     .filter((row) => Boolean(row.timestamp))
-    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    .sort(
+      (a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+    );
 };
 
 const activeNutritionProfileLabel = computed(() => {
-  return activeNutritionProfile.value?.plant_name ?? 'Acuan umum sayuran daun';
+  return activeNutritionProfile.value?.plant_name ?? "Acuan umum sayuran daun";
 });
 
 const defaultTargets = {
@@ -292,13 +381,20 @@ type MetricStats = {
   maximum: number;
 };
 
-const getStats = (values: Array<number | null | undefined>): MetricStats | null => {
-  const numericValues = values.filter((value): value is number => typeof value === 'number');
+const getStats = (
+  values: Array<number | null | undefined>,
+): MetricStats | null => {
+  const numericValues = values.filter(
+    (value): value is number => typeof value === "number",
+  );
   if (!numericValues.length) {
     return null;
   }
 
-  const sum = numericValues.reduce((accumulator, value) => accumulator + value, 0);
+  const sum = numericValues.reduce(
+    (accumulator, value) => accumulator + value,
+    0,
+  );
   return {
     average: sum / numericValues.length,
     minimum: Math.min(...numericValues),
@@ -306,11 +402,14 @@ const getStats = (values: Array<number | null | undefined>): MetricStats | null 
   };
 };
 
-const formatNumber = (value: number, digits = 1): string => value.toFixed(digits);
+const formatNumber = (value: number, digits = 1): string =>
+  value.toFixed(digits);
 
 const formatPeriodLabel = (): string => {
-  const selected = periodOptions.find((option) => option.value === selectedPeriod.value);
-  return selected?.label.toLowerCase() ?? 'rentang ini';
+  const selected = periodOptions.find(
+    (option) => option.value === selectedPeriod.value,
+  );
+  return selected?.label.toLowerCase() ?? "rentang ini";
 };
 
 const buildInsight = (
@@ -318,20 +417,29 @@ const buildInsight = (
   unit: string,
   stats: MetricStats | null,
   target: { min: number; max: number },
-  type: 'moisture' | 'temperature' | 'humidity' | 'ph' | 'tds',
-): { title: string; value: string; target: string; description: string; badge: string; tone: 'good' | 'warn' | 'bad'; key: string } => {
-  const profileName = activeNutritionProfile.value?.plant_name ?? 'sayuran daun';
+  type: "moisture" | "temperature" | "humidity" | "ph" | "tds",
+): {
+  title: string;
+  value: string;
+  target: string;
+  description: string;
+  badge: string;
+  tone: "good" | "warn" | "bad";
+  key: string;
+} => {
+  const profileName =
+    activeNutritionProfile.value?.plant_name ?? "sayuran daun";
   const periodLabel = formatPeriodLabel();
 
   if (!stats) {
     return {
       key: title,
       title,
-      value: '-',
+      value: "-",
       target: `${formatNumber(target.min)} - ${formatNumber(target.max)}${unit}`,
       description: `Belum ada data ${title.toLowerCase()} pada ${periodLabel}.`,
-      badge: 'No Data',
-      tone: 'warn',
+      badge: "No Data",
+      tone: "warn",
     };
   }
 
@@ -343,14 +451,14 @@ const buildInsight = (
   const formattedMax = formatNumber(maximum);
   const targetText = `${formatNumber(target.min)} - ${formatNumber(target.max)}${unit}`;
 
-  if (type === 'moisture' || type === 'humidity') {
+  if (type === "moisture" || type === "humidity") {
     return {
       key: title,
       title,
       value: `${formattedAverage}${unit}`,
       target: targetText,
-      badge: withinRange ? 'Stable' : belowRange ? 'Dry' : 'Wet',
-      tone: withinRange ? 'good' : belowRange ? 'warn' : 'bad',
+      badge: withinRange ? "Stable" : belowRange ? "Dry" : "Wet",
+      tone: withinRange ? "good" : belowRange ? "warn" : "bad",
       description: withinRange
         ? `Rata-rata moisture pada ${periodLabel} berada di ${formattedAverage}${unit} dengan puncak ${formattedMax}${unit}. Kondisi ini masih selaras dengan kebutuhan ${profileName}, sehingga media tanam cenderung cukup lembap dan akar tetap dapat menyerap nutrisi dengan stabil.`
         : belowRange
@@ -359,14 +467,14 @@ const buildInsight = (
     };
   }
 
-  if (type === 'temperature') {
+  if (type === "temperature") {
     return {
       key: title,
       title,
       value: `${formattedAverage}°C`,
       target: targetText,
-      badge: withinRange ? 'Optimal' : belowRange ? 'Cold' : 'Hot',
-      tone: withinRange ? 'good' : belowRange ? 'warn' : 'bad',
+      badge: withinRange ? "Optimal" : belowRange ? "Cold" : "Hot",
+      tone: withinRange ? "good" : belowRange ? "warn" : "bad",
       description: withinRange
         ? `Suhu rata-rata ${formattedAverage}°C pada ${periodLabel} berada di zona ideal ${targetText}. Kisaran ini mendukung kerja enzim, respirasi, dan penyerapan nutrisi pada ${profileName}.`
         : belowRange
@@ -375,14 +483,14 @@ const buildInsight = (
     };
   }
 
-  if (type === 'ph') {
+  if (type === "ph") {
     return {
       key: title,
       title,
       value: formattedAverage,
       target: targetText,
-      badge: withinRange ? 'Balanced' : belowRange ? 'Acidic' : 'Alkaline',
-      tone: withinRange ? 'good' : belowRange ? 'warn' : 'bad',
+      badge: withinRange ? "Balanced" : belowRange ? "Acidic" : "Alkaline",
+      tone: withinRange ? "good" : belowRange ? "warn" : "bad",
       description: withinRange
         ? `Nilai pH rata-rata ${formattedAverage} masih berada di rentang aman ${targetText}. Kondisi ini membantu menjaga ketersediaan unsur hara makro dan mikro untuk ${profileName}.`
         : belowRange
@@ -396,8 +504,8 @@ const buildInsight = (
     title,
     value: `${formattedAverage} ppm`,
     target: targetText,
-    badge: withinRange ? 'Ready' : belowRange ? 'Low' : 'High',
-    tone: withinRange ? 'good' : belowRange ? 'warn' : 'bad',
+    badge: withinRange ? "Ready" : belowRange ? "Low" : "High",
+    tone: withinRange ? "good" : belowRange ? "warn" : "bad",
     description: withinRange
       ? `TDS rata-rata ${formattedAverage} ppm dengan puncak ${formattedMax} ppm masih cocok untuk ${profileName}. Konsentrasi larutan nutrisi cukup untuk mendukung pertumbuhan vegetatif pada ${periodLabel}.`
       : belowRange
@@ -408,7 +516,7 @@ const buildInsight = (
 
 const metricInsights = computed(() => {
   const moistureSeries = timelinePoints.value.map((point) => {
-    if (typeof point.moistureAvg === 'number') {
+    if (typeof point.moistureAvg === "number") {
       return point.moistureAvg;
     }
 
@@ -419,40 +527,69 @@ const metricInsights = computed(() => {
       point.moisture4,
       point.moisture5,
       point.moisture6,
-    ].filter((value): value is number => typeof value === 'number');
+    ].filter((value): value is number => typeof value === "number");
 
     if (!moistureValues.length) {
       return null;
     }
 
-    return moistureValues.reduce((sum, value) => sum + value, 0) / moistureValues.length;
+    return (
+      moistureValues.reduce((sum, value) => sum + value, 0) /
+      moistureValues.length
+    );
   });
 
   const temperatureSeries = timelinePoints.value.map((point) => {
-    if (typeof point.temperatureAvg === 'number') {
+    if (typeof point.temperatureAvg === "number") {
       return point.temperatureAvg;
     }
 
-    const temperatureValues = [point.temperatureTop, point.temperatureBottom].filter((value): value is number => typeof value === 'number');
+    const temperatureValues = [
+      point.temperatureTop,
+      point.temperatureBottom,
+    ].filter((value): value is number => typeof value === "number");
     if (!temperatureValues.length) {
       return null;
     }
 
-    return temperatureValues.reduce((sum, value) => sum + value, 0) / temperatureValues.length;
+    return (
+      temperatureValues.reduce((sum, value) => sum + value, 0) /
+      temperatureValues.length
+    );
   });
 
   const moistureStats = getStats(moistureSeries);
   const temperatureStats = getStats(temperatureSeries);
-  const humidityStats = getStats(timelinePoints.value.map((point) => point.humidityAvg));
+  const humidityStats = getStats(
+    timelinePoints.value.map((point) => point.humidityAvg),
+  );
   const phStats = getStats(timelinePoints.value.map((point) => point.ph));
   const tdsStats = getStats(timelinePoints.value.map((point) => point.tds));
 
   return {
-    moisture: buildInsight('Moisture', '%', moistureStats, currentTargets.value.moisture, 'moisture'),
-    temperature: buildInsight('Suhu', '°C', temperatureStats, currentTargets.value.temperature, 'temperature'),
-    humidity: buildInsight('Humidity', '%', humidityStats, currentTargets.value.humidity, 'humidity'),
-    ph: buildInsight('pH', '', phStats, currentTargets.value.ph, 'ph'),
-    tds: buildInsight('TDS', 'ppm', tdsStats, currentTargets.value.tds, 'tds'),
+    moisture: buildInsight(
+      "Moisture",
+      "%",
+      moistureStats,
+      currentTargets.value.moisture,
+      "moisture",
+    ),
+    temperature: buildInsight(
+      "Suhu",
+      "°C",
+      temperatureStats,
+      currentTargets.value.temperature,
+      "temperature",
+    ),
+    humidity: buildInsight(
+      "Humidity",
+      "%",
+      humidityStats,
+      currentTargets.value.humidity,
+      "humidity",
+    ),
+    ph: buildInsight("pH", "", phStats, currentTargets.value.ph, "ph"),
+    tds: buildInsight("TDS", "ppm", tdsStats, currentTargets.value.tds, "tds"),
   };
 });
 
@@ -460,7 +597,7 @@ const hasTimelineData = computed(() => timelineSeries.value.length > 0);
 
 const lastUpdatedLabel = computed(() => {
   if (!lastUpdatedAt.value) {
-    return 'Never';
+    return "Never";
   }
 
   return lastUpdatedAt.value.toLocaleString();
@@ -494,17 +631,28 @@ const timelinePoints = computed<Array<TimelinePoint>>(() => {
       moisture6: toSeriesNumber(row.moisture6),
       moistureAvg:
         toSeriesNumber(row.moisture_avg) ??
-        (moistureValues.length ? Number((moistureValues.reduce((sum, value) => sum + value, 0) / moistureValues.length).toFixed(2)) : null),
+        (moistureValues.length
+          ? Number(
+              (
+                moistureValues.reduce((sum, value) => sum + value, 0) /
+                moistureValues.length
+              ).toFixed(2),
+            )
+          : null),
       temperatureTop: tempTop,
       temperatureBottom: tempBottom,
       temperatureAvg:
         toSeriesNumber(row.temperature_avg) ??
-        (tempTop !== null && tempBottom !== null ? Number(((tempTop + tempBottom) / 2).toFixed(2)) : null),
+        (tempTop !== null && tempBottom !== null
+          ? Number(((tempTop + tempBottom) / 2).toFixed(2))
+          : null),
       humidityTop: humTop,
       humidityBottom: humBottom,
       humidityAvg:
         toSeriesNumber(row.humidity_avg) ??
-        (humTop !== null && humBottom !== null ? Number(((humTop + humBottom) / 2).toFixed(2)) : null),
+        (humTop !== null && humBottom !== null
+          ? Number(((humTop + humBottom) / 2).toFixed(2))
+          : null),
       ph: phValue,
       tds: tdsValue,
     };
@@ -514,10 +662,15 @@ const timelinePoints = computed<Array<TimelinePoint>>(() => {
 const labels = computed<Array<string>>(() => {
   return timelinePoints.value.map((point) => {
     const date = new Date(point.timestamp);
-    if (selectedPeriod.value === '24h' || selectedPeriod.value === '3d') {
-      return date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    if (selectedPeriod.value === "24h" || selectedPeriod.value === "3d") {
+      return date.toLocaleString([], {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
     }
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString([], { month: "short", day: "numeric" });
   });
 });
 
@@ -525,7 +678,7 @@ const buildLineDataset = (
   label: string,
   data: Array<number | null>,
   color: string,
-  dash: Array<number> = []
+  dash: Array<number> = [],
 ) => ({
   label,
   data,
@@ -539,13 +692,13 @@ const buildLineDataset = (
   borderDash: dash,
 });
 
-const baseTimelineOptions: ChartOptions<'line'> = {
+const baseTimelineOptions: ChartOptions<"line"> = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
     legend: {
       display: true,
-      position: 'top',
+      position: "top",
       labels: {
         boxWidth: 12,
       },
@@ -567,7 +720,7 @@ const baseTimelineOptions: ChartOptions<'line'> = {
   },
 };
 
-const moistureOptions = computed<ChartOptions<'line'>>(() => ({
+const moistureOptions = computed<ChartOptions<"line">>(() => ({
   ...baseTimelineOptions,
   scales: {
     ...baseTimelineOptions.scales,
@@ -581,56 +734,121 @@ const moistureOptions = computed<ChartOptions<'line'>>(() => ({
   },
 }));
 
-const timelineOptions = computed<ChartOptions<'line'>>(() => ({
+const timelineOptions = computed<ChartOptions<"line">>(() => ({
   ...baseTimelineOptions,
 }));
 
-const moistureChartData = computed<ChartData<'line'>>(() => ({
+const moistureChartData = computed<ChartData<"line">>(() => ({
   labels: labels.value,
   datasets: [
-    buildLineDataset('Moisture 1', timelinePoints.value.map((point) => point.moisture1), '#2563eb'),
-    buildLineDataset('Moisture 2', timelinePoints.value.map((point) => point.moisture2), '#3b82f6'),
-    buildLineDataset('Moisture 3', timelinePoints.value.map((point) => point.moisture3), '#60a5fa'),
-    buildLineDataset('Moisture 4', timelinePoints.value.map((point) => point.moisture4), '#0284c7'),
-    buildLineDataset('Moisture 5', timelinePoints.value.map((point) => point.moisture5), '#0ea5e9'),
-    buildLineDataset('Moisture 6', timelinePoints.value.map((point) => point.moisture6), '#38bdf8'),
-    buildLineDataset('Moisture Avg', timelinePoints.value.map((point) => point.moistureAvg), '#1e3a8a', [6, 4]),
+    buildLineDataset(
+      "Moisture 1",
+      timelinePoints.value.map((point) => point.moisture1),
+      "#2563eb",
+    ),
+    buildLineDataset(
+      "Moisture 2",
+      timelinePoints.value.map((point) => point.moisture2),
+      "#3b82f6",
+    ),
+    buildLineDataset(
+      "Moisture 3",
+      timelinePoints.value.map((point) => point.moisture3),
+      "#60a5fa",
+    ),
+    buildLineDataset(
+      "Moisture 4",
+      timelinePoints.value.map((point) => point.moisture4),
+      "#0284c7",
+    ),
+    buildLineDataset(
+      "Moisture 5",
+      timelinePoints.value.map((point) => point.moisture5),
+      "#0ea5e9",
+    ),
+    buildLineDataset(
+      "Moisture 6",
+      timelinePoints.value.map((point) => point.moisture6),
+      "#38bdf8",
+    ),
+    buildLineDataset(
+      "Moisture Avg",
+      timelinePoints.value.map((point) => point.moistureAvg),
+      "#1e3a8a",
+      [6, 4],
+    ),
   ],
 }));
 
-const temperatureChartData = computed<ChartData<'line'>>(() => ({
+const temperatureChartData = computed<ChartData<"line">>(() => ({
   labels: labels.value,
   datasets: [
-    buildLineDataset('Temperature Top', timelinePoints.value.map((point) => point.temperatureTop), '#f59e0b'),
-    buildLineDataset('Temperature Bottom', timelinePoints.value.map((point) => point.temperatureBottom), '#f97316'),
-    buildLineDataset('Temperature Avg', timelinePoints.value.map((point) => point.temperatureAvg), '#c2410c', [6, 4]),
+    buildLineDataset(
+      "Temperature Top",
+      timelinePoints.value.map((point) => point.temperatureTop),
+      "#f59e0b",
+    ),
+    buildLineDataset(
+      "Temperature Bottom",
+      timelinePoints.value.map((point) => point.temperatureBottom),
+      "#f97316",
+    ),
+    buildLineDataset(
+      "Temperature Avg",
+      timelinePoints.value.map((point) => point.temperatureAvg),
+      "#c2410c",
+      [6, 4],
+    ),
   ],
 }));
 
-const humidityChartData = computed<ChartData<'line'>>(() => ({
+const humidityChartData = computed<ChartData<"line">>(() => ({
   labels: labels.value,
   datasets: [
-    buildLineDataset('Humidity Top', timelinePoints.value.map((point) => point.humidityTop), '#0ea5e9'),
-    buildLineDataset('Humidity Bottom', timelinePoints.value.map((point) => point.humidityBottom), '#0284c7'),
-    buildLineDataset('Humidity Avg', timelinePoints.value.map((point) => point.humidityAvg), '#155e75', [6, 4]),
+    buildLineDataset(
+      "Humidity Top",
+      timelinePoints.value.map((point) => point.humidityTop),
+      "#0ea5e9",
+    ),
+    buildLineDataset(
+      "Humidity Bottom",
+      timelinePoints.value.map((point) => point.humidityBottom),
+      "#0284c7",
+    ),
+    buildLineDataset(
+      "Humidity Avg",
+      timelinePoints.value.map((point) => point.humidityAvg),
+      "#155e75",
+      [6, 4],
+    ),
   ],
 }));
 
-const phChartData = computed<ChartData<'line'>>(() => ({
+const phChartData = computed<ChartData<"line">>(() => ({
   labels: labels.value,
   datasets: [
-    buildLineDataset('pH', timelinePoints.value.map((point) => point.ph), '#16a34a'),
+    buildLineDataset(
+      "pH",
+      timelinePoints.value.map((point) => point.ph),
+      "#16a34a",
+    ),
   ],
 }));
 
-const tdsChartData = computed<ChartData<'line'>>(() => ({
+const tdsChartData = computed<ChartData<"line">>(() => ({
   labels: labels.value,
   datasets: [
-    buildLineDataset('TDS', timelinePoints.value.map((point) => point.tds), '#059669'),
+    buildLineDataset(
+      "TDS",
+      timelinePoints.value.map((point) => point.tds),
+      "#059669",
+    ),
   ],
 }));
 
-const fetchHydroponicRows = async (period: PeriodKey): Promise<Array<HydroponicOut>> => {
+const fetchHydroponicRows = async (
+  period: PeriodKey,
+): Promise<Array<HydroponicOut>> => {
   const { startIso, endIso } = getPeriodRange(period);
   const { limit } = periodConfig(period);
   const rows: Array<HydroponicOut> = [];
@@ -639,12 +857,13 @@ const fetchHydroponicRows = async (period: PeriodKey): Promise<Array<HydroponicO
   let totalPages = 1;
 
   while (page <= totalPages) {
-    const response: ResponseList_HydroponicOut_ = await HydroponicsService.getPublicHydroponicData(
-      page,
-      limit,
-      startIso,
-      endIso,
-    );
+    const response: ResponseList_HydroponicOut_ =
+      await HydroponicsService.getPublicHydroponicData(
+        page,
+        limit,
+        startIso,
+        endIso,
+      );
 
     rows.push(...response.data);
     totalPages = Math.max(response.meta.total_pages ?? 1, 1);
@@ -656,9 +875,13 @@ const fetchHydroponicRows = async (period: PeriodKey): Promise<Array<HydroponicO
 
 const loadActiveNutritionProfile = async (): Promise<void> => {
   try {
-    activeNutritionProfile.value = await PlantNutritionProfilesService.getActiveNutritionProfile();
+    activeNutritionProfile.value =
+      await NutritionService.getActiveNutritionProfile();
   } catch (error) {
-    if (error instanceof Error && (error as { status?: number }).status === 404) {
+    if (
+      error instanceof Error &&
+      (error as { status?: number }).status === 404
+    ) {
       activeNutritionProfile.value = null;
       return;
     }
@@ -668,13 +891,13 @@ const loadActiveNutritionProfile = async (): Promise<void> => {
 };
 
 const resetRange = (): void => {
-  selectedPeriod.value = '24h';
+  selectedPeriod.value = "24h";
   void refreshData();
 };
 
 const refreshData = async (): Promise<void> => {
   isLoading.value = true;
-  errorMessage.value = '';
+  errorMessage.value = "";
 
   try {
     const rows = await fetchHydroponicRows(selectedPeriod.value);
@@ -682,7 +905,10 @@ const refreshData = async (): Promise<void> => {
     timelineSeries.value = downsampleSeries(sortedRows);
     lastUpdatedAt.value = new Date();
   } catch (error) {
-    const message = getApiErrorMessage(error, 'Failed to fetch timeline data. Please try again.');
+    const message = getApiErrorMessage(
+      error,
+      "Failed to fetch timeline data. Please try again.",
+    );
     errorMessage.value = message;
     timelineSeries.value = [];
   } finally {
@@ -717,7 +943,7 @@ onUnmounted(() => {
   width: 100%;
   min-height: 100vh;
   background-color: #f8fafc;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .main-content {

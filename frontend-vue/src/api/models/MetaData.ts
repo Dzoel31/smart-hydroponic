@@ -3,10 +3,9 @@
 /* tslint:disable */
 /* eslint-disable */
 export type MetaData = {
-    total_rows?: (number | null);
-    limit: number;
-    offset: number;
-    readonly total_pages: number;
-    readonly current_page: number;
+  total_rows?: number | null;
+  limit: number;
+  offset: number;
+  readonly total_pages: number;
+  readonly current_page: number;
 };
-
