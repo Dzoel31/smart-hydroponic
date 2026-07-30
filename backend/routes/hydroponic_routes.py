@@ -8,13 +8,18 @@ from fastapi import (
     HTTPException,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
-from utils.deps import get_session, get_db_session, get_current_user, get_optional_current_user
+from utils.deps import (
+    get_session,
+    get_db_session,
+    get_current_user,
+    get_optional_current_user,
+)
 from services.hydroponic_service import HydroponicService
 from schemas.hydroponic import (
     HydroponicIn,
     HydroponicOut,
     HydroponicDashboardOut,
-    HydroponicDataSensor,
+    HydroponicDataPlant,
     HydroponicDataEnvironment,
     HydroponicDataActuator,
     HydroponicControlResult,
@@ -22,10 +27,8 @@ from schemas.hydroponic import (
 )
 from schemas.user import UserOut
 from uuid import uuid4
-import time
 from utils.manager import manager
 from utils.aggregator import aggregator
-from utils.evaluation_tracker import evaluation_tracker
 from utils.coap_actuator_client import send_actuator_command_coap
 from utils.actuator_control import build_actuator_control_payload
 from utils.deps import require_role
@@ -34,7 +37,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from datetime import timedelta
 import logging
-import json
+
+from services.nutrition_service import NutritionService
 
 logging.basicConfig(
     level=logging.INFO,
@@ -50,7 +54,7 @@ DEVICE_CONFIG = {
     "sensor-data": {
         "role": "plant",
         "room": "hydroponics",
-        "model": HydroponicDataSensor,
+        "model": HydroponicDataPlant,
     },
     "environment-data": {
         "role": "environment",
@@ -149,6 +153,7 @@ async def get_hydroponic_data(
     service = HydroponicService(session)
     return await service.get_all_data(page, limit, start_date, end_date)
 
+
 @router.get(
     "/public",
     response_model=ResponseList[HydroponicOut],
@@ -182,6 +187,7 @@ async def get_public_hydroponic_data(
 
     return await service.get_all_data(page, limit, start_date, end_date)
 
+
 @router.post(
     "/control",
     response_model=HydroponicControlResult,
@@ -207,14 +213,12 @@ async def control_hydroponic_actuators(
         )
 
     command_id = f"dashboard-{uuid4()}"
-    time_start = time.time()
     command_payload = command.model_dump()
 
     if transport == "coap":
         coap_payload = {
             "type": "command",
             "command_id": command_id,
-            "time_start": time_start,
             "payload": command_payload,
         }
         coap_result = await send_actuator_command_coap(coap_payload)
@@ -222,17 +226,7 @@ async def control_hydroponic_actuators(
             **command_payload,
             command_id=command_id,
             confirmed=coap_result["confirmed"],
-            time_start=time_start,
-            time_end=coap_result["ended_at"],
-            latency_ms=coap_result["latency_ms"],
-            actuator_response=coap_result,
         )
-
-    pending = await evaluation_tracker.create(
-        message_id=command_id,
-        scenario="dashboard_control",
-        source_role="web-client",
-    )
 
     logger.info(f"Received control command: {command_payload}")
     await manager.send_to_room(
@@ -241,28 +235,14 @@ async def control_hydroponic_actuators(
         message={
             "type": "command",
             "command_id": command_id,
-            "time_start": time_start,
             "payload": command_payload,
         },
     )
-
-    ack = await evaluation_tracker.wait_for_ack(pending, timeout=5.0)
-    if ack is None:
-        return HydroponicControlResult(
-            **command_payload,
-            command_id=command_id,
-            confirmed=False,
-            time_start=time_start,
-        )
 
     return HydroponicControlResult(
         **command_payload,
         command_id=command_id,
         confirmed=True,
-        time_start=time_start,
-        time_end=ack["ended_at"],
-        latency_ms=ack["latency_ms"],
-        actuator_response=ack["actuator_payload"],
     )
 
 
@@ -306,31 +286,13 @@ async def hydroponic_data_websocket(device_type: str, websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_json()
-            seq = data.get("seq", -1)
-            arrival_timestamp = time.time()
-            payload_bytes = len(
-                json.dumps(data, separators=(",", ":")).encode("utf-8")
-            )
-            is_payload_test = "padding" in data
-
-            print(
-                f"[SERVER_METRIC] Node: {device_type} | Seq: {seq} | "
-                f"Arrival_Timestamp: {arrival_timestamp} | PayloadBytes: {payload_bytes}"
-            )
 
             await websocket.send_json(
                 {
                     "status": "ack",
-                    "seq": seq,
                     "device_type": device_type,
-                    "arrival_timestamp": arrival_timestamp,
-                    "payload_bytes": payload_bytes,
-                    "scenario": "payload_size" if is_payload_test else "default",
                 }
             )
-
-            if is_payload_test:
-                continue
 
             if validator_model:
                 validated_data = validator_model.model_validate(data)
@@ -342,23 +304,28 @@ async def hydroponic_data_websocket(device_type: str, websocket: WebSocket):
 
                 if snapshot:
                     snapshot_payload = snapshot.model_dump()
-                    snapshot_payload["seq"] = seq
-                    snapshot_payload["arrival_timestamp"] = arrival_timestamp
-                    actuator_message = build_actuator_control_payload(snapshot_payload)
-                    snapshot_payload.update(
-                        {
-                            "pump_status": actuator_message["pump_status"],
-                            "light_status": actuator_message["light_status"],
-                            "automation_status": actuator_message[
-                                "automation_status"
-                            ],
-                        }
-                    )
 
                     async with get_db_session() as session:
+                        nutrition_service = NutritionService(session)
+                        active_profile = await nutrition_service.get_active_profile()
+
+                        actuator_message = build_actuator_control_payload(
+                            snapshot_payload, active_profile
+                        )
+                        snapshot_payload.update(
+                            {
+                                "pump_status": actuator_message["pump_status"],
+                                "light_status": actuator_message["light_status"],
+                                "automation_status": actuator_message[
+                                    "automation_status"
+                                ],
+                            }
+                        )
+
                         service = HydroponicService(session)
-                        saved_data = HydroponicIn.model_validate(snapshot_payload)
-                        new_data = await service.add_data(saved_data)
+                        new_data = await service.add_data(
+                            HydroponicIn.model_validate(snapshot_payload)
+                        )
 
                     logger.info(f"Snapshot created: {new_data.model_dump()}")
                     await manager.send_to_room(
@@ -370,6 +337,7 @@ async def hydroponic_data_websocket(device_type: str, websocket: WebSocket):
                         role="actuator",
                         message=actuator_message,
                     )
+
                     logger.info(
                         f"Snapshot created and sent to actuator clients: {actuator_message}"
                     )

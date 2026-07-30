@@ -25,7 +25,9 @@ def upgrade() -> None:
         "plant_nutrition_profiles",
         sa.Column("nutrition_id", sa.UUID(), nullable=False),
         sa.Column("plant_name", sa.String(length=120), nullable=False),
-        sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("false")),
+        sa.Column(
+            "is_active", sa.Boolean(), nullable=False, server_default=sa.text("false")
+        ),
         sa.Column("moisture_min", sa.DOUBLE_PRECISION(), nullable=False),
         sa.Column("moisture_max", sa.DOUBLE_PRECISION(), nullable=False),
         sa.Column("ph_min", sa.DOUBLE_PRECISION(), nullable=False),
@@ -49,8 +51,12 @@ def upgrade() -> None:
             server_default=sa.text("CURRENT_TIMESTAMP"),
             nullable=False,
         ),
-        sa.PrimaryKeyConstraint("nutrition_id", name=op.f("pk_plant_nutrition_profiles")),
-        sa.UniqueConstraint("plant_name", name=op.f("uq_plant_nutrition_profiles_plant_name")),
+        sa.PrimaryKeyConstraint(
+            "nutrition_id", name=op.f("pk_plant_nutrition_profiles")
+        ),
+        sa.UniqueConstraint(
+            "plant_name", name=op.f("uq_plant_nutrition_profiles_plant_name")
+        ),
     )
     op.create_index(
         op.f("ix_plant_nutrition_profiles_plant_name"),
@@ -62,5 +68,8 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.drop_index(op.f("ix_plant_nutrition_profiles_plant_name"), table_name="plant_nutrition_profiles")
+    op.drop_index(
+        op.f("ix_plant_nutrition_profiles_plant_name"),
+        table_name="plant_nutrition_profiles",
+    )
     op.drop_table("plant_nutrition_profiles")

@@ -187,10 +187,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-=======
-# Environments
 .env
->>>>>>> dev-python
 .venv
 env/
 venv/
@@ -239,10 +236,11 @@ poetry.toml
 # LSP config files
 pyrightconfig.json
 
-<<<<<<< HEAD
 # End of https://www.toptal.com/developers/gitignore/api/python,node
-=======
-# End of https://www.toptal.com/developers/gitignore/api/python
-logs
->>>>>>> dev-python
 
+*.csv
+*.pcap
+*.txt
+logs/
+ready_data/
+pcap_extract/

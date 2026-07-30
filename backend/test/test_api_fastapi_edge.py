@@ -213,7 +213,10 @@ def test_public_hydroponic_data_rejects_range_over_7_days_for_anonymous(
     )
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "Date range cannot exceed 7 days for public endpoint"
+    assert (
+        response.json()["detail"]
+        == "Date range cannot exceed 7 days for public endpoint"
+    )
 
 
 def test_public_hydroponic_data_allows_range_over_7_days_for_admin(
@@ -232,7 +235,9 @@ def test_public_hydroponic_data_allows_range_over_7_days_for_admin(
             created_at=datetime.now(timezone.utc),
         )
 
-    async def fake_get_all_data(_self, _page=1, _limit=25, _start_date=None, _end_date=None):
+    async def fake_get_all_data(
+        _self, _page=1, _limit=25, _start_date=None, _end_date=None
+    ):
         sample = HydroponicOut(
             dataid=uuid7(),
             moisture1=1,

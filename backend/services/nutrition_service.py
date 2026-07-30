@@ -39,7 +39,10 @@ class NutritionService:
 
         data_stmt = (
             select(PlantNutritionProfile)
-            .order_by(PlantNutritionProfile.is_active.desc(), PlantNutritionProfile.plant_name.asc())
+            .order_by(
+                PlantNutritionProfile.is_active.desc(),
+                PlantNutritionProfile.plant_name.asc(),
+            )
             .limit(limit)
             .offset(offset)
         )
@@ -50,15 +53,22 @@ class NutritionService:
 
         return ResponseList(
             meta=MetaData(total_rows=total_rows, limit=limit, offset=offset),
-            data=[PlantNutritionProfileOut.model_validate(row) for row in data_result.scalars().all()],
+            data=[
+                PlantNutritionProfileOut.model_validate(row)
+                for row in data_result.scalars().all()
+            ],
         )
 
     async def get_active_profile(self) -> PlantNutritionProfile | None:
-        stmt = select(PlantNutritionProfile).where(PlantNutritionProfile.is_active.is_(True))
+        stmt = select(PlantNutritionProfile).where(
+            PlantNutritionProfile.is_active.is_(True)
+        )
         result = await self.session.execute(stmt)
         return result.scalars().first()
 
-    async def get_profile_by_id(self, nutrition_id: UUID | str) -> PlantNutritionProfile | None:
+    async def get_profile_by_id(
+        self, nutrition_id: UUID | str
+    ) -> PlantNutritionProfile | None:
         stmt = select(PlantNutritionProfile).where(
             PlantNutritionProfile.nutrition_id == nutrition_id
         )
@@ -102,7 +112,9 @@ class NutritionService:
         await self.session.refresh(profile)
         return PlantNutritionProfileOut.model_validate(profile)
 
-    async def set_active_profile(self, nutrition_id: UUID | str) -> PlantNutritionProfileOut | None:
+    async def set_active_profile(
+        self, nutrition_id: UUID | str
+    ) -> PlantNutritionProfileOut | None:
         profile = await self.get_profile_by_id(nutrition_id)
         if profile is None:
             return None

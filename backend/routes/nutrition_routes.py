@@ -32,7 +32,7 @@ async def get_nutrition_profiles(
     page: int = 1,
     limit: int = 25,
     session: AsyncSession = Depends(get_session),
-)-> ResponseList[PlantNutritionProfileOut]:
+) -> ResponseList[PlantNutritionProfileOut]:
     service = NutritionService(session)
     return await service.get_profiles(page=page, limit=limit)
 
