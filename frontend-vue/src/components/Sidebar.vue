@@ -1,6 +1,5 @@
 <template>
   <aside class="sidebar" :class="{ 'is-collapsed': isCollapsed }">
-    
     <div class="sidebar-header">
       <router-link to="/dashboard" class="brand">
         <span class="brand-logo">
@@ -10,12 +9,28 @@
       </router-link>
 
       <button class="toggle-btn" @click="toggleSidebar">
-        <svg v-if="isCollapsed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          v-if="isCollapsed"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <line x1="3" y1="12" x2="21" y2="12"></line>
           <line x1="3" y1="6" x2="21" y2="6"></line>
           <line x1="3" y1="18" x2="21" y2="18"></line>
         </svg>
-        <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          v-else
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
@@ -24,7 +39,14 @@
 
     <nav class="nav-menu">
       <router-link to="/dashboard" class="nav-item" active-class="active">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <rect x="3" y="3" width="7" height="7"></rect>
           <rect x="14" y="3" width="7" height="7"></rect>
           <rect x="14" y="14" width="7" height="7"></rect>
@@ -35,7 +57,14 @@
 
       <template v-if="userRole === 'admin' || userRole === 'superadmin'">
         <router-link to="/data-logs" class="nav-item" active-class="active">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
             <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
             <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
@@ -43,9 +72,22 @@
           <span class="nav-text">Hydroponic Data</span>
         </router-link>
 
-        <router-link to="/nutrition-profiles" class="nav-item" active-class="active">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2C8 7 5 10.5 5 14a7 7 0 0 0 14 0c0-3.5-3-7-7-12Z"></path>
+        <router-link
+          to="/nutrition-profiles"
+          class="nav-item"
+          active-class="active"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M12 2C8 7 5 10.5 5 14a7 7 0 0 0 14 0c0-3.5-3-7-7-12Z"
+            ></path>
             <path d="M9 15c1.2-1.4 2.6-2.2 4.8-2.2"></path>
           </svg>
           <span class="nav-text">Nutrition Profiles</span>
@@ -53,15 +95,29 @@
       </template>
 
       <router-link to="/analytics" class="nav-item" active-class="active">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
         </svg>
         <span class="nav-text">Analytics</span>
       </router-link>
 
-     <template v-if="userRole === 'superadmin'">
+      <template v-if="userRole === 'superadmin'">
         <router-link to="/manage-admin" class="nav-item" active-class="active">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <circle cx="9" cy="7" r="4"></circle>
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
             <circle cx="17" cy="11" r="3"></circle>
@@ -73,7 +129,14 @@
 
       <template v-if="userRole === 'admin' || userRole === 'superadmin'">
         <router-link to="/profile" class="nav-item" active-class="active">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
             <circle cx="12" cy="7" r="4"></circle>
           </svg>
@@ -85,29 +148,29 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { authState } from '@/auth';
+import { ref, computed, onMounted, onUnmounted } from "vue";
+import { authState } from "@/auth";
 
 defineProps({
-  logo: String
+  logo: String,
 });
 
 const userRole = computed(() => {
   if (authState.isLoggedIn && authState.user) {
     return authState.user.role;
   }
-  return 'guest';
+  return "guest";
 });
 
-const savedState = localStorage.getItem('sidebarCollapsed');
+const savedState = localStorage.getItem("sidebarCollapsed");
 
 const isCollapsed = ref(
-  savedState !== null ? savedState === 'true' : window.innerWidth <= 1024
+  savedState !== null ? savedState === "true" : window.innerWidth <= 1024,
 );
 
 const toggleSidebar = () => {
   isCollapsed.value = !isCollapsed.value;
-  localStorage.setItem('sidebarCollapsed', isCollapsed.value.toString());
+  localStorage.setItem("sidebarCollapsed", isCollapsed.value.toString());
 };
 
 // Deteksi ukuran layar otomatis saat browser di-resize
@@ -115,23 +178,23 @@ const checkScreenSize = () => {
   if (window.innerWidth <= 1024) {
     isCollapsed.value = true;
   } else {
-    if (localStorage.getItem('sidebarCollapsed') === 'true') {
+    if (localStorage.getItem("sidebarCollapsed") === "true") {
       isCollapsed.value = true;
     } else {
       isCollapsed.value = false;
     }
-  } 
+  }
 };
 
 onMounted(() => {
   if (savedState === null) {
     checkScreenSize();
   }
-  window.addEventListener('resize', checkScreenSize);
+  window.addEventListener("resize", checkScreenSize);
 });
 
 onUnmounted(() => {
-  window.removeEventListener('resize', checkScreenSize);
+  window.removeEventListener("resize", checkScreenSize);
 });
 </script>
 
@@ -152,7 +215,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   position: sticky;
   top: 0;
   flex-shrink: 0;
@@ -163,7 +226,9 @@ onUnmounted(() => {
 }
 
 /* Sembunyikan scrollbar agar rapi */
-.sidebar::-webkit-scrollbar { display: none; }
+.sidebar::-webkit-scrollbar {
+  display: none;
+}
 
 .sidebar-header {
   display: flex;
@@ -178,14 +243,16 @@ onUnmounted(() => {
 .brand {
   display: flex;
   align-items: center;
-  padding: 4px; 
+  padding: 4px;
   gap: 12px;
   cursor: pointer;
   border-radius: 8px;
   transition: background-color 0.3s ease;
 }
 
-.brand:hover { background-color: #f8fafc; }
+.brand:hover {
+  background-color: #f8fafc;
+}
 
 .brand h2 {
   font-size: 18px;
@@ -193,7 +260,9 @@ onUnmounted(() => {
   color: #4caf50;
   line-height: 1.2;
   white-space: normal;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    visibility 0.2s ease;
 }
 
 .logo-img {
@@ -264,9 +333,18 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.nav-item:hover { background-color: #f8fafc; color: #0f172a; }
-.nav-item.active { background-color: #e8f5e9; color: #2e7d32; font-weight: 600; }
-.spacer { flex-grow: 1; }
+.nav-item:hover {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+.nav-item.active {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  font-weight: 600;
+}
+.spacer {
+  flex-grow: 1;
+}
 
 .sidebar.is-collapsed {
   width: 88px;
@@ -278,7 +356,7 @@ onUnmounted(() => {
   gap: 20px;
 }
 
-.sidebar.is-collapsed .brand h2, 
+.sidebar.is-collapsed .brand h2,
 .sidebar.is-collapsed .nav-text {
   display: none;
 }

@@ -13,12 +13,7 @@
       {
         "preset": "conventionalcommits",
         "presetConfig": {
-          "scope": [
-            "frontend",
-            "frontend-*",
-            "ui",
-            "web"
-          ],
+          "scope": ["frontend", "frontend-*", "ui", "web"],
           "scopeOnly": true
         },
         "releaseRules": [
@@ -64,19 +59,11 @@
       {
         "preset": "conventionalcommits",
         "presetConfig": {
-          "scope": [
-            "frontend",
-            "frontend-*",
-            "ui",
-            "web"
-          ],
+          "scope": ["frontend", "frontend-*", "ui", "web"],
           "scopeOnly": true
         },
         "writerOpts": {
-          "commitsSort": [
-            "scope",
-            "subject"
-          ]
+          "commitsSort": ["scope", "subject"]
         }
       }
     ],
@@ -95,10 +82,7 @@
     [
       "@semantic-release/git",
       {
-        "assets": [
-          "package.json",
-          "CHANGELOG.md"
-        ],
+        "assets": ["package.json", "CHANGELOG.md"],
         "message": "chore(release): frontend-v${nextRelease.version} [skip ci]"
       }
     ],
