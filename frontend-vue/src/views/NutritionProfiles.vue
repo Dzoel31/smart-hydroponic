@@ -351,7 +351,7 @@
                   <button
                     type="button"
                     class="btn-inline danger"
-                    @click="removeProfile(profile.nutrition_id)"
+                    @click="removeProfile(profile.nutrition_id as string)"
                   >
                     Hapus
                   </button>
@@ -521,7 +521,7 @@ const applyActiveProfile = async () => {
 };
 
 const startEdit = (profile: PlantNutritionProfileOut) => {
-  editingProfileId.value = profile.nutrition_id;
+  editingProfileId.value = profile.nutrition_id || null;
   Object.assign(form, {
     plant_name: profile.plant_name,
     moisture_min: profile.moisture_min,
