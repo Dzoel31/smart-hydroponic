@@ -175,3 +175,19 @@ pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python
 
+# SSH and generic private/public keys
+id_rsa
+id_rsa.*
+id_dsa
+id_dsa.*
+id_ecdsa
+id_ecdsa.*
+id_ed25519
+id_ed25519.*
+
+# General private key and certificate extensions
+*.key
+*.pem
+*.pfx
+*.pkcs12
+*.asc

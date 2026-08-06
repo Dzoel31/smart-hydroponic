@@ -15,10 +15,12 @@ services:
     volumes:
       - timescale_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PGUSER} -d ${PGDATABASE} -h localhost"]
+      test: [ "CMD-SHELL", "pg_isready -U ${PGUSER} -d ${PGDATABASE} -h localhost" ]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - hydroponic_network
 
   api:
     build: ./backend
@@ -33,17 +35,28 @@ services:
       PGDATABASE: ${PGDATABASE}
     ports:
       - "8000:8000"
+    volumes:
+      - ./keys:/app/keys:ro
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - hydroponic_network
 
-  client: 
+  client:
     build: ./frontend-vue
     container_name: hydroponic-frontend
     ports:
       - "8080:80"
     depends_on:
       - api
-      
+    networks:
+      - hydroponic_network
+
 volumes:
   timescale_data:
+
+networks:
+  hydroponic_network:
+    name: hydroponic_network
+    driver: bridge
