@@ -83,6 +83,7 @@ class HydroponicCoAPResource(resource.ObservableResource):
 
                         actuator_res = HydroponicCoAPResource._instances.get("actuator")
                         if actuator_res:
+                            self.aggregator.update_actuator_state(actuator_payload)
                             actuator_res.latest_state = json.dumps(
                                 actuator_payload
                             ).encode("utf-8")

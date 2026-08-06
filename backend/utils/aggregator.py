@@ -10,20 +10,25 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(levelname)s:     %(message)s",
-)
-logger = logging.getLogger(__name__)
-
 
 class HydroponicAggregator:
     def __init__(self, timeout: float = 60.0, min_interval: float = 1.0):
-        self.buffer = {"plant": None, "environment": None, "actuator": None}
+        self.buffer = {"plant": None, "environment": None}
+        self.actuator_state = {
+            "pump_status": False,
+            "light_status": False,
+            "automation_status": False,
+        }
         self.last_update = time.monotonic()
         self.timeout = timeout
         self.last_received = {}
         self.min_interval = min_interval
+        self.lock = asyncio.Lock()
+
+    def update_actuator_state(self, state: dict):
+        for key in ["pump_status", "light_status", "automation_status"]:
+            if key in state:
+                self.actuator_state[key] = state[key]
         self.lock = asyncio.Lock()
 
     def debug_buffer(self, source: str, event: str):
@@ -74,14 +79,14 @@ class HydroponicAggregator:
         combined_data = {
             **self.buffer["plant"],
             **self.buffer["environment"],
-            **self.buffer["actuator"],
+            **self.actuator_state,
         }
 
         return HydroponicIn(dataid=uuid7(), **combined_data)
 
     def reset(self):
         # Reset buffer
-        self.buffer = {"plant": None, "environment": None, "actuator": None}
+        self.buffer = {"plant": None, "environment": None}
         self.last_update = time.monotonic()
 
 

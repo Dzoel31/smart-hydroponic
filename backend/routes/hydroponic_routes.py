@@ -29,7 +29,6 @@ from schemas.user import UserOut
 from uuid import uuid4
 from utils.manager import manager
 from utils.aggregator import aggregator
-from utils.coap_actuator_client import send_actuator_command_coap
 from utils.actuator_control import build_actuator_control_payload
 from utils.deps import require_role
 from utils.converter import _parse_datetime_input
@@ -216,16 +215,25 @@ async def control_hydroponic_actuators(
     command_payload = command.model_dump()
 
     if transport == "coap":
-        coap_payload = {
-            "type": "command",
-            "command_id": command_id,
-            "payload": command_payload,
-        }
-        coap_result = await send_actuator_command_coap(coap_payload)
+        import json
+        from routes.coap_handler import HydroponicCoAPResource
+
+        # Perbarui state global di aggregator
+        aggregator.update_actuator_state(command_payload)
+
+        # Beritahu observer CoAP (ESP8266) tentang state baru ini
+        actuator_res = HydroponicCoAPResource._instances.get("actuator")
+        if actuator_res:
+            actuator_res.latest_state = json.dumps(command_payload).encode("utf-8")
+            actuator_res.updated_state()
+            confirmed = True
+        else:
+            confirmed = False
+
         return HydroponicControlResult(
             **command_payload,
             command_id=command_id,
-            confirmed=coap_result["confirmed"],
+            confirmed=confirmed,
         )
 
     logger.info(f"Received control command: {command_payload}")
@@ -312,6 +320,7 @@ async def hydroponic_data_websocket(device_type: str, websocket: WebSocket):
                         actuator_message = build_actuator_control_payload(
                             snapshot_payload, active_profile
                         )
+                        aggregator.update_actuator_state(actuator_message)
                         snapshot_payload.update(
                             {
                                 "pump_status": actuator_message["pump_status"],
@@ -337,6 +346,16 @@ async def hydroponic_data_websocket(device_type: str, websocket: WebSocket):
                         role="actuator",
                         message=actuator_message,
                     )
+
+                    import json
+                    from routes.coap_handler import HydroponicCoAPResource
+
+                    actuator_res = HydroponicCoAPResource._instances.get("actuator")
+                    if actuator_res:
+                        actuator_res.latest_state = json.dumps(actuator_message).encode(
+                            "utf-8"
+                        )
+                        actuator_res.updated_state()
 
                     logger.info(
                         f"Snapshot created and sent to actuator clients: {actuator_message}"
