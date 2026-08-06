@@ -12,7 +12,7 @@ nav = [
     { "Selamat Datang" = "index.md" },
     { "Cara Membaca Dokumentasi" = "how-to-read.md" },
     { "Memulai Sistem Smart Hydroponic" = "getting-started.md" },
-
+    { "Roadmap Pengembangan" = "roadmap.md"},
   ] },
   { "Sistem" = [
     { "Arsitektur Sistem" = "architecture.md" },
