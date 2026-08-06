@@ -2,7 +2,9 @@
 
 Selamat datang di dokumentasi Smart Hydroponic. Dokumentasi ini dibuat untuk membantu pembaca memahami proyek secara bertahap, mulai dari konsep IoT sampai cara menjalankan backend, frontend, database, dan deployment.
 
-Repository proyek: [IoT-Smart-Hydroponic/smart-hydroponic](https://github.com/IoT-Smart-Hydroponic/smart-hydroponic)
+- Repository proyek: [IoT-Smart-Hydroponic/smart-hydroponic](https://github.com/IoT-Smart-Hydroponic/smart-hydroponic)
+- Dokumentasi API: [Dokumentasi API](http://103.147.92.179/smart-hydroponic/api/v2/docs)
+- Dashboard: [Dashboard Monitoring](http://103.147.92.179/dashboard-hidroponik/dashboard)
 
 ## Tujuan Proyek
 
@@ -70,7 +72,7 @@ Software yang digunakan dalam proyek:
 1. **Arduino IDE** untuk memprogram ESP32 dan ESP8266.
 2. **Python/FastAPI** untuk backend utama.
 3. **Pydantic, SQLAlchemy, dan Alembic** untuk validasi data, akses database, dan migration.
-4. **Vue 3 + Vite + TypeScript** untuk dashboard web.
+4. **Vue + Vite + TypeScript** untuk dashboard web.
 5. **PostgreSQL + TimescaleDB** untuk menyimpan data sensor.
 6. **Docker Compose** untuk menjalankan beberapa service sekaligus.
 7. **NGINX** untuk reverse proxy ketika aplikasi dipasang di server.
