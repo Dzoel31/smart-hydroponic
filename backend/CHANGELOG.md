@@ -2,6 +2,28 @@
 
 <!-- version list -->
 
+## v1.3.0 (2026-08-06)
+
+### Documentation
+
+- Migrate and expand smart hydroponic guide
+  ([`f94601a`](https://github.com/ksm-aiot-upnvj/smart-hydroponic/commit/f94601aafc7f9abbf0b5238cf17bfa95e00d0824))
+
+- Migrate and expand smart hydroponic guide
+  ([`39dd3bc`](https://github.com/ksm-aiot-upnvj/smart-hydroponic/commit/39dd3bc5ef99eae2c43aa1a6362464670e00a5c7))
+
+- **shared**: Add roadmap tracker, fuzzy logic guide, and AI agent configuration
+  ([`32b61b7`](https://github.com/ksm-aiot-upnvj/smart-hydroponic/commit/32b61b7e5a925d480600b8ab44a0c3dfb19d16c6))
+
+- **shared**: Move roadmap tracker to root directory
+  ([`07dc196`](https://github.com/ksm-aiot-upnvj/smart-hydroponic/commit/07dc196f2b94e0b80b43a820027bc8afd674e722))
+
+### Features
+
+- Refactor actuator control to server-centric CoAP observe pattern
+  ([`81e3703`](https://github.com/ksm-aiot-upnvj/smart-hydroponic/commit/81e370345dfb32e1f6942afdb442aea3e866423f))
+
+
 ## v1.2.0 (2026-05-19)
 
 ### Features
