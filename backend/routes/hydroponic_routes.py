@@ -116,6 +116,7 @@ async def get_specific_hydroponic_data(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
 @router.get(
     "/data",
     response_model=ResponseList[HydroponicOut],
