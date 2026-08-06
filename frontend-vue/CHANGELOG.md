@@ -1,3 +1,5 @@
+## [1.2.0](https://github.com/IoT-Smart-Hydroponic/smart-hydroponic/compare/frontend-v1.1.0...frontend-v1.2.0) (2026-05-19)
+
 ## [1.1.0](https://github.com/IoT-Smart-Hydroponic/smart-hydroponic/compare/frontend-v1.0.0...frontend-v1.1.0) (2026-04-17)
 
 ### Features

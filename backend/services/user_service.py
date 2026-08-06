@@ -55,13 +55,13 @@ class UserService:
             iat=int(now.timestamp()),
             exp=int((now + timedelta(seconds=expiry_seconds)).timestamp()),
         )
-        key = load_signing_key().decode()
+        key = load_signing_key()
         return jwt.encode(
             {"alg": settings.ALGORITHM}, payload.model_dump(), key
         ).decode("utf-8")
 
     def verify_token(self, token: str):
-        key = load_verification_key().decode()
+        key = load_verification_key()
         claims = jwt.decode(token, key)
         claims.validate()
 

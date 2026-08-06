@@ -141,6 +141,7 @@ venv.bak/
 
 # mkdocs documentation
 /site
+site
 
 # mypy
 .mypy_cache/
@@ -175,6 +176,7 @@ pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python
 
+.env.session
 *.csv
 *.pcap
 *.ipynb

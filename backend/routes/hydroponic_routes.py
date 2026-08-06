@@ -116,24 +116,6 @@ async def get_specific_hydroponic_data(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
-@router.post(
-    "/data",
-    response_model=HydroponicOut,
-    status_code=201,
-    operation_id="addHydroponicData",
-)
-async def add_hydroponic_data(
-    hydroponic_data: HydroponicIn,
-    session: AsyncSession = Depends(get_session),
-    current_user: UserOut = Depends(get_current_user),
-) -> HydroponicOut:
-    """Endpoint untuk menambahkan data hidroponik baru."""
-    require_role(current_user, {"admin", "superadmin"})
-    service = HydroponicService(session)
-    return await service.add_data(hydroponic_data)
-
-
 @router.get(
     "/data",
     response_model=ResponseList[HydroponicOut],

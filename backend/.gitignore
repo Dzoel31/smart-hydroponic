@@ -188,6 +188,7 @@ celerybeat.pid
 
 # Environments
 .env
+.env.session
 .venv
 env/
 venv/
@@ -244,3 +245,5 @@ pyrightconfig.json
 logs/
 ready_data/
 pcap_extract/
+keys/private.pem
+keys/public.pem

@@ -15,9 +15,10 @@ class Settings(BaseSettings):
     DATABASE_USER: str = Field(validation_alias="PGUSER")
     DATABASE_PASSWORD: str = Field(validation_alias="PGPASSWORD")
     DATABASE_NAME: str = Field(validation_alias="PGDATABASE")
-    ALGORITHM: str = "HS256"
+    ALGORITHM: str = "ES256"
     ACCESS_TOKEN_EXPIRE: str = Field(validation_alias="JWT_EXPIRES_IN")
-    SECRET_KEY: str = Field(validation_alias="JWT_SECRET")
+    JWT_PRIVATE_KEY: str = Field(validation_alias="JWT_PRIVATE_KEY")
+    JWT_PUBLIC_KEY: str = Field(validation_alias="JWT_PUBLIC_KEY")
     SUPERUSER_USERNAME: str = Field(validation_alias="SUPERUSER_USERNAME")
     SUPERUSER_EMAIL: str = Field(validation_alias="SUPERUSER_EMAIL")
     SUPERUSER_PASSWORD: str = Field(validation_alias="SUPERUSER_PASSWORD")
