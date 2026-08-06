@@ -1,4 +1,4 @@
-name: "Frontend Release"
+name: "release-frontend"
 
 on:
   push:

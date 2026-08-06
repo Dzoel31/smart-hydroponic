@@ -4,6 +4,12 @@ import os
 os.environ.setdefault("PGHOST", "localhost")
 os.environ.setdefault("PGPORT", "5432")
 os.environ.setdefault("PGUSER", "test_user")
+import os
+
+# Provide default settings so imports that instantiate Settings() do not fail in tests.
+os.environ.setdefault("PGHOST", "localhost")
+os.environ.setdefault("PGPORT", "5432")
+os.environ.setdefault("PGUSER", "test_user")
 os.environ.setdefault("PGPASSWORD", "test_password")
 os.environ.setdefault("PGDATABASE", "test_db")
 os.environ.setdefault("JWT_EXPIRES_IN", "1h")
@@ -12,3 +18,5 @@ os.environ.setdefault("SUPERUSER_USERNAME", "superadmin")
 os.environ.setdefault("SUPERUSER_EMAIL", "superadmin@example.com")
 os.environ.setdefault("SUPERUSER_PASSWORD", "supersecret123")
 os.environ.setdefault("SUPERUSER_ROLE", "superadmin")
+os.environ.setdefault("JWT_PRIVATE_KEY", "test/dummy_private.pem")
+os.environ.setdefault("JWT_PUBLIC_KEY", "test/dummy_public.pem")

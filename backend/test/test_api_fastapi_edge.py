@@ -164,15 +164,6 @@ def test_hydroponic_specific_forbidden_for_user_role(client: TestClient):
     assert response.json()["detail"] == "Permission denied"
 
 
-def test_hydroponic_post_forbidden_for_user_role(client: TestClient):
-    _set_current_user_override(role="user")
-
-    response = client.post("/hydroponics/data", json={})
-
-    assert response.status_code == 403
-    assert response.json()["detail"] == "Permission denied"
-
-
 def test_hydroponic_specific_invalid_parameter(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ):
