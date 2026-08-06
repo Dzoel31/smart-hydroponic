@@ -2,13 +2,13 @@ name: "CI"
 
 on:
   push:
-    branches: [ dev-python ]
+    branches: [ main ]
   pull_request:
-    branches: [ dev-python ]
+    branches: [ main ]
 
 jobs:
   build:
-    if: github.repository == 'IoT-Smart-Hydroponic/smart-hydroponic'
+    if: github.repository == 'ksm-aiot-upnvj/smart-hydroponic'
     runs-on: ubuntu-latest
     permissions:
       contents: write

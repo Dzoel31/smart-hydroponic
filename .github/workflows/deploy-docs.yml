@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.repository == 'IoT-Smart-Hydroponic/smart-hydroponic'
+    if: github.repository == 'ksm-aiot-upnvj/smart-hydroponic'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

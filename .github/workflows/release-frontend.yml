@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - dev-python
     paths:
       - 'frontend-vue/**'
       - '.github/workflows/release-frontend.yml'
@@ -12,7 +11,7 @@ on:
 
 jobs:
   release:
-    if: github.repository == 'IoT-Smart-Hydroponic/smart-hydroponic' && github.actor != 'github-actions[bot]'
+    if: github.repository == 'ksm-aiot-upnvj/smart-hydroponic' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     concurrency:
       group: release-frontend-dev-python
