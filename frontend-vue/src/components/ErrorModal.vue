@@ -14,10 +14,17 @@
         :aria-describedby="messageId"
       >
         <div class="error-modal__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <path d="M12 9v4"></path>
             <path d="M12 17h.01"></path>
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.72 3h16.92a2 2 0 0 0 1.72-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <path
+              d="M10.29 3.86L1.82 18a2 2 0 0 0 1.72 3h16.92a2 2 0 0 0 1.72-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+            ></path>
           </svg>
         </div>
 
@@ -35,7 +42,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed } from "vue";
 
 withDefaults(
   defineProps<{
@@ -45,23 +52,23 @@ withDefaults(
     confirmText?: string;
   }>(),
   {
-    title: 'Terjadi Kesalahan',
-    message: 'Sistem tidak dapat memproses permintaan saat ini.',
-    confirmText: 'Tutup',
+    title: "Terjadi Kesalahan",
+    message: "Sistem tidak dapat memproses permintaan saat ini.",
+    confirmText: "Tutup",
   },
 );
 
 const emit = defineEmits<{
-  (event: 'update:modelValue', value: boolean): void;
-  (event: 'close'): void;
+  (event: "update:modelValue", value: boolean): void;
+  (event: "close"): void;
 }>();
 
-const titleId = computed(() => 'error-modal-title');
-const messageId = computed(() => 'error-modal-message');
+const titleId = computed(() => "error-modal-title");
+const messageId = computed(() => "error-modal-message");
 
 const close = (): void => {
-  emit('update:modelValue', false);
-  emit('close');
+  emit("update:modelValue", false);
+  emit("close");
 };
 </script>
 
@@ -132,7 +139,9 @@ const close = (): void => {
   color: #ffffff;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .error-modal__button:hover {

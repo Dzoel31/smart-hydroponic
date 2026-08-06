@@ -187,11 +187,8 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-=======
-# Environments
 .env
 .env.session
->>>>>>> dev-python
 .venv
 env/
 venv/
@@ -242,5 +239,11 @@ pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python,node
 
+*.csv
+*.pcap
+*.txt
+logs/
+ready_data/
+pcap_extract/
 keys/private.pem
 keys/public.pem

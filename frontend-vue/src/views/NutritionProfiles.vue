@@ -5,15 +5,35 @@
     <main class="main-content">
       <Topbar title="Nutrition Profiles" />
 
-      <div v-if="showSuccessModal" class="success-modal-overlay" role="presentation">
-        <section class="success-modal" role="dialog" aria-modal="true" aria-labelledby="success-title" aria-describedby="success-message">
+      <div
+        v-if="showSuccessModal"
+        class="success-modal-overlay"
+        role="presentation"
+      >
+        <section
+          class="success-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="success-title"
+          aria-describedby="success-message"
+        >
           <div class="success-modal__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
               <path d="M20 6 9 17l-5-5"></path>
             </svg>
           </div>
-          <h3 id="success-title" class="success-modal__title">Proses Berhasil</h3>
-          <p id="success-message" class="success-modal__message">Profil nutrisi berhasil disimpan. Halaman akan dimuat ulang otomatis.</p>
+          <h3 id="success-title" class="success-modal__title">
+            Proses Berhasil
+          </h3>
+          <p id="success-message" class="success-modal__message">
+            Profil nutrisi berhasil disimpan. Halaman akan dimuat ulang
+            otomatis.
+          </p>
         </section>
       </div>
 
@@ -21,17 +41,28 @@
         <div class="card-header compact">
           <div>
             <h2>Profil untuk Dashboard</h2>
-            <p>Pilih profil nutrisi yang akan dipakai sebagai acuan Analytics dan tampilan dashboard.</p>
+            <p>
+              Pilih profil nutrisi yang akan dipakai sebagai acuan Analytics dan
+              tampilan dashboard.
+            </p>
           </div>
         </div>
 
         <div class="dashboard-selector">
           <div class="form-group dashboard-selector__field">
             <label>Profil aktif</label>
-            <select v-model="activeProfileId" :disabled="isSavingActiveProfile || profiles.length === 0">
+            <select
+              v-model="activeProfileId"
+              :disabled="isSavingActiveProfile || profiles.length === 0"
+            >
               <option value="">Pilih profil nutrisi</option>
-              <option v-for="profile in profiles" :key="profile.nutrition_id" :value="profile.nutrition_id">
-                {{ profile.plant_name }}{{ profile.is_active ? ' - aktif' : '' }}
+              <option
+                v-for="profile in profiles"
+                :key="profile.nutrition_id"
+                :value="profile.nutrition_id"
+              >
+                {{ profile.plant_name
+                }}{{ profile.is_active ? " - aktif" : "" }}
               </option>
             </select>
           </div>
@@ -39,10 +70,14 @@
           <button
             type="button"
             class="btn-primary dashboard-selector__button"
-            :disabled="!activeProfileId || isSavingActiveProfile || profiles.length === 0"
+            :disabled="
+              !activeProfileId || isSavingActiveProfile || profiles.length === 0
+            "
             @click="applyActiveProfile"
           >
-            {{ isSavingActiveProfile ? 'Menyimpan...' : 'Gunakan untuk Dashboard' }}
+            {{
+              isSavingActiveProfile ? "Menyimpan..." : "Gunakan untuk Dashboard"
+            }}
           </button>
         </div>
 
@@ -50,7 +85,8 @@
           Profil aktif saat ini: <strong>{{ activeProfileLabel }}</strong>
         </p>
         <p v-else class="dashboard-selector__hint muted">
-          Belum ada profil aktif. Pilih salah satu profil dan simpan untuk mengisi dashboard.
+          Belum ada profil aktif. Pilih salah satu profil dan simpan untuk
+          mengisi dashboard.
         </p>
       </section>
 
@@ -58,7 +94,10 @@
         <div class="card-header">
           <div>
             <h2>Input Kebutuhan Nutrisi Tanaman</h2>
-            <p>Isi profil untuk membantu analisis grafik dan acuan kebutuhan tanaman.</p>
+            <p>
+              Isi profil untuk membantu analisis grafik dan acuan kebutuhan
+              tanaman.
+            </p>
           </div>
           <button
             v-if="editingProfileId"
@@ -70,72 +109,166 @@
           </button>
         </div>
 
-        <p v-if="message && !showSuccessModal" class="feedback" :class="messageType">{{ message }}</p>
+        <p
+          v-if="message && !showSuccessModal"
+          class="feedback"
+          :class="messageType"
+        >
+          {{ message }}
+        </p>
 
         <form class="nutrition-form" @submit.prevent="submitProfile">
           <div class="form-grid">
             <div class="form-group full-span">
               <label>Jenis Tanaman</label>
-              <input v-model.trim="form.plant_name" type="text" placeholder="Contoh: Selada Hijau" required />
+              <input
+                v-model.trim="form.plant_name"
+                type="text"
+                placeholder="Contoh: Selada Hijau"
+                required
+              />
             </div>
 
             <div class="form-group">
               <label>Moisture Minimum (%)</label>
-              <input v-model.number="form.moisture_min" type="number" min="0" max="100" step="0.1" required />
+              <input
+                v-model.number="form.moisture_min"
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                required
+              />
             </div>
             <div class="form-group">
               <label>Moisture Maksimum (%)</label>
-              <input v-model.number="form.moisture_max" type="number" min="0" max="100" step="0.1" required />
+              <input
+                v-model.number="form.moisture_max"
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                required
+              />
             </div>
 
             <div class="form-group">
               <label>pH Minimum</label>
-              <input v-model.number="form.ph_min" type="number" min="0" max="14" step="0.1" required />
+              <input
+                v-model.number="form.ph_min"
+                type="number"
+                min="0"
+                max="14"
+                step="0.1"
+                required
+              />
             </div>
             <div class="form-group">
               <label>pH Maksimum</label>
-              <input v-model.number="form.ph_max" type="number" min="0" max="14" step="0.1" required />
+              <input
+                v-model.number="form.ph_max"
+                type="number"
+                min="0"
+                max="14"
+                step="0.1"
+                required
+              />
             </div>
 
             <div class="form-group">
               <label>TDS Minimum (ppm)</label>
-              <input v-model.number="form.tds_min" type="number" min="0" step="1" required />
+              <input
+                v-model.number="form.tds_min"
+                type="number"
+                min="0"
+                step="1"
+                required
+              />
             </div>
             <div class="form-group">
               <label>TDS Maksimum (ppm)</label>
-              <input v-model.number="form.tds_max" type="number" min="0" step="1" required />
+              <input
+                v-model.number="form.tds_max"
+                type="number"
+                min="0"
+                step="1"
+                required
+              />
             </div>
 
             <div class="form-group">
               <label>Suhu Minimum (°C)</label>
-              <input v-model.number="form.temperature_min" type="number" min="-10" max="60" step="0.1" required />
+              <input
+                v-model.number="form.temperature_min"
+                type="number"
+                min="-10"
+                max="60"
+                step="0.1"
+                required
+              />
             </div>
             <div class="form-group">
               <label>Suhu Maksimum (°C)</label>
-              <input v-model.number="form.temperature_max" type="number" min="-10" max="60" step="0.1" required />
+              <input
+                v-model.number="form.temperature_max"
+                type="number"
+                min="-10"
+                max="60"
+                step="0.1"
+                required
+              />
             </div>
 
             <div class="form-group">
               <label>Kelembaban Minimum (%)</label>
-              <input v-model.number="form.humidity_min" type="number" min="0" max="100" step="0.1" required />
+              <input
+                v-model.number="form.humidity_min"
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                required
+              />
             </div>
             <div class="form-group">
               <label>Kelembaban Maksimum (%)</label>
-              <input v-model.number="form.humidity_max" type="number" min="0" max="100" step="0.1" required />
+              <input
+                v-model.number="form.humidity_max"
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                required
+              />
             </div>
 
             <div class="form-group full-span">
               <label>Catatan</label>
-              <textarea v-model.trim="form.notes" rows="4" placeholder="Catatan tambahan kebutuhan tanaman..."></textarea>
+              <textarea
+                v-model.trim="form.notes"
+                rows="4"
+                placeholder="Catatan tambahan kebutuhan tanaman..."
+              ></textarea>
             </div>
           </div>
 
           <div class="form-actions">
-            <button type="button" class="btn-secondary" @click="resetForm" :disabled="isSaving">
+            <button
+              type="button"
+              class="btn-secondary"
+              @click="resetForm"
+              :disabled="isSaving"
+            >
               Reset
             </button>
             <button type="submit" class="btn-primary" :disabled="isSaving">
-              {{ isSaving ? 'Menyimpan...' : editingProfileId ? 'Update Profile' : 'Simpan Profile' }}
+              {{
+                isSaving
+                  ? "Menyimpan..."
+                  : editingProfileId
+                    ? "Update Profile"
+                    : "Simpan Profile"
+              }}
             </button>
           </div>
         </form>
@@ -145,7 +278,9 @@
         <div class="card-header compact">
           <div>
             <h2>Daftar Profil Nutrisi</h2>
-            <p>Gunakan data ini sebagai acuan analisis pada halaman Analytics.</p>
+            <p>
+              Gunakan data ini sebagai acuan analisis pada halaman Analytics.
+            </p>
           </div>
         </div>
 
@@ -165,25 +300,61 @@
             </thead>
             <tbody>
               <tr v-if="isLoading">
-                <td colspan="8" class="empty-state">Memuat profil nutrisi...</td>
+                <td colspan="8" class="empty-state">
+                  Memuat profil nutrisi...
+                </td>
               </tr>
               <tr v-else-if="profiles.length === 0">
-                <td colspan="8" class="empty-state">Belum ada profil nutrisi tersimpan.</td>
+                <td colspan="8" class="empty-state">
+                  Belum ada profil nutrisi tersimpan.
+                </td>
               </tr>
               <tr v-for="profile in profiles" :key="profile.nutrition_id">
                 <td class="font-medium">
                   <span>{{ profile.plant_name }}</span>
-                  <span v-if="profile.is_active" class="active-badge">Aktif</span>
+                  <span v-if="profile.is_active" class="active-badge"
+                    >Aktif</span
+                  >
                 </td>
-                <td>{{ formatRange(profile.moisture_min, profile.moisture_max, '%') }}</td>
+                <td>
+                  {{
+                    formatRange(profile.moisture_min, profile.moisture_max, "%")
+                  }}
+                </td>
                 <td>{{ formatRange(profile.ph_min, profile.ph_max) }}</td>
-                <td>{{ formatRange(profile.tds_min, profile.tds_max, 'ppm') }}</td>
-                <td>{{ formatRange(profile.temperature_min, profile.temperature_max, '°C') }}</td>
-                <td>{{ formatRange(profile.humidity_min, profile.humidity_max, '%') }}</td>
-                <td class="notes-cell">{{ profile.notes || '-' }}</td>
+                <td>
+                  {{ formatRange(profile.tds_min, profile.tds_max, "ppm") }}
+                </td>
+                <td>
+                  {{
+                    formatRange(
+                      profile.temperature_min,
+                      profile.temperature_max,
+                      "°C",
+                    )
+                  }}
+                </td>
+                <td>
+                  {{
+                    formatRange(profile.humidity_min, profile.humidity_max, "%")
+                  }}
+                </td>
+                <td class="notes-cell">{{ profile.notes || "-" }}</td>
                 <td class="action-cell">
-                  <button type="button" class="btn-inline" @click="startEdit(profile)">Edit</button>
-                  <button type="button" class="btn-inline danger" @click="removeProfile(profile.nutrition_id)">Hapus</button>
+                  <button
+                    type="button"
+                    class="btn-inline"
+                    @click="startEdit(profile)"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-inline danger"
+                    @click="removeProfile(profile.nutrition_id as string)"
+                  >
+                    Hapus
+                  </button>
                 </td>
               </tr>
             </tbody>
@@ -195,35 +366,35 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
-import Sidebar from '@/components/Sidebar.vue';
-import Topbar from '@/components/Topbar.vue';
-import brandLogo from '@/assets/images/logo-hydroponic.png';
+import { onBeforeUnmount, onMounted, reactive, ref } from "vue";
+import { useRouter } from "vue-router";
+import Sidebar from "@/components/Sidebar.vue";
+import Topbar from "@/components/Topbar.vue";
+import brandLogo from "@/assets/images/logo-hydroponic.png";
 import {
   ApiError,
-  PlantNutritionProfilesService,
+  NutritionService,
   type PlantNutritionProfileCreate,
   type PlantNutritionProfileOut,
-} from '../api';
-import { authState } from '../auth';
-import { getApiErrorMessage } from '../utils/apiError';
+} from "../api";
+import { authState } from "../auth";
+import { getApiErrorMessage } from "../utils/apiError";
 
 const router = useRouter();
 const profiles = ref<PlantNutritionProfileOut[]>([]);
-const activeProfileId = ref('');
-const activeProfileLabel = ref('');
+const activeProfileId = ref("");
+const activeProfileLabel = ref("");
 const isLoading = ref(false);
 const isSaving = ref(false);
 const isSavingActiveProfile = ref(false);
-const message = ref('');
-const messageType = ref<'success' | 'error' | ''>('');
+const message = ref("");
+const messageType = ref<"success" | "error" | "">("");
 const editingProfileId = ref<string | null>(null);
 const showSuccessModal = ref(false);
 let reloadTimer: number | null = null;
 
 const emptyForm = (): PlantNutritionProfileCreate => ({
-  plant_name: '',
+  plant_name: "",
   moisture_min: 0,
   moisture_max: 0,
   ph_min: 0,
@@ -234,7 +405,7 @@ const emptyForm = (): PlantNutritionProfileCreate => ({
   temperature_max: 0,
   humidity_min: 0,
   humidity_max: 0,
-  notes: '',
+  notes: "",
 });
 
 const form = reactive<PlantNutritionProfileCreate>(emptyForm());
@@ -259,13 +430,15 @@ const normalizeForm = (): PlantNutritionProfileCreate => ({
   notes: form.notes?.trim() || null,
 });
 
-const formatRange = (min: number, max: number, unit = '') => {
-  return `${min.toFixed(1)} - ${max.toFixed(1)}${unit ? ` ${unit}` : ''}`;
+const formatRange = (min: number, max: number, unit = "") => {
+  return `${min.toFixed(1)} - ${max.toFixed(1)}${unit ? ` ${unit}` : ""}`;
 };
 
 const syncActiveProfileLabel = () => {
-  const activeProfile = profiles.value.find((profile) => profile.nutrition_id === activeProfileId.value);
-  activeProfileLabel.value = activeProfile?.plant_name ?? '';
+  const activeProfile = profiles.value.find(
+    (profile) => profile.nutrition_id === activeProfileId.value,
+  );
+  activeProfileLabel.value = activeProfile?.plant_name ?? "";
 };
 
 const loadProfiles = async () => {
@@ -273,8 +446,8 @@ const loadProfiles = async () => {
 
   try {
     const [response, activeProfile] = await Promise.all([
-      PlantNutritionProfilesService.getNutritionProfiles(1, 100),
-      PlantNutritionProfilesService.getActiveNutritionProfile().catch((error) => {
+      NutritionService.getNutritionProfiles(1, 100),
+      NutritionService.getActiveNutritionProfile().catch((error) => {
         if (error instanceof ApiError && error.status === 404) {
           return null;
         }
@@ -283,22 +456,28 @@ const loadProfiles = async () => {
     ]);
 
     profiles.value = response.data;
-    activeProfileId.value = activeProfile?.nutrition_id || profiles.value.find((profile) => profile.is_active)?.nutrition_id || '';
+    activeProfileId.value =
+      activeProfile?.nutrition_id ||
+      profiles.value.find((profile) => profile.is_active)?.nutrition_id ||
+      "";
     syncActiveProfileLabel();
   } catch (error) {
     if (error instanceof ApiError) {
-      message.value = getApiErrorMessage(error, 'Gagal mengambil data profil nutrisi.');
-      messageType.value = 'error';
+      message.value = getApiErrorMessage(
+        error,
+        "Gagal mengambil data profil nutrisi.",
+      );
+      messageType.value = "error";
       if (error.status === 401) {
         authState.logout();
-        await router.push('/login');
+        await router.push("/login");
       }
       if (error.status === 403) {
-        await router.push('/dashboard');
+        await router.push("/dashboard");
       }
     } else {
-      message.value = 'Terjadi gangguan saat mengambil data profil nutrisi.';
-      messageType.value = 'error';
+      message.value = "Terjadi gangguan saat mengambil data profil nutrisi.";
+      messageType.value = "error";
     }
   } finally {
     isLoading.value = false;
@@ -311,27 +490,30 @@ const applyActiveProfile = async () => {
   }
 
   isSavingActiveProfile.value = true;
-  message.value = '';
+  message.value = "";
 
   try {
-    await PlantNutritionProfilesService.activateNutritionProfile(activeProfileId.value);
-    message.value = 'Profil dashboard berhasil diperbarui.';
-    messageType.value = 'success';
+    await NutritionService.activateNutritionProfile(activeProfileId.value);
+    message.value = "Profil dashboard berhasil diperbarui.";
+    messageType.value = "success";
     await loadProfiles();
   } catch (error) {
     if (error instanceof ApiError) {
-      message.value = getApiErrorMessage(error, 'Gagal memperbarui profil dashboard.');
-      messageType.value = 'error';
+      message.value = getApiErrorMessage(
+        error,
+        "Gagal memperbarui profil dashboard.",
+      );
+      messageType.value = "error";
       if (error.status === 401) {
         authState.logout();
-        await router.push('/login');
+        await router.push("/login");
       }
       if (error.status === 403) {
-        await router.push('/dashboard');
+        await router.push("/dashboard");
       }
     } else {
-      message.value = 'Terjadi gangguan saat memperbarui profil dashboard.';
-      messageType.value = 'error';
+      message.value = "Terjadi gangguan saat memperbarui profil dashboard.";
+      messageType.value = "error";
     }
   } finally {
     isSavingActiveProfile.value = false;
@@ -339,7 +521,7 @@ const applyActiveProfile = async () => {
 };
 
 const startEdit = (profile: PlantNutritionProfileOut) => {
-  editingProfileId.value = profile.nutrition_id;
+  editingProfileId.value = profile.nutrition_id || null;
   Object.assign(form, {
     plant_name: profile.plant_name,
     moisture_min: profile.moisture_min,
@@ -352,28 +534,31 @@ const startEdit = (profile: PlantNutritionProfileOut) => {
     temperature_max: profile.temperature_max,
     humidity_min: profile.humidity_min,
     humidity_max: profile.humidity_max,
-    notes: profile.notes || '',
+    notes: profile.notes || "",
   });
-  message.value = '';
-  messageType.value = '';
+  message.value = "";
+  messageType.value = "";
 };
 
 const submitProfile = async () => {
   isSaving.value = true;
-  message.value = '';
+  message.value = "";
 
   try {
     const payload = normalizeForm();
 
     if (editingProfileId.value) {
-      await PlantNutritionProfilesService.updateNutritionProfile(editingProfileId.value, payload);
+      await NutritionService.updateNutritionProfile(
+        editingProfileId.value,
+        payload,
+      );
     } else {
-      await PlantNutritionProfilesService.createNutritionProfile(payload);
+      await NutritionService.createNutritionProfile(payload);
     }
 
     resetForm();
-    messageType.value = 'success';
-    message.value = 'Profil nutrisi berhasil disimpan.';
+    messageType.value = "success";
+    message.value = "Profil nutrisi berhasil disimpan.";
     showSuccessModal.value = true;
 
     if (reloadTimer !== null) {
@@ -387,18 +572,21 @@ const submitProfile = async () => {
     }, 1500);
   } catch (error) {
     if (error instanceof ApiError) {
-      message.value = getApiErrorMessage(error, 'Gagal menyimpan profil nutrisi.');
-      messageType.value = 'error';
+      message.value = getApiErrorMessage(
+        error,
+        "Gagal menyimpan profil nutrisi.",
+      );
+      messageType.value = "error";
       if (error.status === 401) {
         authState.logout();
-        await router.push('/login');
+        await router.push("/login");
       }
       if (error.status === 403) {
-        await router.push('/dashboard');
+        await router.push("/dashboard");
       }
     } else {
-      message.value = 'Terjadi gangguan saat menyimpan profil nutrisi.';
-      messageType.value = 'error';
+      message.value = "Terjadi gangguan saat menyimpan profil nutrisi.";
+      messageType.value = "error";
     }
   } finally {
     isSaving.value = false;
@@ -406,24 +594,27 @@ const submitProfile = async () => {
 };
 
 const removeProfile = async (nutritionId: string) => {
-  const confirmed = window.confirm('Hapus profil nutrisi ini?');
+  const confirmed = window.confirm("Hapus profil nutrisi ini?");
   if (!confirmed) return;
 
   try {
-    await PlantNutritionProfilesService.deleteNutritionProfile(nutritionId);
-    message.value = 'Profil nutrisi berhasil dihapus.';
-    messageType.value = 'success';
+    await NutritionService.deleteNutritionProfile(nutritionId);
+    message.value = "Profil nutrisi berhasil dihapus.";
+    messageType.value = "success";
     if (editingProfileId.value === nutritionId) {
       resetForm();
     }
     await loadProfiles();
   } catch (error) {
     if (error instanceof ApiError) {
-      message.value = getApiErrorMessage(error, 'Gagal menghapus profil nutrisi.');
-      messageType.value = 'error';
+      message.value = getApiErrorMessage(
+        error,
+        "Gagal menghapus profil nutrisi.",
+      );
+      messageType.value = "error";
     } else {
-      message.value = 'Terjadi gangguan saat menghapus profil nutrisi.';
-      messageType.value = 'error';
+      message.value = "Terjadi gangguan saat menghapus profil nutrisi.";
+      messageType.value = "error";
     }
   }
 };
@@ -450,7 +641,7 @@ onBeforeUnmount(() => {
   min-height: 100vh;
   background-color: #f8fafc;
   color: #0f172a;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .main-content {
@@ -615,7 +806,9 @@ onBeforeUnmount(() => {
   border: none;
   border-radius: 10px;
   cursor: pointer;
-  transition: transform 0.15s ease, opacity 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .btn-ghost,

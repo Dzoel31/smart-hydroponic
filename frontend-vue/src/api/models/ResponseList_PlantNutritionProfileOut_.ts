@@ -2,9 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { PlantNutritionProfileOut } from './PlantNutritionProfileOut';
-import type { MetaData } from './MetaData';
+import type { MetaData } from "./MetaData";
+import type { PlantNutritionProfileOut } from "./PlantNutritionProfileOut";
 export type ResponseList_PlantNutritionProfileOut_ = {
-    meta: MetaData;
-    data: Array<PlantNutritionProfileOut>;
+  meta: MetaData;
+  data: Array<PlantNutritionProfileOut>;
 };

@@ -10,21 +10,34 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(levelname)s:     %(message)s",
-)
-logger = logging.getLogger(__name__)
-
 
 class HydroponicAggregator:
-    def __init__(self, timeout: float = 5.0, min_interval: float = 1.0):
-        self.buffer = {"sensor": None, "environment": None, "actuator": None}
+    def __init__(self, timeout: float = 60.0, min_interval: float = 1.0):
+        self.buffer = {"plant": None, "environment": None}
+        self.actuator_state = {
+            "pump_status": False,
+            "light_status": False,
+            "automation_status": False,
+        }
         self.last_update = time.monotonic()
         self.timeout = timeout
         self.last_received = {}
         self.min_interval = min_interval
         self.lock = asyncio.Lock()
+
+    def update_actuator_state(self, state: dict):
+        for key in ["pump_status", "light_status", "automation_status"]:
+            if key in state:
+                self.actuator_state[key] = state[key]
+        self.lock = asyncio.Lock()
+
+    def debug_buffer(self, source: str, event: str):
+        if event == "after-update":
+            logger.info(f"[Aggregator] Menerima data dari node: {source}")
+        elif event == "snapshot-ready":
+            logger.info(
+                "[Aggregator] Semua data dari 3 node terkumpul! Membuat snapshot ke database."
+            )
 
     async def gather_data(self, source: str, data: dict) -> HydroponicIn | None:
         async with self.lock:
@@ -41,15 +54,20 @@ class HydroponicAggregator:
             self.last_received[source] = now
 
             if any(self.buffer.values()) and (now - self.last_update > self.timeout):
-                logger.warning("Incomplete data; resetting buffer due to timeout.")
+                logger.warning(
+                    "Incomplete data; resetting buffer due to timeout "
+                    f"({now - self.last_update:.2f}s > {self.timeout:.2f}s)."
+                )
                 self.reset()
 
             self.buffer[source] = data
             self.last_update = now
+            self.debug_buffer(source, "after-update")
 
             if not self.is_complete():
                 return None
 
+            self.debug_buffer(source, "snapshot-ready")
             snapshot = self.build_snapshot()
             self.reset()
             return snapshot
@@ -59,17 +77,17 @@ class HydroponicAggregator:
 
     def build_snapshot(self) -> HydroponicIn:
         combined_data = {
-            **self.buffer["sensor"],
+            **self.buffer["plant"],
             **self.buffer["environment"],
-            **self.buffer["actuator"],
+            **self.actuator_state,
         }
 
         return HydroponicIn(dataid=uuid7(), **combined_data)
 
     def reset(self):
         # Reset buffer
-        self.buffer = {"sensor": None, "environment": None, "actuator": None}
+        self.buffer = {"plant": None, "environment": None}
         self.last_update = time.monotonic()
 
 
-aggregator = HydroponicAggregator()
+aggregator = HydroponicAggregator(timeout=60.0)

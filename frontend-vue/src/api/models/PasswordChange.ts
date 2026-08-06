@@ -3,7 +3,6 @@
 /* tslint:disable */
 /* eslint-disable */
 export type PasswordChange = {
-    current_password: string;
-    new_password: string;
+  current_password: string;
+  new_password: string;
 };
-

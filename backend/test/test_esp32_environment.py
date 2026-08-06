@@ -7,7 +7,7 @@ import json
 dotenv.load_dotenv()
 
 DEVICE_ID = "esp32-environment-device"
-uri = "ws://localhost:8000/hydroponics/ws/environment-data"
+uri = "ws://localhost:8000/smart-hydroponic/api/v2/hydroponics/ws/environment-data"
 
 asyncio.set_event_loop(asyncio.new_event_loop())
 

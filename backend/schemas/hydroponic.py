@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pydantic import BaseModel, Field, ConfigDict, computed_field
 import datetime
 from typing import Optional
@@ -37,7 +39,7 @@ class HydroponicInternalResult(BaseModel):
     total: int | None
 
 
-class HydroponicDataSensor(BaseModel):
+class HydroponicDataPlant(BaseModel):
     moisture1: int = Field(0, ge=0)
     moisture2: int = Field(0, ge=0)
     moisture3: int = Field(0, ge=0)
@@ -64,8 +66,13 @@ class HydroponicDataActuator(BaseModel):
     automation_status: bool = Field(False)
 
 
+class HydroponicControlResult(HydroponicDataActuator):
+    command_id: str
+    confirmed: bool = False
+
+
 class HydroponicAggregate(
-    HydroponicDataActuator, HydroponicDataEnvironment, HydroponicDataSensor
+    HydroponicDataActuator, HydroponicDataEnvironment, HydroponicDataPlant
 ):
     dataid: UUID = Field(default_factory=uuid7)
 

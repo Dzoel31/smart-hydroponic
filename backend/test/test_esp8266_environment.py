@@ -14,7 +14,7 @@ DATA_SEND_INTERVAL = 5  # seconds
 RECONNECT_DELAY = 5  # seconds between reconnection attempts
 
 # uri = f"ws://{os.getenv('HOST')}/ws/smart-hydroponic/device"
-uri = "ws://localhost:8000/hydroponics/ws/actuator-data"
+uri = "ws://localhost:8000/smart-hydroponic/api/v2/hydroponics/ws/actuator-data"
 
 # Simulated pin states
 pins = {

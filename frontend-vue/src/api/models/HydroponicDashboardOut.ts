@@ -3,13 +3,12 @@
 /* tslint:disable */
 /* eslint-disable */
 export type HydroponicDashboardOut = {
-    flowrate?: (number | null);
-    distance_cm?: (number | null);
-    total_litres?: (number | null);
-    moisture_avg?: (number | null);
-    temperature_avg?: (number | null);
-    humidity_avg?: (number | null);
-    ph?: (number | null);
-    tds?: (number | null);
+  flowrate?: number | null;
+  distance_cm?: number | null;
+  total_litres?: number | null;
+  moisture_avg?: number | null;
+  temperature_avg?: number | null;
+  humidity_avg?: number | null;
+  ph?: number | null;
+  tds?: number | null;
 };
-

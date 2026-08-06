@@ -6,7 +6,11 @@
     </div>
 
     <div class="user-actions">
-      <router-link v-if="!authState.isLoggedIn" to="/login" class="login-action-btn">
+      <router-link
+        v-if="!authState.isLoggedIn"
+        to="/login"
+        class="login-action-btn"
+      >
         Log in
       </router-link>
 
@@ -14,7 +18,15 @@
         <div class="user-profile" @click="toggleDropdown">
           <div class="avatar">{{ userInitial }}</div>
           <span>{{ user }}</span>
-          <svg :class="{ 'rotate': isDropdownOpen }" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <svg
+            :class="{ rotate: isDropdownOpen }"
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
         </div>
@@ -22,7 +34,16 @@
         <transition name="fade">
           <div v-if="isDropdownOpen" class="dropdown-menu">
             <button @click="handleLogout" class="dropdown-item">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <svg
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                 <polyline points="16 17 21 12 16 7"></polyline>
                 <line x1="21" y1="12" x2="9" y2="12"></line>
@@ -45,20 +66,20 @@ defineProps({
   title: {
     type: String,
     required: true,
-    default: "Dashboard"
+    default: "Dashboard",
   },
   subtitle: {
     type: String,
     required: false,
-    default: ""
-  }
+    default: "",
+  },
 });
 
 const user = computed(() => {
-  if (!authState.isLoggedIn) return 'Guest';
+  if (!authState.isLoggedIn) return "Guest";
 
-  const userName = authState.user?.username || 'Admin';
-  
+  const userName = authState.user?.username || "Admin";
+
   return userName;
 });
 
@@ -74,21 +95,21 @@ const toggleDropdown = () => {
 };
 
 const handleLogout = () => {
-  if (authState && typeof authState.logout === 'function') {
-      authState.logout();
+  if (authState && typeof authState.logout === "function") {
+    authState.logout();
   }
   isDropdownOpen.value = false;
-  router.push('/login');
+  router.push("/login");
 };
 
 const closeDropdown = (e: MouseEvent) => {
-  if (!(e.target as Element).closest('.user-profile-wrapper')) {
+  if (!(e.target as Element).closest(".user-profile-wrapper")) {
     isDropdownOpen.value = false;
   }
 };
 
-onMounted(() => window.addEventListener('click', closeDropdown));
-onUnmounted(() => window.removeEventListener('click', closeDropdown));
+onMounted(() => window.addEventListener("click", closeDropdown));
+onUnmounted(() => window.removeEventListener("click", closeDropdown));
 </script>
 
 <style scoped>
@@ -148,7 +169,7 @@ onUnmounted(() => window.removeEventListener('click', closeDropdown));
   padding: 8px 12px;
   border-radius: 8px;
   transition: background 0.2s;
-  color: #1e293b; 
+  color: #1e293b;
   font-weight: 500;
 }
 
@@ -197,7 +218,7 @@ onUnmounted(() => window.removeEventListener('click', closeDropdown));
   padding: 10px 12px;
   border: none;
   background: none;
-  color: #ef4444; 
+  color: #ef4444;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -209,10 +230,12 @@ onUnmounted(() => window.removeEventListener('click', closeDropdown));
   background: #fef2f2;
 }
 
-.fade-enter-active, .fade-leave-active {
+.fade-enter-active,
+.fade-leave-active {
   transition: opacity 0.2s;
 }
-.fade-enter-from, .fade-leave-to {
+.fade-enter-from,
+.fade-leave-to {
   opacity: 0;
 }
 </style>

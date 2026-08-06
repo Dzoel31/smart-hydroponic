@@ -2,10 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { AccountSummary } from './AccountSummary';
+import type { AccountSummary } from "./AccountSummary";
 export type LoginResponse = {
-    access_token: string;
-    token_type?: string;
-    user: AccountSummary;
+  access_token: string;
+  token_type?: string;
+  user: AccountSummary;
 };
-

@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from typing import Any
 from schemas.hydroponic import (
-    HydroponicDataSensor,
+    HydroponicDataPlant,
     HydroponicDataEnvironment,
     HydroponicDataActuator,
     HydroponicIn,
@@ -10,10 +10,9 @@ from schemas.hydroponic import (
     MetaData,
     ResponseList,
 )
-from models.hydroponic import HydroponicData
 from utils.converter import get_uuidv7_from_timestamp
 
-SENSOR_FIELDS = set(HydroponicDataSensor.model_fields.keys())
+SENSOR_FIELDS = set(HydroponicDataPlant.model_fields.keys())
 ENVIRONMENT_FIELDS = set(HydroponicDataEnvironment.model_fields.keys())
 ACTUATOR_FIELDS = set(HydroponicDataActuator.model_fields.keys())
 
@@ -29,15 +28,25 @@ class HydroponicService:
         self.session = session
 
     async def add_data(self, hydroponic_data: HydroponicIn) -> HydroponicOut:
-        # Create ORM from the incoming validated Pydantic data
-        row = HydroponicData(**hydroponic_data.model_dump())
+        from uuid import uuid7
 
-        self.session.add(row)
+        data_dict = hydroponic_data.model_dump()
+        if "dataid" not in data_dict:
+            data_dict["dataid"] = uuid7()
+
+        columns = ", ".join(f'"{k}"' for k in data_dict.keys())
+        placeholders = ", ".join(f":{k}" for k in data_dict.keys())
+
+        stmt = text(f"""
+            INSERT INTO hydroponic_data ({columns})
+            VALUES ({placeholders})
+            RETURNING *
+        """)
+
+        result = await self.session.execute(stmt, data_dict)
         await self.session.commit()
-        await self.session.refresh(row)
-
-        # Convert ORM object (or refreshed instance) back to response schema
-        return HydroponicOut.model_validate(row)
+        record = result.mappings().first()
+        return HydroponicOut.model_validate(record)
 
     async def get_all_data(
         self,

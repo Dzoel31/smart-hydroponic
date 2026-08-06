@@ -39,7 +39,7 @@ async def get_nutrition_profiles(
     limit: int = 25,
     current_user: UserOut = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
-)-> ResponseList[PlantNutritionProfileOut]:
+) -> ResponseList[PlantNutritionProfileOut]:
     require_role(current_user, {"admin", "superadmin"})
     service = NutritionService(session)
     try:
@@ -89,7 +89,7 @@ async def get_nutrition_profile_by_id(
 ) -> PlantNutritionProfileOut:
     require_role(current_user, {"admin", "superadmin"})
     service = NutritionService(session)
-    try: 
+    try:
         profile = await service.get_profile_by_id(nutrition_id)
         if profile is None:
             raise HTTPException(status_code=404, detail="Nutrition profile not found")

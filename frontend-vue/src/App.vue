@@ -1,9 +1,8 @@
 <template>
-  <router-view/>
+  <router-view />
 </template>
 
-<script setup lang="ts">
-</script>
+<script setup lang="ts"></script>
 
 <style>
 #app {
@@ -13,7 +12,8 @@
   padding: 0;
 }
 
-body, html {
+body,
+html {
   margin: 0;
   padding: 0;
   width: 100%;

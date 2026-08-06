@@ -2,8 +2,8 @@
 site_name = "Guide Smart Hydroponic"
 site_description = "Dokumentasi berbasis web untuk mempelajari dan mengembangkan sistem Smart Hydroponic"
 site_author = "Smart Hydroponic Research Group"
-site_url = "https://iot-smart-hydroponic.github.io/smart-hydroponic/"
-repo_url = "https://github.com/IoT-Smart-Hydroponic/smart-hydroponic/"
+site_url = "https://ksm-aiot-upnvj.github.io/smart-hydroponic/"
+repo_url = "https://github.com/ksm-aiot-upnvj/smart-hydroponic/"
 repo_name = "IoT-Smart-Hydroponic/smart-hydroponic"
 copyright = "Copyright &copy; 2026 Smart Hydroponic Research Group"
 
@@ -12,6 +12,7 @@ nav = [
     { "Selamat Datang" = "index.md" },
     { "Cara Membaca Dokumentasi" = "how-to-read.md" },
     { "Memulai Sistem Smart Hydroponic" = "getting-started.md" },
+
   ] },
   { "Sistem" = [
     { "Arsitektur Sistem" = "architecture.md" },

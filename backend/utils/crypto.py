@@ -5,7 +5,7 @@ try:
     PRIVATE_KEY = Path(settings.JWT_PRIVATE_KEY).read_text(encoding="utf-8")
     PUBLIC_KEY = Path(settings.JWT_PUBLIC_KEY).read_text(encoding="utf-8")
 except FileNotFoundError as e:
-    raise RuntimeError(f"JWT key file not found: {e.filename}") from e  
+    raise RuntimeError(f"JWT key file not found: {e.filename}") from e
 
 
 def load_signing_key():

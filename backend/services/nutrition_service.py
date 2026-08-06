@@ -1,10 +1,9 @@
-from typing import Any
+import uuid
 from uuid import UUID
 
-from sqlalchemy import func, select, update
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models.nutrition import PlantNutritionProfile
 from schemas.hydroponic import MetaData, ResponseList
 from schemas.nutrition import (
     PlantNutritionProfileCreate,
@@ -20,15 +19,26 @@ class NutritionService:
     async def create_profile(
         self, profile_data: PlantNutritionProfileCreate
     ) -> PlantNutritionProfileOut:
-        has_active_profile = await self.get_active_profile()
-        profile = PlantNutritionProfile(
-            **profile_data.model_dump(),
-            is_active=has_active_profile is None,
-        )
-        self.session.add(profile)
+        has_active = await self.get_active_profile()
+        is_active = has_active is None
+
+        data_dict = profile_data.model_dump()
+        data_dict["nutrition_id"] = uuid.uuid4()
+        data_dict["is_active"] = is_active
+
+        columns = ", ".join(f"{k}" for k in data_dict.keys())
+        placeholders = ", ".join(f":{k}" for k in data_dict.keys())
+
+        stmt = text(f"""
+            INSERT INTO plant_nutrition_profiles ({columns})
+            VALUES ({placeholders})
+            RETURNING *
+        """)
+
+        result = await self.session.execute(stmt, data_dict)
         await self.session.commit()
-        await self.session.refresh(profile)
-        return PlantNutritionProfileOut.model_validate(profile)
+        record = result.mappings().first()
+        return PlantNutritionProfileOut.model_validate(record)
 
     async def get_profiles(
         self,
@@ -37,33 +47,43 @@ class NutritionService:
     ) -> ResponseList[PlantNutritionProfileOut]:
         offset = (page - 1) * limit
 
-        data_stmt = (
-            select(PlantNutritionProfile)
-            .order_by(PlantNutritionProfile.is_active.desc(), PlantNutritionProfile.plant_name.asc())
-            .limit(limit)
-            .offset(offset)
-        )
-        count_stmt = select(func.count()).select_from(PlantNutritionProfile)
+        stmt_data = text("""
+            SELECT * FROM plant_nutrition_profiles
+            ORDER BY is_active DESC, plant_name ASC
+            LIMIT :limit OFFSET :offset
+        """)
+        stmt_count = text("SELECT COUNT(*) FROM plant_nutrition_profiles")
 
-        data_result = await self.session.execute(data_stmt)
-        total_rows = await self.session.scalar(count_stmt)
+        data_result = await self.session.execute(
+            stmt_data, {"limit": limit, "offset": offset}
+        )
+        total_rows = await self.session.scalar(stmt_count)
 
         return ResponseList(
             meta=MetaData(total_rows=total_rows, limit=limit, offset=offset),
-            data=[PlantNutritionProfileOut.model_validate(row) for row in data_result.scalars().all()],
+            data=[
+                PlantNutritionProfileOut.model_validate(row)
+                for row in data_result.mappings().all()
+            ],
         )
 
-    async def get_active_profile(self) -> PlantNutritionProfile | None:
-        stmt = select(PlantNutritionProfile).where(PlantNutritionProfile.is_active.is_(True))
+    async def get_active_profile(self) -> PlantNutritionProfileOut | None:
+        stmt = text("SELECT * FROM plant_nutrition_profiles WHERE is_active = true")
         result = await self.session.execute(stmt)
-        return result.scalars().first()
+        record = result.mappings().first()
+        if record:
+            return PlantNutritionProfileOut.model_validate(record)
+        return None
 
-    async def get_profile_by_id(self, nutrition_id: UUID | str) -> PlantNutritionProfile | None:
-        stmt = select(PlantNutritionProfile).where(
-            PlantNutritionProfile.nutrition_id == nutrition_id
-        )
-        result = await self.session.execute(stmt)
-        return result.scalars().first()
+    async def get_profile_by_id(
+        self, nutrition_id: UUID | str
+    ) -> PlantNutritionProfileOut | None:
+        stmt = text("SELECT * FROM plant_nutrition_profiles WHERE nutrition_id = :id")
+        result = await self.session.execute(stmt, {"id": nutrition_id})
+        record = result.mappings().first()
+        if record:
+            return PlantNutritionProfileOut.model_validate(record)
+        return None
 
     async def update_profile(
         self,
@@ -71,55 +91,56 @@ class NutritionService:
         profile_update: PlantNutritionProfileUpdate,
     ) -> PlantNutritionProfileOut | None:
         profile = await self.get_profile_by_id(nutrition_id)
-        if profile is None:
+        if not profile:
             return None
 
         update_data = profile_update.model_dump(exclude_unset=True)
         if not update_data:
-            return PlantNutritionProfileOut.model_validate(profile)
+            return profile
 
-        merged_data: dict[str, Any] = {
-            "plant_name": profile.plant_name,
-            "moisture_min": profile.moisture_min,
-            "moisture_max": profile.moisture_max,
-            "ph_min": profile.ph_min,
-            "ph_max": profile.ph_max,
-            "tds_min": profile.tds_min,
-            "tds_max": profile.tds_max,
-            "temperature_min": profile.temperature_min,
-            "temperature_max": profile.temperature_max,
-            "humidity_min": profile.humidity_min,
-            "humidity_max": profile.humidity_max,
-            "notes": profile.notes,
-        }
-        merged_data.update(update_data)
+        set_clause = ", ".join(f"{k} = :{k}" for k in update_data.keys())
+        stmt = text(f"""
+            UPDATE plant_nutrition_profiles
+            SET {set_clause}, updated_at = NOW()
+            WHERE nutrition_id = :id
+            RETURNING *
+        """)
 
-        validated = PlantNutritionProfileCreate.model_validate(merged_data)
-        for field, value in validated.model_dump().items():
-            setattr(profile, field, value)
-
+        params = {**update_data, "id": nutrition_id}
+        result = await self.session.execute(stmt, params)
         await self.session.commit()
-        await self.session.refresh(profile)
-        return PlantNutritionProfileOut.model_validate(profile)
+        record = result.mappings().first()
+        return PlantNutritionProfileOut.model_validate(record)
 
-    async def set_active_profile(self, nutrition_id: UUID | str) -> PlantNutritionProfileOut | None:
+    async def set_active_profile(
+        self, nutrition_id: UUID | str
+    ) -> PlantNutritionProfileOut | None:
         profile = await self.get_profile_by_id(nutrition_id)
-        if profile is None:
+        if not profile:
             return None
 
         await self.session.execute(
-            update(PlantNutritionProfile).values(is_active=False)
+            text("UPDATE plant_nutrition_profiles SET is_active = false")
         )
-        profile.is_active = True
+
+        stmt = text("""
+            UPDATE plant_nutrition_profiles 
+            SET is_active = true 
+            WHERE nutrition_id = :id 
+            RETURNING *
+        """)
+        result = await self.session.execute(stmt, {"id": nutrition_id})
         await self.session.commit()
-        await self.session.refresh(profile)
-        return PlantNutritionProfileOut.model_validate(profile)
+
+        record = result.mappings().first()
+        return PlantNutritionProfileOut.model_validate(record)
 
     async def delete_profile(self, nutrition_id: UUID | str) -> bool:
         profile = await self.get_profile_by_id(nutrition_id)
-        if profile is None:
+        if not profile:
             return False
 
-        await self.session.delete(profile)
+        stmt = text("DELETE FROM plant_nutrition_profiles WHERE nutrition_id = :id")
+        await self.session.execute(stmt, {"id": nutrition_id})
         await self.session.commit()
         return True

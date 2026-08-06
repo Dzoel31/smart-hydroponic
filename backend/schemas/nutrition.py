@@ -26,7 +26,9 @@ class PlantNutritionProfileBase(BaseModel):
         if self.tds_min > self.tds_max:
             raise ValueError("tds_min must be less than or equal to tds_max")
         if self.temperature_min > self.temperature_max:
-            raise ValueError("temperature_min must be less than or equal to temperature_max")
+            raise ValueError(
+                "temperature_min must be less than or equal to temperature_max"
+            )
         if self.humidity_min > self.humidity_max:
             raise ValueError("humidity_min must be less than or equal to humidity_max")
         return self
