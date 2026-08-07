@@ -2,6 +2,17 @@
 
 <!-- version list -->
 
+## v1.3.2 (2026-08-07)
+
+### Bug Fixes
+
+- Fix CoAP Observe notifications handling and logging
+  ([`37a9b85`](https://github.com/ksm-aiot-upnvj/smart-hydroponic/commit/37a9b85e6f6e51fae8e0ef9c20b9e2cafba1fe94))
+
+- Update docstring for control_hydroponic_actuators to reflect CoAP Observe
+  ([`de80c96`](https://github.com/ksm-aiot-upnvj/smart-hydroponic/commit/de80c96c15359c3ed4cc9fd352d3a143258172c5))
+
+
 ## v1.3.1 (2026-08-07)
 
 ### Bug Fixes
