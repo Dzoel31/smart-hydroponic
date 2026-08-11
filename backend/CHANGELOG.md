@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.4.0 (2026-08-11)
+
+### Bug Fixes
+
+- Update docstring for control_hydroponic_actuators to reflect CoAP Observe
+  ([`ad2c06a`](https://github.com/ksm-aiot-upnvj/smart-hydroponic/commit/ad2c06a260572b3fcb354962f8ec28bec06ec18c))
+
+### Features
+
+- Add actuator status fields to hydroponics latest response schema
+  ([`f448f96`](https://github.com/ksm-aiot-upnvj/smart-hydroponic/commit/f448f96d555272720b33485da6522145df66871c))
+
+
 ## v1.3.2 (2026-08-07)
 
 ### Bug Fixes
