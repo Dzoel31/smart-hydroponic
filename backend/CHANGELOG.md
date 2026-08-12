@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.4.1 (2026-08-12)
+
+### Bug Fixes
+
+- Add skip ci tag to semantic release commit message
+  ([`be35dfb`](https://github.com/ksm-aiot-upnvj/smart-hydroponic/commit/be35dfb58dc59685ce92f5cde9b5890271fa3548))
+
+
 ## v1.4.0 (2026-08-11)
 
 ### Bug Fixes
