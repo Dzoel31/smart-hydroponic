@@ -1,3 +1,13 @@
+## [1.5.0](https://github.com/ksm-aiot-upnvj/smart-hydroponic/compare/frontend-v1.4.0...frontend-v1.5.0) (2026-08-12)
+
+### Features
+
+* map actuator status in dashboard metrics and update security dependencies ([1bc25ab](https://github.com/ksm-aiot-upnvj/smart-hydroponic/commit/1bc25abd5d4f9bf3aba4641fa45d3b598bc13ad7))
+
+### Bug Fixes
+
+* use coap transport for actuator control ([0799823](https://github.com/ksm-aiot-upnvj/smart-hydroponic/commit/0799823eed39229c28fcefb2f2892648ca3c00b3))
+
 ## [1.4.0](https://github.com/ksm-aiot-upnvj/smart-hydroponic/compare/frontend-v1.3.0...frontend-v1.4.0) (2026-08-06)
 
 ## [1.3.0](https://github.com/ksm-aiot-upnvj/smart-hydroponic/compare/frontend-v1.2.0...frontend-v1.3.0) (2026-08-06)
