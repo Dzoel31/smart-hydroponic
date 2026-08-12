@@ -19,7 +19,11 @@ const uint16_t coapServerPort = 8683;
 
 // ============================ INTERVALS ============================
 const unsigned long WIFI_RETRY_INTERVAL = 5000;
-const unsigned long OBSERVE_REFRESH_INTERVAL = 3600000; // Refresh observe tiap 1 jam
+const unsigned long OBSERVE_REFRESH_INTERVAL =
+    3600000; // Refresh observe tiap 1 jam
+const unsigned long SERVER_WATCHDOG_TIMEOUT =
+    90000; // Reset observe jika server diam > 90s (deteksi server
+           // redeploy/restart)
 
 // ============================ GLOBALS ============================
 struct ActuatorState {
@@ -33,6 +37,7 @@ bool wifiConnected = false;
 bool coapStarted = false;
 unsigned long lastWifiAttempt = 0;
 unsigned long lastObserveRefresh = 0;
+unsigned long lastServerActivity = 0;
 
 // ============================ COAP ============================
 WiFiUDP udp;
@@ -72,7 +77,7 @@ void setup() {
 
   // Mendaftarkan callback untuk menerima notifikasi Observe & balasan
   coap.response(callback_response);
-  
+
   // Connect WiFi
   connectWifi();
 
@@ -86,6 +91,7 @@ void setup() {
 
   lastWifiAttempt = millis();
   lastObserveRefresh = millis();
+  lastServerActivity = millis();
 
   Serial.print("Free heap: ");
   Serial.println(ESP.getFreeHeap());
@@ -103,10 +109,20 @@ void loop() {
   // CoAP loop jika connected
   if (wifiConnected && coapStarted) {
     coap.loop();
+
+    // Check CoAP Server Watchdog (jika > 90s tidak ada pesan dari server,
+    // re-register Observe)
+    if (now - lastServerActivity >= SERVER_WATCHDOG_TIMEOUT) {
+      Serial.println("\n[WATCHDOG] Tidak ada notifikasi dari server > 90s "
+                     "(server restart?). Mendaftarkan ulang Observe...");
+      registerObserve();
+      lastServerActivity = now;
+    }
   }
 
   // Refresh observe periodically
-  if (wifiConnected && coapStarted && (now - lastObserveRefresh >= OBSERVE_REFRESH_INTERVAL)) {
+  if (wifiConnected && coapStarted &&
+      (now - lastObserveRefresh >= OBSERVE_REFRESH_INTERVAL)) {
     registerObserve();
     lastObserveRefresh = now;
   }
@@ -179,7 +195,8 @@ void checkWiFi() {
 
 // ============================ COAP ============================
 void startCoap() {
-  if (coapStarted) return;
+  if (coapStarted)
+    return;
 
   Serial.println("Starting CoAP...");
   udp.begin(5683);
@@ -189,7 +206,8 @@ void startCoap() {
 }
 
 void stopCoap() {
-  if (!coapStarted) return;
+  if (!coapStarted)
+    return;
 
   Serial.println("Stopping CoAP...");
   udp.stop();
@@ -214,46 +232,52 @@ void updateRelays() {
 
 // ============================ OBSERVE REGISTER ============================
 void registerObserve() {
-    if (!wifiConnected || !coapStarted) return;
-    Serial.println("\n[OBSERVE] Mendaftarkan observe ke server...");
-    
-    CoapPacket packet;
-    packet.type = COAP_CON; 
-    packet.code = COAP_GET; 
-    packet.messageid = rand();
-    packet.token = observeToken;
-    packet.tokenlen = 4;
-    packet.optionnum = 0;
-    
-    // Add URI_HOST
-    char ipaddress[16] = "";
-    sprintf(ipaddress, "%d.%d.%d.%d", coapServerIp[0], coapServerIp[1], coapServerIp[2], coapServerIp[3]);
-    packet.addOption(COAP_URI_HOST, strlen(ipaddress), (uint8_t *)ipaddress);
+  if (!wifiConnected || !coapStarted)
+    return;
+  Serial.println("\n[OBSERVE] Mendaftarkan observe ke server...");
 
-    // Option Observe = 0 (Register)
-    uint8_t observeOption[1] = {0}; 
-    packet.addOption(COAP_OBSERVE, 1, observeOption);
+  CoapPacket packet;
+  packet.type = COAP_CON;
+  packet.code = COAP_GET;
+  packet.messageid = rand();
+  packet.token = observeToken;
+  packet.tokenlen = 4;
+  packet.optionnum = 0;
 
-    // Add URI path: "coap/hydroponics/actuator"
-    String p1 = "coap";
-    packet.addOption(COAP_URI_PATH, p1.length(), (uint8_t *)p1.c_str());
-    String p2 = "hydroponics";
-    packet.addOption(COAP_URI_PATH, p2.length(), (uint8_t *)p2.c_str());
-    String p3 = "actuator";
-    packet.addOption(COAP_URI_PATH, p3.length(), (uint8_t *)p3.c_str());
+  // Add URI_HOST
+  char ipaddress[16] = "";
+  sprintf(ipaddress, "%d.%d.%d.%d", coapServerIp[0], coapServerIp[1],
+          coapServerIp[2], coapServerIp[3]);
+  packet.addOption(COAP_URI_HOST, strlen(ipaddress), (uint8_t *)ipaddress);
 
-    coap.sendPacket(packet, coapServerIp, coapServerPort);
-    Serial.println("[OBSERVE] Paket pendaftaran terkirim!");
+  // Option Observe = 0 (Register)
+  uint8_t observeOption[1] = {0};
+  packet.addOption(COAP_OBSERVE, 1, observeOption);
+
+  // Add URI path: "coap/hydroponics/actuator"
+  String p1 = "coap";
+  packet.addOption(COAP_URI_PATH, p1.length(), (uint8_t *)p1.c_str());
+  String p2 = "hydroponics";
+  packet.addOption(COAP_URI_PATH, p2.length(), (uint8_t *)p2.c_str());
+  String p3 = "actuator";
+  packet.addOption(COAP_URI_PATH, p3.length(), (uint8_t *)p3.c_str());
+
+  coap.sendPacket(packet, coapServerIp, coapServerPort);
+  Serial.println("[OBSERVE] Paket pendaftaran terkirim!");
 }
 
 // ============================ COAP CALLBACK ============================
 void callback_response(CoapPacket &packet, IPAddress ip, int port) {
+  lastServerActivity =
+      millis(); // Reset Watchdog timer saat ada aktivitas dari server
   Serial.println("\n--- [INCOMING] ---");
   Serial.println("Menerima pesan dari server!");
 
   if (packet.type == COAP_CON) {
-      Serial.println("Tipe paket: Confirmable. Auto-ACK dikirim oleh library (Empty ACK).");
-      // coap.sendResponse(ip, port, packet.messageid); // Dihapus karena sudah auto-ACK di library
+    Serial.println(
+        "Tipe paket: Confirmable. Auto-ACK dikirim oleh library (Empty ACK).");
+    // coap.sendResponse(ip, port, packet.messageid); // Dihapus karena sudah
+    // auto-ACK di library
   }
 
   if (packet.payloadlen > 0) {
@@ -267,23 +291,26 @@ void callback_response(CoapPacket &packet, IPAddress ip, int port) {
     DeserializationError error = deserializeJson(doc, payload);
     if (!error) {
       bool changed = false;
-      if (doc.containsKey("pump_status") && state.pump_status != doc["pump_status"].as<int>()) {
+      if (doc.containsKey("pump_status") &&
+          state.pump_status != doc["pump_status"].as<int>()) {
         state.pump_status = doc["pump_status"].as<int>();
         changed = true;
       }
-      if (doc.containsKey("automation_status") && state.automation_status != doc["automation_status"].as<int>()) {
+      if (doc.containsKey("automation_status") &&
+          state.automation_status != doc["automation_status"].as<int>()) {
         state.automation_status = doc["automation_status"].as<int>();
         changed = true;
       }
-      if (doc.containsKey("light_status") && state.light_status != doc["light_status"].as<int>()) {
+      if (doc.containsKey("light_status") &&
+          state.light_status != doc["light_status"].as<int>()) {
         state.light_status = doc["light_status"].as<int>();
         changed = true;
       }
 
       if (changed) {
-         updateRelays();
+        updateRelays();
       } else {
-         Serial.println("State tidak berubah.");
+        Serial.println("State tidak berubah.");
       }
     } else {
       Serial.println("Gagal parsing JSON!");
